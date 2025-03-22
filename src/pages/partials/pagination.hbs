@@ -1,0 +1,25 @@
+{{#with pageInfo}}
+  <div class="pagination">
+    {{#if hasPreviousPage }}
+      <a href="{{url}}?offset={{previousOffset}}">
+        Previous
+      </a>
+    {{else}}
+      <span>
+        Previous
+      </span>
+    {{/if}}
+    <span class="status">
+      Page {{currentPage}} of {{totalPages}}
+    </span>
+    {{#if hasNextPage}}
+      <a href="{{../url}}?offset={{nextOffset}}">
+        Next
+      </a>
+    {{else}}
+      <span>
+        Next
+      </span>
+    {{/if}}
+  </div>
+{{/with}}

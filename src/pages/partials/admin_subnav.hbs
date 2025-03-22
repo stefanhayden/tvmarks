@@ -1,0 +1,15 @@
+{{#if links}}
+  <ul class="admin-links">
+    {{#each links}}
+      <li>
+        {{#eq href ../currentPath}}
+          {{label}}
+        {{else}}
+          <a href="{{href}}">
+            {{label}}
+          </a>
+        {{/eq}}
+      </li>
+    {{/each}}
+  </ul>
+{{/if}}

@@ -1,0 +1,63 @@
+{
+  "name": "tvmarks",
+  "version": "0.0.1",
+  "description": "A personal tv tracking store, powered by Express, sqlite and ActivityPub",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "watch": "nodemon --ignore public/ --exec npm start",
+    "lint": "eslint . --ext .js",
+    "test": "node --experimental-vm-modules ./node_modules/.bin/jest"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "chalk": "^5.2.0",
+    "connect-sqlite3": "^0.9.13",
+    "cors": "^2.8.5",
+    "csv-stringify": "^6.4.2",
+    "dotenv": "^16.0.3",
+    "es6-promisify": "^7.0.0",
+    "express": "^4.18.2",
+    "express-basic-auth": "^1.2.1",
+    "express-handlebars": "^6.0.7",
+    "express-session": "^1.17.3",
+    "linkifyjs": "^4.1.1",
+    "node-fetch": "^3.3.2",
+    "open-graph-scraper": "^5.2.3",
+    "sqlite": "^5.0.1",
+    "sqlite3": "^5.1.5",
+    "string-strip-html": "^13.4.2",
+    "escape-html": "^1.0.3",
+    "xml2js": "^0.6.2",
+    "node-tvmaze": "^1.0.0",
+    "handlebars-helpers": "^0.10.0",
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=16.x"
+  },
+  "repository": {
+    "url": "https://github.com/ckolderup/postmarks"
+  },
+  "license": "MIT",
+  "keywords": [
+    "node",
+    "glitch",
+    "sqlite",
+    "fediverse",
+    "express",
+    "activitypub",
+    "mastodon",
+    "bookmarks"
+  ],
+  "devDependencies": {
+    "eslint": "^8.43.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "nodemon": "^2.0.20",
+    "prettier": "^3.0.3"
+  }
+}

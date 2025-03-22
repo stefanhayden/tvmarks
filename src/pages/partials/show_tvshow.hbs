@@ -1,0 +1,25 @@
+<div class="bookmark">
+
+  {{#if tvshow.watchNextEpisode}}
+    <a id="watchNext"></a>
+    <fieldset style="border: 1px solid; padding: 5px; margin-bottom: 10px;">
+      <legend style="padding: 0 5px;">Watch next:</legend>
+      {{> episode episode=tvshow.watchNextEpisode returnHash="watchNext" }}
+    </fieldset>
+  {{/if}}
+  <br />
+  
+  <img src="{{{tvshow.image}}}" />
+  <br />
+  <br />
+  <div class="subhead">
+    <span class="bookmark-domain">
+      {{#if tvshow.network_name}}
+        {{tvshow.network_name}} ({{{tvshow.network_country_code}}})
+      {{/if}}
+    </span>
+  </div>
+  <div class="description">
+    {{{tvshow.summary}}}
+  </div>
+</div>

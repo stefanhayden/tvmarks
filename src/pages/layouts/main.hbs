@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <link rel="icon" href="https://glitch.com/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{#if (mastodonAccount)}}
+      <link rel="me" href="{{ mastodonAccount }}">
+    {{/if}}
+    <link rel="alternate" type="application/atom+xml" href="{{{feedUrl}}}">
+    <title>{{title}} | {{siteName}}</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="https://cdn.glitch.global/5aacd173-98f2-4f1f-83c1-d07815d82bf3/tvmarksLogoFavicon.png?v=1742129836124">
+    <link rel="shortcut icon" href="https://cdn.glitch.global/5aacd173-98f2-4f1f-83c1-d07815d82bf3/tvmarksLogoFavicon.ico?v=1742129989230">
+    <link rel="search" type="application/opensearchdescription+xml" href="{{{searchUrl}}}" title="Postmarks">
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <div class="header">
+      <div class="logo">
+        <a href="/">
+          <img src="https://cdn.glitch.global/5aacd173-98f2-4f1f-83c1-d07815d82bf3/tvmarksLogo.png?v=1742129685337" />
+          {{siteName}}
+        </a>
+      </div>
+      <div class="menu">
+        {{#if loggedIn}}
+          <a href="/network">Network</a>
+          <a href="/admin">Add new show</a>
+          <a href="/admin">Admin</a>
+          <a href="/logout">Logout</a>
+        {{else}}
+          <a href="/login">Login</a>
+        {{/if}}
+      </div>
+    </div>
+    <div class="wrapper">
+      <div class="content" role="main">
+        {{#if adminLinks}}
+          {{> admin_subnav links=adminLinks currentPath=currentPath}}
+        {{/if}}
+        {{^if hideTitle}}
+          <h1>{{title}}</h1>
+        {{/if}}
+        {{{body}}}
+      </div>
+    </div>
+    <footer class="footer">
+      <a href="/about">About</a>
+      {{#if loggedIn}}
+        <a href="/network">Network</a>
+        <a href="/bookmark/new">Add</a>
+        <a href="/admin">Admin</a>
+        <a href="/logout">Logout</a>
+      {{else}}
+        <a href="/login">Login</a>
+      {{/if}}
+      <div class="btn-section">
+        <a class="btn--feed" href="{{{feedUrl}}}" target="_blank">
+        <img src="/feed-icon.png" alt="RSS feed icon">
+      </a>
+         <a class="btn--github" href="https://github.com/stefanhayden/tvmarks" target="_blank">
+        <img src="/github-icon.svg" alt="GitHub logo">
+      </a>
+      <a class="btn--remix" target="_top" href="https://glitch.new/github.com/stefanhayden/tvmarks">
+        <img src="https://cdn.glitch.com/605e2a51-d45f-4d87-a285-9410ad350515%2FLogo_Color.svg?v=1618199565140" alt="Glitch logo">
+        Remix on Glitch
+      </a>
+      </div>
+    </footer>
+    {{{_sections.script}}}
+  </body>
+</html>

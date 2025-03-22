@@ -1,0 +1,24 @@
+<div class="search">
+  <form action="/search">
+    <div class="form-group">
+      <label for="query" class="visually-hidden">
+        Query
+      </label>
+      <input id="query" name="query" value="{{keywords}}">
+    </div>
+    <div class="form-group">
+      <button>Search</button>
+    </div>
+  </form>
+</div>
+{{#if error}}
+  <p class="error">
+    {{error}}
+  </p>
+{{else}}
+  <div class="bookmarks">
+    {{#each bookmarks }}
+      {{> show_bookmark bookmark=this }}
+    {{/each}}
+  </div>
+{{/if}}

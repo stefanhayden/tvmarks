@@ -1,0 +1,48 @@
+<div data-id="{{episode.id}}" style="width: 100%; border-bottom:1px solid; padding: 5px; margin-bottom: 5px; border-collapse: collapse;">
+  <div style="display: flex; gap: 10px;">
+    <div style="flex-grow: 1;">
+      <div>
+        S{{episode.season}} {{#if episode.number}}| E{{episode.number}}{{/if}} - 
+        <span style="color: rgba(0, 0, 0, 0.3)">{{episode.airdate}}</span>
+      </div>
+      <div>
+        <a href="/show/{{episode.show_id}}/episode/{{episode.id}}">{{episode.name}}</a>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction: column;">
+      <div style="display: flex; align-items: center; gap: 10px; justify-content: end;">
+        {{#if episode.not_aired}}
+          <div>
+            {{episode.days_untill}} days
+          </div>
+        {{/if}}
+        {{#if episode.isWatched}}
+          {{#if @root.loggedIn}}
+            <form method="post" action="/show/{{episode.show_id}}/episode/{{episode.id}}/status">
+              <input type="hidden" name="status" value="null" />
+              <input type="hidden" name="returnHash" value="{{#if returnHash}}{{returnHash}}{{/if}}" />
+              <button style="display:inline-block; padding: 0; background: none; border: 0;">
+                {{> check checked=true not_aired=episode.not_aired }}
+              </button>
+            </form>
+          {{else}}
+            {{> check checked=true not_aired=episode.not_aired }}
+          {{/if}}
+        {{else}}
+          {{#if @root.loggedIn}}
+            <form method="post" action="/show/{{episode.show_id}}/episode/{{episode.id}}/status">
+              <input type="hidden" name="status" value="WATCHED" />
+              <input type="hidden" name="returnHash" value="{{#if returnHash}}{{returnHash}}{{/if}}" />
+              <button style="display:inline-block; padding: 0; background: none; border: 0;">
+                {{> check not_aired=episode.not_aired }}
+              </button>
+            </form>
+          {{else}}
+            {{> check not_aired=episode.not_aired }}
+          {{/if}}
+        {{/if}}
+      </div>
+      <small style="text-align: right;"><a href="/show/{{episode.show_id}}/episode/{{episode.id}}">add note</a></small>
+    </div>
+  </div>
+</div>

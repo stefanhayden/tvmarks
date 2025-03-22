@@ -1,0 +1,56 @@
+{{#if error}}
+  <p class="error">
+    {{error}}
+  </p>
+{{else}}
+
+<h1>
+  <a href="/show/{{episode.show_id}}">{{episode.show.name}}</a>
+</h1>
+<form method="post" action="/show/{{episode.show_id}}/episode/{{episode.id}}/status">
+  <input type="hidden" name="returnHash" value="{{#if returnHash}}{{returnHash}}{{/if}}" />
+  <div data-id="{{episode.id}}" style="width: 100%; padding: 5px; margin-bottom: 5px; border-collapse: collapse;">
+    <div style="display: flex; gap: 10px;">
+      <div style="flex-grow: 1;">
+        <h2 style="margin-bottom: 0px;">{{episode.name}}</h2>
+        <div>
+          S{{episode.season}} {{#if episode.number}}| E{{episode.number}}{{/if}} - 
+          <span style="color: rgba(0, 0, 0, 0.3)">{{episode.airdate}}</span>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction: column;">
+        <div style="display: flex; align-items: center; gap: 10px; justify-content: end;">
+          {{#if episode.not_aired}}
+            <div>
+              {{episode.days_untill}} days
+            </div>
+          {{/if}}
+          {{#if episode.isWatched}}
+            {{#if @root.loggedIn}}
+              <input type="hidden" name="status" value="null" />
+              <button type="submit" style="display:inline-block; padding: 0; background: none; border: 0;">
+                {{> check checked=true not_aired=episode.not_aired }}
+              </button>
+            {{else}}
+              {{> check checked=true not_aired=episode.not_aired }}
+            {{/if}}
+          {{else}}
+            {{#if @root.loggedIn}}
+              <input type="hidden" name="status" value="WATCHED" />
+              <button type="submit" style="display:inline-block; padding: 0; background: none; border: 0;">
+                {{> check not_aired=episode.not_aired }}
+              </button>
+            {{else}}
+              {{> check not_aired=episode.not_aired }}
+            {{/if}}
+          {{/if}}
+        </div>
+      </div>
+    </div>
+  </div>
+  <textarea placeholder="Add a note" style="width: 100%; height: 100px; margin-bottom: 10px; background: #fdf7fc">{{episode.note}}</textarea>
+  {{#if episode.isWatched}}
+    <button style="float: right;">Update Note</button>
+  {{/if}}
+</form>
+{{/if}}

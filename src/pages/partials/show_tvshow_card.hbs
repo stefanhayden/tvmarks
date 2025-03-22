@@ -1,0 +1,13 @@
+<div class="">
+  <a href="/show/{{tvshow.id}}" style="">
+    <img 
+      src="{{{tvshow.image}}}"
+      style="display:block;"
+      title="{{tvshow.name}} - watched {{tvshow.watched_episodes_count}} of {{tvshow.aired_episodes_count}} aired episodes"
+    />
+  </a>
+  <div style="height: 10px; background-color: cornsilk;">
+    <div style="height: 10px; background-color: yellow; width: {{toCssPercent tvshow.watched_episodes_count tvshow.aired_episodes_count}}%">
+     </div>
+  </div>
+</div>

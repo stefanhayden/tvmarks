@@ -1,0 +1,69 @@
+{{#if error}}
+  <p class="error">
+    {{error}}
+  </p>
+{{else}}
+  <div class="bookmarks">
+    {{> show_tvshow tvshow=show}}
+  </div>
+  <div>
+    <a id="episodes"></a>
+    {{#each seasons}}
+    <div style="margin-bottom: 20px;">
+      
+      <a id="season{{this.seasonId}}"></a>
+      <div style="display:flex; gap: 10px; padding: 5px; border-bottom: 1px solid; margin-bottom: 10px; align-items: center;">
+        <h3 style="flex-grow: 1;">{{this.title}}</h3>
+        <div>
+          <!-- Mark Entire Season as Watched -->
+          {{#if this.isWatched}}
+            {{#if @root.loggedIn}}
+              <form method="post" action="/show/{{this.showId}}/season/{{this.seasonId}}/status">
+                <input type="hidden" name="status" value="null" />
+                <button style="display:inline-block; padding: 0; background: none; border: 0;">
+                  <div class="circle checked">
+                    <div class="checkmark"></div>
+                  </div> 
+                </button>
+              </form>
+            {{else}}
+              <div class="circle checked">
+                <div class="checkmark"></div>
+              </div>
+            {{/if}}
+          {{else}}
+            {{#if @root.loggedIn}}
+              <form method="post" action="/show/{{this.showId}}/season/{{this.seasonId}}/status">
+                <input type="hidden" name="status" value="WATCHED" />
+                <button style="display:inline-block; padding: 0; background: none; border: 0;">
+                  <div class="circle">
+                    <div class="checkmark"></div>
+                  </div>
+                </button>
+              </form>
+            {{else}}
+              <div class="circle">
+                <div class="checkmark"></div>
+              </div>
+            {{/if}}
+          {{/if}}
+        </div>
+      </div>
+
+    
+      {{#each this.episodes}}
+        {{> episode episode=this}}
+      {{/each}}
+    </div>
+    {{/each}}
+  </div>
+  <div style="float: right;">
+    {{#if @root.loggedIn}}
+      <form method="post" action="/admin/show/delete/{{{show.id}}}">
+        <button>
+          delete show
+        </button>
+      </form>
+    {{/if}}
+  </div>
+{{/if}}

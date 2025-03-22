@@ -1,0 +1,37 @@
+<div class="bookmark">
+  <img src="{{{tvshow.image.medium}}}" />
+  <div class="headline">
+    <a href="{{tvshow.url}}">
+      {{tvshow.name}}
+    </a>
+  </div>
+  <div class="subhead">
+    <a href="/bookmark/{{bookmark.id}}" class="bookmark-date" title="{{bookmark.created_at}}">
+      {{bookmark.timestamp}}
+    </a>
+    <span class="bookmark-domain">
+      {{tvshow.network.name}} ({{{tvshow.network.country.code}}})
+    </span>
+  </div>
+  <div class="description">
+    {{{tvshow.summary}}}
+  </div>
+  <form method="post" action="/admin/show/add/{{{tvshow.id}}}" style="margin-bottom: 10px;">
+    <textarea placeholder="I can't wait to watch!" name="description" style="height: 6rem; margin-bottom: 10px;"></textarea>
+    <button>
+      add show
+    </button>
+  </form>
+  <div class="bottom">
+    {{^if permalink}}
+      {{#if bookmark.comment_count}}
+        <span>
+          <a href="/bookmark/{{bookmark.id}}">
+            {{bookmark.comment_count}}
+            {{pluralize bookmark.comment_count "comment" "comments"}}
+          </a>
+        </span>
+      {{/if}}
+    {{/if}}
+  </div>
+</div>

@@ -1,0 +1,71 @@
+<h3>
+  Set global permissions
+</h3>
+<p>
+  You can set permissions here for specific users to always be allowed to, or
+  blocked from, commenting on posts. Note that the same controls are allowed on
+  a per-bookmark setting on the bookmark edit page.
+</p>
+<form action="/admin/permissions" method="post">
+  <div class="form-group">
+    <label for="permissions_allowed">
+      Auto-allow comments from (one username per line)
+    </label>
+    <textarea
+      id="permissions_allowed"
+      name="allowed"
+    >{{allowed}}</textarea>
+  </div>
+  <div class="form-group">
+    <label for="permissions_blocked">
+      Auto-ignore comments from (one username per line)
+    </label>
+    <textarea
+      id="permissions_blocked"
+      name="blocked"
+    >{{blocked}}</textarea>
+  </div>
+  <div class="form-group">
+    <button type="submit">Save</button>
+  </div>
+</form>
+
+<h3>
+  Followers
+</h3>
+
+<div class="followers">
+  {{#each followers}}
+    <div class="follower">
+      <div class="info">
+        <a href="{{this}}">{{this}}</a>
+      </div>
+      <div class="actions">
+        <form action="/admin/followers/block" method="POST">
+          <input type="hidden" name="actor" value="{{this}}" />
+          <button type="submit">Block</button>
+        </form>
+      </div>
+    </div>
+  {{/each}}
+</div>
+
+<h3>
+  Blocked Users
+</h3>
+
+<div class="blocks">
+  {{#each blocks}}
+    <div class="block">
+      <div class="info">
+        <a href="{{this}}">{{this}}</a>
+      </div>
+      <div class="actions">
+        <form action="/admin/followers/unblock" method="POST">
+          <input type="hidden" name="actor" value="{{this}}" />
+          <button type="submit">Unblock</button>
+        </form>
+      </div>
+    </div>
+  {{/each}}
+</div>
