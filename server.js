@@ -25,7 +25,7 @@ app.use(express.json({ type: ['application/json', 'application/ld+json', 'applic
 app.use(session());
 
 app.use((req, res, next) => {
-  res.locals.loggedIn = req.session.loggedIn;
+  res.locals.loggedIn = req.session['loggedIn'];
   return next();
 });
 
@@ -37,16 +37,15 @@ tvdb.init();
 app.set('tvshowDb', tvdb);
 app.set('account', account);
 app.set('domain', domain);
-
 app.disable('x-powered-by');
 
 // force HTTPS in production
 if (process.env.ENVIRONMENT === 'production') {
   app.set('trust proxy', ['127.0.0.1', '10.0.0.0/8']);
 
-  app.use(({ secure, hostname, url, port }, response, next) => {
+  app.use(({ secure, hostname, url }, response, next) => {
     if (!secure) {
-      return response.redirect(308, `https://${hostname}${url}${port ? `:${port}` : ''}`);
+      return response.redirect(308, `https://${hostname}${url}}`);
     }
 
     return next();

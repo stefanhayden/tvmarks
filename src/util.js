@@ -12,11 +12,12 @@ export const data = {
 
 let actorFileData = {};
 try {
+  // read file from the dist folder
   const accountFile = await readFile(new URL('../account.json', import.meta.url));
   actorFileData = JSON.parse(accountFile);
   actorFileData.disabled = false;
 } catch (e) {
-  console.log('no account.json file found, assuming non-fediverse mode for now. restart the app to check again');
+  console.log('no account.json file found, assuming non-fediverse mode for now. restart the app to check again', new URL('../account.json', import.meta.url));
   actorFileData = { disabled: true };
 }
 

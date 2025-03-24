@@ -26,9 +26,10 @@ router.get('/', async (req, res) => {
   const showsUpToDate = await tvshowDb.getShowsUpToDate();
   const showsAbandoned = await tvshowDb.getShowsAbandoned();
   const showsToWatch = await tvshowDb.getShowsToWatch()
-
+// test
   params = {
     ...params,
+    shows,
     showsNotStarted,
     showsCompleted,
     showsUpToDate,

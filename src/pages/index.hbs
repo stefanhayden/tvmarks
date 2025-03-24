@@ -4,41 +4,57 @@
   </p>
 {{else}}
 
+  {{#unless shows}}
+    <h2>Welcome to Tvmarks!</h2>
+    <p>Tvmarks is a single user self hosted website that help you track the shows you are watching and catalog shows you have weatched.</p>
+    <p>If you have just set this site up then it's working! Login to search for show to add.</p>
+  {{/unless}}
 
+
+  {{#if showsToWatch}}
   <h2>Watch Next</h2>
   <div style="display:flex; flex-wrap: wrap; gap: 0.5em; margin-bottom: 50px">
     {{#each showsToWatch }}
       {{> show_tvshow_card tvshow=this}}
     {{/each}}
   </div>
+  {{/if}}
 
+  {{#if showsUpToDate}}
   <h2>Up To Date</h2>
   <div style="display:flex; flex-wrap: wrap; gap: 0.5em; margin-bottom: 50px">
     {{#each showsUpToDate }}
       {{> show_tvshow_card tvshow=this}}
     {{/each}}
   </div>
+  {{/if}}
 
+  {{#if showsNotStarted}}
   <h2>Not Started</h2>
   <div style="display:flex; flex-wrap: wrap; gap: 0.5em; margin-bottom: 50px">
     {{#each showsNotStarted }}
       {{> show_tvshow_card tvshow=this}}
     {{/each}}
   </div>
+  {{/if}}
 
+  {{#if showsAbandoned}}
   <h2>Abandoned</h2>
   <div style="display:flex; flex-wrap: wrap; gap: 0.5em; margin-bottom: 50px">
     {{#each showsAbandoned }}
       {{> show_tvshow_card tvshow=this}}
     {{/each}}
   </div>
+  {{/if}}
 
+  {{#if showsCompleted}}
   <h2>Completed</h2>
   <div style="display:flex; flex-wrap: wrap; gap: 0.5em;">
     {{#each showsCompleted }}
       {{> show_tvshow_card tvshow=this}}
     {{/each}}
   </div>
+  {{/if}}
 
 
 {{/if}}
