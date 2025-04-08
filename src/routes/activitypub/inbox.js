@@ -122,27 +122,27 @@ async function handleFollowAccepted(req, res) {
   }
 }
 
-async function handleCommentOnBookmark(req, res, inReplyToGuid) {
+async function handleComment(req, res, inReplyToGuid) {
   const apDb = req.app.get('apDb');
 
-  const bookmarkId = await apDb.getBookmarkIdFromMessageGuid(inReplyToGuid);
+  const id = await apDb.getIdFromMessageGuid(inReplyToGuid);
 
-  if (typeof bookmarkId !== 'number') {
-    console.log("couldn't find a bookmark this message is related to");
+  if (typeof id !== 'string') {
+    console.log("couldn't find the id this message is related to");
     return res.sendStatus(400);
   }
 
-  const bookmarkPermissions = await apDb.getPermissionsForBookmark(bookmarkId);
+  const permissions = await apDb.getPermissions(id);
   const globalPermissions = await apDb.getGlobalPermissions();
 
-  const bookmarkBlocks = bookmarkPermissions?.blocked?.split('\n') || [];
+  const blocks = permissions?.blocked?.split('\n') || [];
   const globalBlocks = globalPermissions?.blocked?.split('\n') || [];
 
-  const bookmarkAllows = bookmarkPermissions?.allowed?.split('\n') || [];
+  const allows = permissions?.allowed?.split('\n') || [];
   const globalAllows = globalPermissions?.allowed?.split('\n') || [];
 
-  const blocklist = bookmarkBlocks.concat(globalBlocks).filter((x) => x.match(/^@([^@]+)@(.+)$/));
-  const allowlist = bookmarkAllows.concat(globalAllows).filter((x) => x.match(/^@([^@]+)@(.+)$/));
+  const blocklist = blocks.concat(globalBlocks).filter((x) => x.match(/^@([^@]+)@(.+)$/));
+  const allowlist = allows.concat(globalAllows).filter((x) => x.match(/^@([^@]+)@(.+)$/));
 
   if (blocklist.length > 0 && blocklist.map((username) => actorMatchesUsername(req.body.actor, username)).some((x) => x)) {
     console.log(`Actor ${req.body.actor} matches a blocklist item, ignoring comment`);
@@ -163,9 +163,9 @@ async function handleCommentOnBookmark(req, res, inReplyToGuid) {
     visible = 1;
   }
 
-  const bookmarksDb = req.app.get('bookmarksDb');
+  const tvshowsDb = req.app.get('tvshowDb');
 
-  bookmarksDb.createComment(bookmarkId, actor, commentUrl, req.body.object.content, visible);
+  tvshowsDb.createComment(id, actor, commentUrl, req.body.object.content, visible);
 
   return res.status(200);
 }
@@ -185,9 +185,9 @@ async function handleFollowedPost(req, res) {
 
     const commentUrl = req.body.object.id;
 
-    const bookmarksDb = req.app.get('bookmarksDb');
+    const tvshowDb = req.app.get('tvshowDb');
 
-    bookmarksDb.createComment(undefined, actor, commentUrl, req.body.object.content, false);
+    tvshowDb.createComment(undefined, actor, commentUrl, req.body.object.content, false);
   }
 
   return res.status(200);
@@ -196,16 +196,17 @@ async function handleFollowedPost(req, res) {
 async function handleDeleteRequest(req, res) {
   console.log(JSON.stringify(req.body));
 
-  const bookmarksDb = req.app.get('bookmarksDb');
+  const tvshowDb = req.app.get('tvshowDb');
 
   const commentId = req.body?.object?.id;
 
   if (commentId) {
-    await bookmarksDb.deleteComment(commentId);
+    await tvshowDb.deleteComment(commentId);
   }
 
   return res.status(200);
 }
+
 
 router.post('/', async function (req, res) {
   // console.log(JSON.stringify(req.body));
@@ -230,7 +231,7 @@ router.post('/', async function (req, res) {
     const inReplyToGuid = req.body.object?.inReplyTo?.match(`https://${domain}/m/(.+)`)?.[1];
 
     if (inReplyToGuid) {
-      return handleCommentOnBookmark(req, res, inReplyToGuid);
+      return handleComment(req, res, inReplyToGuid);
     }
     return handleFollowedPost(req, res);
   }

@@ -22,6 +22,7 @@ try {
 }
 
 export const actorInfo = actorFileData;
+console.log('actorFileData', actorFileData)
 export const account = actorInfo.username || 'tvmarks';
 
 export const domain = (() => {

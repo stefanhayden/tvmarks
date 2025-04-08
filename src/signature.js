@@ -90,6 +90,7 @@ function getSignatureHeader(signature, signatureKeys) {
  * @returns {Promise<Response>}
  */
 export async function signedFetch(url, init = {}) {
+  console.log('getPrivateKey', `${account}@${domain}`)
   const privkey = await getPrivateKey(`${account}@${domain}`);
   if (!privkey) {
     throw new Error(`No private key found for ${account}.`);

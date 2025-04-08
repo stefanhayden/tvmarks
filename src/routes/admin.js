@@ -5,6 +5,7 @@ import { domain, actorInfo, parseJSON, data, account, removeEmpty } from '../uti
 import { isAuthenticated } from '../session-auth.js';
 import { lookupActorInfo, createFollowMessage, createUnfollowMessage, signAndSend, getInboxFromActorProfile } from '../activitypub.js';
 import tvMaze from 'node-tvmaze';
+import escapeHTML from 'escape-html';
 import { downloadImage } from '../download-image.js';
 import { broadcastMessage } from '../activitypub.js';
 import fs from 'fs';
@@ -409,11 +410,7 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
       const episodes = await tvMaze.episodes(req.params.showId, true);
       const epPromises = episodes.map(async (ep) => {
         let epImagePath = ep.image?.medium;
-        // TODO: this takes a long time. do something different?
-        // if (epImagePath) {
-        //   epImagePath = `shows/${show.id}_${show.url.split('/').reverse()[0]}_${ep.id}_s${ep.season}e${ep.number}`;
-        //   await downloadImage(ep.image?.medium, epImagePath);
-        // }
+
         await db.createEpisode({
           id: ep.id,
           show_id: req.params.showId,
@@ -435,9 +432,16 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
       await Promise.all(epPromises);
 
       const addedShow = await db.getShow(req.params.showId);
-      addedShow.actionType = 'addedShow';
-      addedShow.description = req.body.description;
-      broadcastMessage(addedShow, 'create', apDb, account, domain);
+      
+      // addedShow
+      const data = {
+        id: `show-${addedShow.id}`,
+        path: `show/${addedShow.id}`,
+        url: addedShow.url,
+        description: req.body.description,
+        title: `Started Watching: <a href="https://${domain}/show/${addedShow.id}" rel="nofollow noopener noreferrer">${escapeHTML(addedShow.name)}</a>`
+      }
+      broadcastMessage(data, 'create', apDb, account, domain);
 
       res.redirect(301, `/show/${show.id}`);
     }
@@ -463,19 +467,11 @@ router.post('/show/delete/:showId', isAuthenticated, async (req, res) => {
       db.deleteShow(req.params.showId);
       db.deleteEpisodesByShow(req.params.showId);
 
-      // TODO: if I download all episodes thumbnails I should delete them.
-      // delete all images
-      // const directory = 'public/shows';
-      // fs.readdir(directory, (err, files) => {
-      //   if (err) throw err;
-
-      //   for (const file of files) {
-      //     fs.unlink(path.join(directory, file), (err) => {
-      //       if (err) throw err;
-      //     });
-      //   }
-      // });
-      
+      const data = {
+        id: `show-${show.id}`,
+        path: `show/${show.id}`,
+        url: show.url
+      }
       broadcastMessage(show, 'delete', apDb, account, domain);
       
     }

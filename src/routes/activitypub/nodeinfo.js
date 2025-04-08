@@ -29,8 +29,8 @@ router.get('/', async (req, res) => {
   }
 
   if (req.originalUrl === '/nodeinfo/2.0') {
-    const bookmarksDb = req.app.get('bookmarksDb');
-    const bookmarkCount = await bookmarksDb.getBookmarkCount();
+    const tvshowDb = req.app.get('tvshowDb');
+    const showCount = await tvshowDb.getShowCount();
 
     const nodeInfo = {
       version: 2.0,
@@ -49,7 +49,7 @@ router.get('/', async (req, res) => {
           activeMonth: 1,
           activeHalfyear: 1,
         },
-        localPosts: bookmarkCount,
+        localPosts: showCount,
       },
       openRegistrations: false,
       metadata: {},
@@ -62,16 +62,16 @@ router.get('/', async (req, res) => {
   }
 
   if (req.originalUrl === '/nodeinfo/2.1') {
-    const bookmarksDb = req.app.get('bookmarksDb');
-    const bookmarkCount = await bookmarksDb.getBookmarkCount();
+    const tvshowDb = req.app.get('tvshowDb');
+    const showCount = await tvshowDb.getShowCount();
 
     const nodeInfo = {
       version: 2.1,
       software: {
         name: instanceType,
         version: instanceVersion,
-        repository: 'https://github.com/ckolderup/postmarks',
-        homepage: 'https://postmarks.glitch.me',
+        repository: 'https://github.com/stefanhayden/tvmarks',
+        homepage: 'https://tvmarks.glitch.me',
       },
       protocols: ['activitypub'],
       services: {
@@ -84,12 +84,12 @@ router.get('/', async (req, res) => {
           activeMonth: 1,
           activeHalfyear: 1,
         },
-        localPosts: bookmarkCount,
+        localPosts: showCount,
       },
       openRegistrations: false,
       metadata: {
         nodeName: 'Postmarks',
-        nodeDescription: 'A single-user bookmarking website designed to live on the Fediverse.',
+        nodeDescription: 'A single-user tv tracking website designed to live on the Fediverse.',
       },
     };
 

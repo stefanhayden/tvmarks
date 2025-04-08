@@ -19,8 +19,14 @@ router.get('/:guid', async (req, res) => {
   const db = req.app.get('apDb');
 
   if (!req.headers.accept?.includes('json')) {
-    const bookmarkId = await db.getBookmarkIdFromMessageGuid(guid);
-    return res.redirect(`/bookmark/${bookmarkId}`);
+    const id = await db.getIdFromMessageGuid(guid);
+    const parts = id.split('-');
+    const showId = parts[1];
+    const episodeId = parts[3];
+    if (episodeId) {
+      return res.redirect(`/show/${id}/episode/${episodeId}`);
+    }
+    return res.redirect(`/show/${id}`);
   }
 
   const result = await db.getMessage(guid);
