@@ -1,4 +1,4 @@
-# Contributing to Postmarks
+# Contributing to Tvmarks
 
 ## Table of Contents
 
@@ -6,21 +6,21 @@
 - [Governance](#governance-how-this-project-runs)
 - [Culture](#culture-code-of-conduct)
 - [Technical philosophy](#technical-philosophy-important-things-to-understand)
-- [Operations](#operations-how-to-develop-postmarks)
+- [Operations](#operations-how-to-develop-tvmarks)
 - [Submissions](#submissions-how-to-submit-changes)
 - [Acknowledgments](#acknowledgments-how-you-will-be-recognized)
 - [Changes/Suggestions](#changessuggestions)
 
 ## Welcome (Hi!)
 
-Thanks for reading! Postmarks was initially built over 2022-2023 with a spirit
+Thanks for reading! Tvmarks was initially built over 2025 with a spirit
 of creation and a desire to participate in the ecosystem of software being
 formed around the ActivityPub protocol and its associated technologies,
 sometimes referred to as "the Fediverse".
 
 It also comes from the thought that some earlier web products "got it right"--
-Postmarks comes most directly from a lineage of apps like del.icio.us and
-Pinboard, and seeks to bring the concepts of those platforms into an age where
+Tvmarks comes most directly from a lineage of apps like Tv Time and
+Tvmaze, and seeks to bring the concepts of those platforms into an age where
 connecting individuals who run interoperable software can create their own
 social networks on the internet without the need for centralization and profit
 as motivating factors.
@@ -51,7 +51,7 @@ original license.
 ## Culture (Code of Conduct)
 
 In the interests of making the fediverse a better place, we also strive to make
-the various spaces in which Postmarks' development takes place to be safe and
+the various spaces in which Tvmarks' development takes place to be safe and
 inclusive. Harassment and abuse are not welcome in these spaces.
 
 With that in mind, we've adopted the
