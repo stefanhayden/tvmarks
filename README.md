@@ -2,13 +2,10 @@
 
 ## About this project
 
-Tvmarks is a tv tracking site that you own yourself and can connect the Fediverse, interacting with other Tvmarks sites as well as Mastodon/FireFish/any text-based ActivityPub platform. You can read more about it here:
+Tvmarks is a tv tracking site that you own yourself and can connect the Fediverse, interacting with other Tvmarks sites as well as Mastodon/FireFish/any text-based ActivityPub platform.
 
-- [Getting Started](https://casey.kolderup.org/notes/b059694f5064c6c6285075c894a72317.html)
-- [Ethos](https://casey.kolderup.org/notes/edf3a659f52528da103ea4dcbb09f66f.html)
-- [Future Ideas](https://casey.kolderup.org/notes/9307f6d67bbfedbd215ae2d09caeab39.html)
 
-The site allows the owner to add, edit and delete bookmarks, but only if a valid login is provided.
+The site allows the owner to add shows and track which episodes you have watched, but only if a valid login is provided.
 Check the setup below to understand how to do that!
 
 ## Setting up your site
@@ -33,16 +30,16 @@ To set your app up:
 
 ## Mastodon Verification
 
-Setting `MASTODON_ACCOUNT` in the `.env` file will cause a link to be added to the Postmarks home page that can be used for verification with your Mastodon account. See the [Mastodon documentation](https://docs.joinmastodon.org/user/profile/#verification) for more details.
+Setting `MASTODON_ACCOUNT` in the `.env` file will cause a link to be added to the Tvmarks home page that can be used for verification with your Mastodon account. See the [Mastodon documentation](https://docs.joinmastodon.org/user/profile/#verification) for more details.
 
 ## Development & Contributions
 
-See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on how to work with Postmarks' development environment as well
+See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on how to work with Tvmarks' development environment as well
 as how to submit your changes for review.
 
 ## Acknowledgments
 
-- The "Tvmarks" name is based off the [Postmarks](https://postmarks.glitch.me/) app which this code was forked from.. Thank you!
+- The "Tvmarks" name is based off the [Tvmarks](https://tvmarks.glitch.me/) app which this code was forked from.. Thank you!
 - Tvmarks (in its default configuration) uses an edited version of ["Nuvola devices tv"](https://commons.wikimedia.org/wiki/File:Nuvola_devices_tv.svg) icon from Wikimedia commons.
 - It also makes use of free fonts including [Averia Sans](http://iotic.com/averia/) and [Public Sans](https://public-sans.digital.gov/).
 - Much of the original form of the site's frontend is lifted from the starter projects available on [Glitch](https://glitch.com). Thank you to all the people who have contributed to those projects over the years!

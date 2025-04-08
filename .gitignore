@@ -1,0 +1,12 @@
+.glitchdotcom.json
+.node-gyp
+node_modules
+.data/*
+!.data/.keep
+.env
+.sqlite_history
+*.patch
+request_logs.txt
+.DS_Store
+account.json
+public/shows/*
