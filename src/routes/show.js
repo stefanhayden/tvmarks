@@ -18,12 +18,12 @@ router.get("/:showId", async (req, res) => {
 
   const show = await tvshowDb.getShow(req.params.showId);
   params.show = show;
-  
-  const comments = isAuthenticated ? 
+  const comments = req.session.loggedIn ? 
         await tvshowDb.getAllComments(`show-${req.params.showId}`)
         : await tvshowDb.getVisibleComments(`show-${req.params.showId}`);
-  console.log('---comments', comments)
+
   params.comments = comments;
+  params.comment_count = comments.length || 0;
 
   const episodes = (await tvshowDb.getEpisodesByShowId(req.params.showId)).map(
     (e) => {
@@ -221,8 +221,14 @@ router.get("/:showId/episode/:episodeId", async (req, res) => {
   params.episode = episode;
   
   
-  const comments = await tvshowDb.getAllComments(`show-${req.params.showId}-episode-${req.params.episodeId}`);
+
+  const comments = req.session.loggedIn ? 
+        await tvshowDb.getAllComments(`show-${req.params.showId}-episode-${req.params.episodeId}`)
+        : await tvshowDb.getVisibleComments(`show-${req.params.showId}-episode-${req.params.episodeId}`);
+  
+  // const comments = await tvshowDb.getAllComments(`show-${req.params.showId}-episode-${req.params.episodeId}`);
   params.comments = comments;
+  params.comment_count = comments.length || 0;
   
   const permissions = await apDb.getPermissions(`show-${req.params.showId}-episode-${req.params.episodeId}`);
   params.allowed = permissions?.allowed;
