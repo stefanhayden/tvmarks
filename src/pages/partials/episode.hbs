@@ -42,7 +42,9 @@
           {{/if}}
         {{/if}}
       </div>
+      {{#if @root.loggedIn}}
       <small style="text-align: right;"><a href="/show/{{episode.show_id}}/episode/{{episode.id}}">add note</a></small>
+      {{/if}}
     </div>
   </div>
 </div>
