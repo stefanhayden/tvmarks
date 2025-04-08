@@ -132,10 +132,21 @@ open({
         },
       ];
 
-      await db.run(
-        'CREATE TABLE comments (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, url TEXT, content TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, visible integer BOOLEAN DEFAULT 0 NOT NULL CHECK (visible IN (0,1)), bookmark_id INTEGER, FOREIGN KEY(bookmark_id) REFERENCES bookmarks(id) ON DELETE CASCADE);',
-      );
-      await db.run('CREATE UNIQUE INDEX comments_url ON comments(url)');
+      // await db.run(
+      //   `CREATE TABLE comments
+      //     (
+      //       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      //       name TEXT,
+      //       url TEXT,
+      //       content TEXT,
+      //       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      //       visible integer BOOLEAN DEFAULT 0 NOT NULL CHECK (visible IN (0,1)),
+      //       bookmark_id INTEGER,
+      //       FOREIGN KEY(bookmark_id) REFERENCES 
+      //         bookmarks(id) ON DELETE CASCADE
+      //     );`,
+      // );
+      // await db.run('CREATE UNIQUE INDEX comments_url ON comments(url)');
 
       const defaultsAsValuesList = defaults.map((b) => `('${b.title}', '${b.url}', '${b.description}', '${b.tags}')`).join(', ');
       db.run(`INSERT INTO bookmarks (title, url, description, tags) VALUES ${defaultsAsValuesList}`);

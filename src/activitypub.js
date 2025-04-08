@@ -28,43 +28,30 @@ export async function signAndSend(message, name, domain, db, targetDomain, inbox
   }
 }
 
-export function createNoteObject(show, account, domain) {
+export function createNoteObject(data, account, domain) {
   const guidNote = crypto.randomBytes(16).toString('hex');
   const d = new Date();
 
-  const updatedShow = show;
-  updatedShow.titleText = `<a href="https://${domain}/show/${updatedShow.id}" rel="nofollow noopener noreferrer">${updatedShow.name}</a>`
+  let titleText = `<a href="https://${domain}/${data.path}" rel="nofollow noopener noreferrer">${data.name}</a>`
 
-  updatedShow.name = escapeHTML(show.name);
-  updatedShow.description = escapeHTML(show.description || '');
+  // const name = escapeHTML(data.name);
+  let description = escapeHTML(data.description || '');
 
-  if (updatedShow.description?.trim().length > 0) {
-    updatedShow.description = updatedShow.description ? `<br/><br/>${updatedShow.description?.trim().replace('\n', '<br/>') || ''}` : '';
-  }
-  
-  if (updatedShow.actionType === 'addedShow') {
-    updatedShow.titleText = `Started Watching: ${updatedShow.titleText}`
-  }
-  
-  if (updatedShow.actionType === 'addedEpisode') {
-    updatedShow.titleText = `${updatedShow.titleText}: Watched s${updatedShow.actionValue.season}e${updatedShow.actionValue.number}`
-  }
-  
-  if (updatedShow.actionType === 'addedSeason') {
-    updatedShow.titleText = `${updatedShow.titleText}: Season ${updatedShow.actionValue} finished`
-  }
-  
-  if (updatedShow.actionType === 'finishedShow') {
-    updatedShow.titleText = `${updatedShow.titleText}: Completed series!`
+  if (description?.trim().length > 0) {
+    description = description ? `<br/><br/>${description?.trim().replace('\n', '<br/>') || ''}` : '';
   }
 
+  const content = `<p><strong>${data.title}</strong>${description}</p>`;
   const noteMessage = {
     '@context': 'https://www.w3.org/ns/activitystreams',
     id: `https://${domain}/m/${guidNote}`,
     type: 'Note',
     published: d.toISOString(),
     attributedTo: `https://${domain}/u/${account}`,
-    content: `<p><strong>${updatedShow.titleText}</strong>${updatedShow.description}</p>`,
+    content: content,
+    contentMap: {
+      EN: content,
+    },
     to: [`https://${domain}/u/${account}/followers/`, 'https://www.w3.org/ns/activitystreams#Public'],
     tag: [
       {
@@ -76,7 +63,7 @@ export function createNoteObject(show, account, domain) {
   };
 
   try {
-    const showHashTag = show.url
+    const showHashTag = data.url
       .split('/')
       .reverse()[0]
       .split('-')
@@ -101,7 +88,7 @@ export function createNoteObject(show, account, domain) {
   return noteMessage;
 }
 
-function createMessage(noteObject, showId, account, domain, db) {
+function createMessage(noteObject, dataId, account, domain, db) {
   const guidCreate = crypto.randomBytes(16).toString('hex');
 
   const message = {
@@ -113,28 +100,24 @@ function createMessage(noteObject, showId, account, domain, db) {
     object: noteObject,
   };
 
-  db.insertMessage(getGuidFromPermalink(noteObject.id), showId, JSON.stringify(noteObject));
+  db.insertMessage(getGuidFromPermalink(noteObject.id), dataId, JSON.stringify(noteObject));
 
   return message;
 }
 
-async function createUpdateMessage(show, account, domain, db) {
-  const guid = await db.getGuidForShowId(show.id);
-
-  // if the bookmark was created but not published to activitypub
-  // we might need to just make our own note object to send along
-  let note;
-  if (guid === undefined) {
-    note = createNoteObject(show, account, domain);
-    createMessage(note, show.id, account, domain, db);
-  } else {
-    note = `https://${domain}/m/${guid}`;
-  }
+async function createUpdateMessage(data, account, domain, db) {
+  const guid = await db.getGuidForId(data.id);
+  
+  let note = {
+    ...createNoteObject(data, account, domain),
+    id: `https://${domain}/m/${guid}`,
+    updated: (new Date()).toISOString()
+  };
 
   const updateMessage = {
     '@context': ['https://www.w3.org/ns/activitystreams', 'https://w3id.org/security/v1'],
     summary: `${account} updated the show`,
-    type: 'Create', // this should be 'Update' but Mastodon does weird things with Updates
+    type: 'Update',
     actor: `https://${domain}/u/${account}`,
     object: note,
   };
@@ -231,7 +214,7 @@ export async function lookupActorInfo(actorUsername) {
   }
 }
 
-export async function broadcastMessage(show, action, db, account, domain) {
+export async function broadcastMessage(data, action, db, account, domain) {
   if (actorInfo.disabled) {
     return; // no fediverse setup, so no purpose trying to send messages
   }
@@ -242,7 +225,7 @@ export async function broadcastMessage(show, action, db, account, domain) {
   if (followers === null) {
     console.log(`No followers for account ${account}@${domain}`);
   } else {
-    const showPermissions = await db.getPermissionsForShow(show.id);
+    const showPermissions = await db.getPermissions(data.id);
     const globalPermissions = await db.getGlobalPermissions();
     const blocklist =
       showPermissions?.blocked
@@ -259,22 +242,17 @@ export async function broadcastMessage(show, action, db, account, domain) {
       return !matches?.some((x) => x);
     });
 
-    const noteObject = createNoteObject(show, account, domain);
+    const noteObject = createNoteObject(data, account, domain);
     let message;
-    // addShow
-    // removeShow
-    // watchEpisode
-    // unwatchEpisode
-    // finnishShow
     switch (action) {
       case 'create':
-        message = createMessage(noteObject, show.id, account, domain, db);
+        message = createMessage(noteObject, data.id, account, domain, db);
         break;
       case 'update':
-        message = await createUpdateMessage(show, account, domain, db);
+        message = await createUpdateMessage(data, account, domain, db);
         break;
       case 'delete':
-        message = await createDeleteMessage(show, account, domain, db);
+        message = await createDeleteMessage(data, account, domain, db);
         break;
       default:
         console.log('unsupported action!');

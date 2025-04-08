@@ -58,6 +58,14 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     };
   }
 
+  function massageBookmark(bookmark) {
+    return addBookmarkDomain(insertRelativeTimestamp(bookmark));
+  }
+
+  function massageComment(comment) {
+    return generateLinkedDisplayName(stripMentionFromComment(stripHtmlFromComment(insertRelativeTimestamp(comment))));
+  }
+  
   /*
   We're using the sqlite wrapper so that we can make async / await connections
   - https://www.npmjs.com/package/sqlite
@@ -94,61 +102,77 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
           // Database doesn't exist yet - create Bookmarks table
           await db.run(
             `CREATE TABLE shows (
-          id INTEGER PRIMARY KEY,
-          tvrage_id	INTEGER,
-          thetvdb_id INTEGER,
-          imdb_id	TEXT,
-          url TEXT,
-          summary TEXT,
-          name TEXT, 
-          type TEXT,
-          language TEXT,
-          status TEXT, -- "Ended", "In Development", "Running", "To Be Determined"
-          runtime INTEGER, 
-          averageRuntime INTEGER, 
-          premiered TEXT, 
-          ended	TEXT, 
-          officialSite TEXT, 
-          network_name TEXT, 
-          network_country TEXT, 
-          network_country_code TEXT, 
-          network_country_timezone TEXT,
-          image TEXT,
-          note TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );`,
+              id INTEGER PRIMARY KEY,
+              tvrage_id	INTEGER,
+              thetvdb_id INTEGER,
+              imdb_id	TEXT,
+              url TEXT,
+              summary TEXT,
+              name TEXT, 
+              type TEXT,
+              language TEXT,
+              status TEXT, -- "Ended", "In Development", "Running", "To Be Determined"
+              runtime INTEGER, 
+              averageRuntime INTEGER, 
+              premiered TEXT, 
+              ended	TEXT, 
+              officialSite TEXT, 
+              network_name TEXT, 
+              network_country TEXT, 
+              network_country_code TEXT, 
+              network_country_timezone TEXT,
+              image TEXT,
+              note TEXT,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );`
           );
           console.log('Table shows created');
 
           await db.run(
             `CREATE TABLE episodes (
-          id INTEGER PRIMARY KEY,
-          show_id INTEGER,
-          url TEXT,
-          name TEXT, 
-          season INTEGER, 
-          number INTEGER, 
-          type TEXT,
-          airdate	TEXT,
-          airtime	TEXT,
-          airstamp	DATETIME,
-          runtime	INTEGER,
-          image TEXT,
-          summary TEXT,
-          note TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          watched_at DATETIME DEFAULT NULL,
-          watched_status TEXT
-        );`,
+              id INTEGER PRIMARY KEY,
+              show_id INTEGER,
+              url TEXT,
+              name TEXT, 
+              season INTEGER, 
+              number INTEGER, 
+              type TEXT,
+              airdate	TEXT,
+              airtime	TEXT,
+              airstamp	DATETIME,
+              runtime	INTEGER,
+              image TEXT,
+              summary TEXT,
+              note TEXT,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              watched_at DATETIME DEFAULT NULL,
+              watched_status TEXT
+            );`,
           );
           console.log('Table episodes created');
 
           await db.run(
+            `CREATE TABLE comments
+              (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT,
+                url TEXT,
+                content TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                visible integer BOOLEAN DEFAULT 0 NOT NULL CHECK (visible IN (0,1)),
+                resource_id TEXT
+              );`,
+          );
+          // stops duplicate commnents from being created
+          await db.run('CREATE UNIQUE INDEX comments_url ON comments(url)');
+
+          // track when last time we pulled in show data from 3rd party
+          await db.run(
             `CREATE TABLE update_history (
-          last_checked DATETIME DEFAULT CURRENT_TIMESTAMP
-        );`,
+              last_checked DATETIME DEFAULT CURRENT_TIMESTAMP
+            );`,
           );
           await db.run(`INSERT INTO update_history (last_checked) VALUES (CURRENT_DATE);`);
           console.log('Update shows created');
@@ -512,6 +536,21 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     return undefined;
   };
 
+  const updateEpisodeNote = async (id, note) => {
+    try {
+      await db.run(
+        `UPDATE episodes SET note = ? WHERE id = ?`,
+        note,
+        id,
+      );
+
+      return await db.get('SELECT * from episodes WHERE id = ?', id);
+    } catch (dbError) {
+      console.error(dbError);
+    }
+    return undefined;
+  };
+
   const createShow = async (body) => {
     try {
       const keys = Object.keys(body);
@@ -683,17 +722,17 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     }
   };
 
-  const createComment = async (bookmarkId, name, url, content, visible = 0) => {
+  const createComment = async (showEpisodeId, name, url, content, visible = 0) => {
     try {
-      await db.run('INSERT INTO comments (name, url, content, bookmark_id, visible) VALUES (?, ?, ?, ?, ?)', name, url, content, bookmarkId, visible);
+      await db.run('INSERT INTO comments (name, url, content, resource_id, visible) VALUES (?, ?, ?, ?, ?)', name, url, content, showEpisodeId, visible);
     } catch (dbError) {
       console.error(dbError);
     }
   };
 
-  const deleteComment = async (url) => {
+  const deleteComment = async (showEpisodeId) => {
     try {
-      await db.run('DELETE FROM comments WHERE url = ?', url);
+      await db.run('DELETE FROM comments WHERE resource_id = ?', showEpisodeId);
     } catch (dbError) {
       console.error(dbError);
     }
@@ -707,9 +746,9 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     }
   };
 
-  const getAllCommentsForBookmark = async (bookmarkId) => {
+  const getAllComments = async (showEpisodeId) => {
     try {
-      const results = await db.all('SELECT * FROM comments WHERE bookmark_id = ?', bookmarkId);
+      const results = await db.all('SELECT * FROM comments WHERE resource_id = ?', showEpisodeId);
       return results.map((c) => massageComment(c));
     } catch (dbError) {
       console.error(dbError);
@@ -717,9 +756,9 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     return undefined;
   };
 
-  const getVisibleCommentsForBookmark = async (bookmarkId) => {
+  const getVisibleComments = async (showEpisodeId) => {
     try {
-      const results = await db.all('SELECT * FROM comments WHERE visible = 1 AND bookmark_id = ?', bookmarkId);
+      const results = await db.all('SELECT * FROM comments WHERE visible = 1 AND resource_id = ?', showEpisodeId);
       return results.map((c) => massageComment(c));
     } catch (dbError) {
       console.error(dbError);
@@ -727,9 +766,9 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     return undefined;
   };
 
-  const deleteHiddenCommentsForBookmark = async (bookmarkId) => {
+  const deleteHiddenComments = async (showEpisodeId) => {
     try {
-      await db.run('DELETE FROM comments WHERE visible = 0 AND bookmark_id = ?', bookmarkId);
+      await db.run('DELETE FROM comments WHERE visible = 0 AND resource_id = ?', showEpisodeId);
     } catch (dbError) {
       console.error(dbError);
     }
@@ -793,6 +832,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     getEpisode,
     getEpisodesByShowId,
     updateEpisodeWatchStatus,
+    updateEpisodeNote,
     createShow,
     updateShow,
     deleteShow,
@@ -803,9 +843,9 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     createComment,
     deleteComment,
     toggleCommentVisibility,
-    getAllCommentsForBookmark,
-    getVisibleCommentsForBookmark,
-    deleteHiddenCommentsForBookmark,
+    getAllComments,
+    getVisibleComments,
+    deleteHiddenComments,
     deleteAllShows,
     deleteAllEpisodes,
     getAllInProgressShows,

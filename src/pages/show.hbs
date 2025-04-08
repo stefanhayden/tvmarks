@@ -57,6 +57,83 @@
     </div>
     {{/each}}
   </div>
+
+
+<fieldset style="border:1px solid; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+  <legend>
+    Show details
+  </legend>
+<form method="post" action="/show/{{episode.show_id}}">
+  <textarea name="note" placeholder="Add a note" style="width: 100%; height: 100px; margin-bottom: 10px; background: #fdf7fc">{{episode.note}}</textarea>
+
+  {{#if @root.loggedIn}}
+  <details class="form-group">
+    <summary>
+      <label for="bookmark_allowed">
+        Auto-allow comments from (one username per line)
+      </label>
+    </summary>
+    <textarea
+      id="bookmark_allowed"
+      name="allowed"
+    >{{allowed}}</textarea>
+  </details>
+  <details class="form-group">
+    <summary>
+      <label for="bookmark_blocked">
+        Auto-ignore comments from (one username per line)
+      </label>
+    </summary>
+    <textarea
+      id="bookmark_blocked"
+      name="blocked"
+    >{{blocked}}</textarea>
+  </details>
+  {{/if}}
+  {{#if @root.loggedIn}}
+    <div style="display: flex; justify-content: end;">
+      <button>Save</button>
+    </div>
+  {{/if}}
+</form>
+</fieldset>
+
+  {{#if @root.loggedIn}}
+    <h2>Review comments ({{comments.length}})</h2>
+    {{#each comments}}
+      {{> show_comment comment=this admin=true}}
+    {{else}}
+      <div style="margin-bottom: 20px;">
+        No comments yet!
+      </div>
+    {{/each}}
+  {{/if}}
+
+  {{#unless @root.loggedIn}}
+    {{#if comments}}
+      <h2>
+        {{bookmark.comment_count}}
+        {{pluralize bookmark.comment_count "comment" "comments"}}
+      </h2>
+
+      {{#each comments }}
+        {{> show_comment comment=this }}
+      {{/each}}
+    {{/if}}
+  {{/unless}}
+
+  <h2>
+    The Danger Zone
+  </h2>
+  <form action="/show/{{episode.show_id}}/episode/{{episode.id}}/delete_hidden_comments" method="post" style="margin-bottom: 20px;">
+    <p>
+      Delete all hidden comments? They can't be recovered.
+    </p>
+    <button type="submit">Cleanup</button>
+  </form>
+
+
+
   <div style="float: right;">
     {{#if @root.loggedIn}}
       <form method="post" action="/admin/show/delete/{{{show.id}}}">
