@@ -18,7 +18,7 @@ function getDigest(data) {
 /**
  * Returns base-64 encoded string signed with user's RSA private key
  *
- * @param {string} privkey - Postmarks user's private key
+ * @param {string} privkey - Tvmarks user's private key
  * @param {string} data - UTF-8 string to sign
  *
  * @returns {string}

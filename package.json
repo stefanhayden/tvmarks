@@ -38,7 +38,7 @@
     "node": ">=16.x"
   },
   "repository": {
-    "url": "https://github.com/ckolderup/postmarks"
+    "url": "https://github.com/stefanhayden/tvmarks"
   },
   "license": "MIT",
   "keywords": [

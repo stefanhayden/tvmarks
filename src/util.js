@@ -112,7 +112,7 @@ export function actorMatchesUsername(actor, username) {
 
   const actorResult = actor.match(/^https?:\/\/([^/]+)\/u(ser)?s?\/(.+)$/);
   if (actorResult?.length !== 4) {
-    console.log(`found an unparseable actor: ${actor}. Report this to https://github.com/ckolderup/postmarks/issues !`);
+    console.log(`found an unparseable actor: ${actor}. Report this to https://github.com/stefanhayden/tvmarks/issues !`);
   }
 
   return actorAccount === actorResult[3] && actorDomain === actorResult[1];

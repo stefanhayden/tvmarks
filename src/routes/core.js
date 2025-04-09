@@ -66,9 +66,10 @@ router.get('/about', async (req, res) => {
 });
 
 router.get('/network', isAuthenticated, async (req, res) => {
-  const bookmarksDb = req.app.get('bookmarksDb');
+  const tvshowDb = req.app.get('tvshowDb');
+  // const bookmarksDb = req.app.get('bookmarksDb');
 
-  const posts = await bookmarksDb.getNetworkPosts();
+  const posts = await tvshowDb.getNetworkPosts();
 
   // TODO: make quickadd able to select from list of links in post
   const linksInPosts = posts.map((post) => ({
@@ -81,24 +82,22 @@ router.get('/network', isAuthenticated, async (req, res) => {
 
 router.get('/index.xml', async (req, res) => {
   const params = {};
-  const bookmarksDb = req.app.get('bookmarksDb');
+  const tvshowDb = req.app.get('tvshowDb');
 
-  const bookmarks = await bookmarksDb.getBookmarks(20, 0);
-  if (!bookmarks) params.error = data.errorMessage;
+  const shows = await tvshowDb.getShows(20, 0);
+  if (!shows) params.error = data.errorMessage;
 
-  if (bookmarks && bookmarks.length < 1) {
+  if (shows && shows.length < 1) {
     params.setup = data.setupMessage;
   } else {
-    params.bookmarks = bookmarks.map((bookmark) => {
-      const tagArray = bookmark.tags?.split(' ').map((b) => b.slice(1)) ?? [];
-      const createdAt = new Date(`${bookmark.created_at}Z`);
+    params.shows = shows.map((show) => {
+      const createdAt = new Date(`${show.created_at}Z`);
       return {
-        tag_array: tagArray,
-        ...bookmark,
+        ...show,
         created_at: createdAt.toISOString(),
       };
     });
-    const lastUpdated = new Date(bookmarks[0].created_at);
+    const lastUpdated = new Date(shows[0].created_at);
     params.last_updated = lastUpdated.toISOString();
   }
 
@@ -106,32 +105,5 @@ router.get('/index.xml', async (req, res) => {
   params.layout = false;
 
   res.type('application/atom+xml');
-  return res.render('bookmarks-xml', params);
-});
-
-router.get('/tagged/*.xml', async (req, res) => {
-  const tags = req.params[0].split('/');
-
-  const params = {};
-  const bookmarksDb = req.app.get('bookmarksDb');
-
-  const bookmarks = await bookmarksDb.getBookmarksForTags(tags, 20, 0);
-
-  if (!bookmarks) params.error = data.errorMessage;
-
-  if (bookmarks && bookmarks.length < 1) {
-    params.setup = data.setupMessage;
-  } else {
-    params.bookmarks = bookmarks.map((bookmark) => {
-      const tagArray = bookmark.tags.split(' ').map((b) => b.slice(1));
-      return { tag_array: tagArray, ...bookmark };
-    });
-    params.last_updated = bookmarks[0].created_at;
-  }
-
-  params.feedTitle = `${req.app.get('site_name')}: Bookmarks tagged '${tags.join(' and ')}'`;
-  params.layout = false;
-
-  res.type('application/atom+xml');
-  return res.render('bookmarks-xml', params);
+  return res.render('shows-xml', params);
 });

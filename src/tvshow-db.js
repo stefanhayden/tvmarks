@@ -721,6 +721,17 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       console.error(dbError);
     }
   };
+  
+  const getNetworkPosts = async () => {
+    try {
+      const result = await db.all('SELECT * from comments WHERE resource_id IS NULL ORDER BY created_at DESC');
+
+      return result;
+    } catch (dbError) {
+      console.error(dbError);
+    }
+    return undefined;
+  }
 
   const createComment = async (showEpisodeId, name, url, content, visible = 0) => {
     try {
