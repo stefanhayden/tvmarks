@@ -21,6 +21,5 @@
       }
     ]
   },
-  "files": ["**/*.spec.js", "**/*.test.js"],
   "plugins": ["jest"]
 }
