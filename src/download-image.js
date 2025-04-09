@@ -23,8 +23,8 @@ export function downloadImage(imageUrl, imagePath) {
       })
       .on('error', (err) => {
         console.log('http error image download: ', err);
-        fs.unlink(path, (err) => {
-          if (err) console.log('fs unlink error: ', err);
+        fs.unlink(path, (err2) => {
+          if (err2) console.log('fs unlink error: ', err2);
         });
         console.error(`Error downloading image: ${err.message}`, imageUrl, imagePath);
         reject();
