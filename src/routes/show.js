@@ -24,12 +24,12 @@ router.get('/:showId', async (req, res) => {
   params.comment_count = comments.length || 0;
 
   const episodes = (await tvshowDb.getEpisodesByShowId(req.params.showId)).map((e) => {
-    const days_untill = Math.round((now - new Date(e.airdate)) / (24 * 60 * 60 * 1000));
+    const daysUntill = Math.round((now - new Date(e.airdate)) / (24 * 60 * 60 * 1000));
     return {
       ...e,
       isWatched: e.watched_status === 'WATCHED',
       not_aired: new Date(e.airdate) > now,
-      days_untill: days_untill < 0 ? Math.abs(days_untill) : 0,
+      days_untill: daysUntill < 0 ? Math.abs(daysUntill) : 0,
     };
   });
 

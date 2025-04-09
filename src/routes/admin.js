@@ -210,7 +210,7 @@ router.post('/followers/unblock', isAuthenticated, async (req, res) => {
 
 router.post('/following/follow', isAuthenticated, async (req, res) => {
   const db = req.app.get('apDb');
-  const account = req.app.get('account');
+  const accountObj = req.app.get('account');
 
   const canonicalUrl = await lookupActorInfo(req.body.actor);
 
@@ -218,8 +218,8 @@ router.post('/following/follow', isAuthenticated, async (req, res) => {
     const inbox = await getInboxFromActorProfile(canonicalUrl);
 
     if (inbox) {
-      const followMessage = await createFollowMessage(account, domain, canonicalUrl, db);
-      signAndSend(followMessage, account, domain, db, req.body.actor.split('@').slice(-1), inbox);
+      const followMessage = await createFollowMessage(accountObj, domain, canonicalUrl, db);
+      signAndSend(followMessage, accountObj, domain, db, req.body.actor.split('@').slice(-1), inbox);
     }
 
     return res.redirect('/admin/following');
@@ -231,7 +231,7 @@ router.post('/following/follow', isAuthenticated, async (req, res) => {
 
 router.post('/following/unfollow', isAuthenticated, async (req, res) => {
   const db = req.app.get('apDb');
-  const account = req.app.get('account');
+  const accountObj = req.app.get('account');
 
   const oldFollowsText = (await db.getFollowing()) || '[]';
 
@@ -245,9 +245,9 @@ router.post('/following/unfollow', isAuthenticated, async (req, res) => {
 
     const inbox = await getInboxFromActorProfile(req.body.actor);
 
-    const unfollowMessage = createUnfollowMessage(account, domain, req.body.actor, db);
+    const unfollowMessage = createUnfollowMessage(accountObj, domain, req.body.actor, db);
 
-    signAndSend(unfollowMessage, account, domain, db, new URL(req.body.actor).hostname, inbox);
+    signAndSend(unfollowMessage, accountObj, domain, db, new URL(req.body.actor).hostname, inbox);
 
     const newFollowsText = JSON.stringify(follows);
 
@@ -281,8 +281,8 @@ router.post('/reset', isAuthenticated, async (req, res) => {
     if (err) throw err;
 
     files.forEach((file) => {
-      fs.unlink(path.join(directory, file), (err) => {
-        if (err) throw err;
+      fs.unlink(path.join(directory, file), (err2) => {
+        if (err2) throw err2;
       });
     });
   });
@@ -389,77 +389,78 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
   const apDb = req.app.get('apDb');
   const db = req.app.get('tvshowDb');
   try {
-    if (req.params.showId) {
-      await db.deleteShow(req.params.showId);
-      await db.deleteEpisodesByShow(req.params.showId);
-      await db.deleteEpisodesByShow(null);
-
-      const show = await tvMaze.show(req.params.showId);
-
-      const fileExt = show.image.medium.split('.').reverse()[0];
-      const showImagePath = `shows/${show.id}_${show.url.split('/').reverse()[0]}.${fileExt}`;
-      await downloadImage(show.image.medium, showImagePath);
-      await db.createShow({
-        id: show.id,
-        tvrage_id: show.externals.tvrage,
-        thetvdb_id: show.externals.thetvdb,
-        imdb_id: show.externals.imdb,
-        url: show.url,
-        summary: show.summary,
-        name: show.name,
-        type: show.type,
-        language: show.language,
-        status: show.status,
-        runtime: show.runtime,
-        averageRuntime: show.averageRuntime,
-        premiered: show.premiered,
-        ended: show.ended,
-        officialSite: show.officialSite,
-        network_name: show.network?.name,
-        network_country: show.network?.country.name,
-        network_country_code: show.network?.country.code,
-        network_country_timezone: show.network?.country.timezone,
-        image: `/${showImagePath}`,
-      });
-
-      const episodes = await tvMaze.episodes(req.params.showId, true);
-      const epPromises = episodes.map(async (ep) => {
-        await db.createEpisode({
-          id: ep.id,
-          show_id: req.params.showId,
-          url: ep.url,
-          name: ep.name,
-          season: ep.season,
-          number: ep.number,
-          type: ep.type,
-          airdate: ep.airdate,
-          airtime: ep.airtime,
-          airstamp: ep.airstamp,
-          runtime: ep.runtime,
-          image: ep.image?.medium,
-          summary: ep.summary,
-          watched_at: null,
-        });
-      });
-
-      await Promise.all(epPromises);
-
-      const addedShow = await db.getShow(req.params.showId);
-
-      // addedShow
-      const data = {
-        id: `show-${addedShow.id}`,
-        path: `show/${addedShow.id}`,
-        url: addedShow.url,
-        description: req.body.description,
-        title: `Started Watching: <a href="https://${domain}/show/${addedShow.id}" rel="nofollow noopener noreferrer">${escapeHTML(
-          addedShow.name,
-        )}</a>`,
-      };
-      broadcastMessage(data, 'create', apDb, account, domain);
-
-      return res.redirect(301, `/show/${show.id}`);
+    if (!req.params.showId) {
+      throw new Error('no show id provided');
     }
+    await db.deleteShow(req.params.showId);
+    await db.deleteEpisodesByShow(req.params.showId);
+    await db.deleteEpisodesByShow(null);
+
+    const show = await tvMaze.show(req.params.showId);
+
+    const fileExt = show.image.medium.split('.').reverse()[0];
+    const showImagePath = `shows/${show.id}_${show.url.split('/').reverse()[0]}.${fileExt}`;
+    await downloadImage(show.image.medium, showImagePath);
+    await db.createShow({
+      id: show.id,
+      tvrage_id: show.externals.tvrage,
+      thetvdb_id: show.externals.thetvdb,
+      imdb_id: show.externals.imdb,
+      url: show.url,
+      summary: show.summary,
+      name: show.name,
+      type: show.type,
+      language: show.language,
+      status: show.status,
+      runtime: show.runtime,
+      averageRuntime: show.averageRuntime,
+      premiered: show.premiered,
+      ended: show.ended,
+      officialSite: show.officialSite,
+      network_name: show.network?.name,
+      network_country: show.network?.country.name,
+      network_country_code: show.network?.country.code,
+      network_country_timezone: show.network?.country.timezone,
+      image: `/${showImagePath}`,
+    });
+
+    const episodes = await tvMaze.episodes(req.params.showId, true);
+    const epPromises = episodes.map(async (ep) => {
+      await db.createEpisode({
+        id: ep.id,
+        show_id: req.params.showId,
+        url: ep.url,
+        name: ep.name,
+        season: ep.season,
+        number: ep.number,
+        type: ep.type,
+        airdate: ep.airdate,
+        airtime: ep.airtime,
+        airstamp: ep.airstamp,
+        runtime: ep.runtime,
+        image: ep.image?.medium,
+        summary: ep.summary,
+        watched_at: null,
+      });
+    });
+
+    await Promise.all(epPromises);
+
+    const addedShow = await db.getShow(req.params.showId);
+
+    // addedShow
+    const data = {
+      id: `show-${addedShow.id}`,
+      path: `show/${addedShow.id}`,
+      url: addedShow.url,
+      description: req.body.description,
+      title: `Started Watching: <a href="https://${domain}/show/${addedShow.id}" rel="nofollow noopener noreferrer">${escapeHTML(
+        addedShow.name,
+      )}</a>`,
+    };
+    broadcastMessage(data, 'create', apDb, account, domain);
+
+    return res.redirect(301, `/show/${show.id}`);
   } catch (err) {
     console.log(err);
     return res.status(500).send('Internal Server Error');
