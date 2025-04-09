@@ -207,7 +207,6 @@ async function handleDeleteRequest(req, res) {
   return res.status(200);
 }
 
-
 router.post('/', async function (req, res) {
   // console.log(JSON.stringify(req.body));
 

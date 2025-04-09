@@ -7,12 +7,11 @@ import { refreshShowData } from './admin.js';
 const router = express.Router();
 export default router;
 
-
 router.get('/', async (req, res) => {
   let params = {};
-  
+
   if (req.session.loggedIn) {
-    refreshShowData(req, res)
+    refreshShowData(req, res);
   }
 
   const tvshowDb = req.app.get('tvshowDb');
@@ -25,8 +24,8 @@ router.get('/', async (req, res) => {
   const showsCompleted = await tvshowDb.getShowsCompleted();
   const showsUpToDate = await tvshowDb.getShowsUpToDate();
   const showsAbandoned = await tvshowDb.getShowsAbandoned();
-  const showsToWatch = await tvshowDb.getShowsToWatch()
-// test
+  const showsToWatch = await tvshowDb.getShowsToWatch();
+  // test
   params = {
     ...params,
     shows,

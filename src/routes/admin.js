@@ -27,16 +27,14 @@ router.get('/update', isAuthenticated, async (req, res) => {
   const params = req.query.raw ? {} : { title: 'Update Show data' };
   params.adminLinks = ADMIN_LINKS;
   params.currentPath = req.originalUrl;
-  
-  
+
   const tvshowDb = req.app.get('tvshowDb');
-  
+
   const updateHistory = await tvshowDb.getUpdateHistory();
   const isRecentlyUpdated = await tvshowDb.isRecentlyUpdated();
-  
+
   params.updateHistory = updateHistory;
   params.isRecentlyUpdated = isRecentlyUpdated;
-
 
   return res.render('admin/update', params);
 });

@@ -39,7 +39,7 @@ router.get('/:guid', async (req, res) => {
   if (isActivity) {
     object = synthesizeActivity(object);
   }
-  
+
   res.setHeader('Content-Type', 'application/activity+json');
   return res.json(object);
 });

@@ -1,8 +1,8 @@
 import express from 'express';
+import escapeHTML from 'escape-html';
 import { account, domain, removeEmpty } from '../util.js';
 import { isAuthenticated } from '../session-auth.js';
 import { broadcastMessage } from '../activitypub.js';
-import escapeHTML from 'escape-html';
 
 const router = express.Router();
 export default router;
