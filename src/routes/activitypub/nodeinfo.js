@@ -88,7 +88,7 @@ router.get('/', async (req, res) => {
       },
       openRegistrations: false,
       metadata: {
-        nodeName: 'Postmarks',
+        nodeName: 'Tvmarks',
         nodeDescription: 'A single-user tv tracking website designed to live on the Fediverse.',
       },
     };

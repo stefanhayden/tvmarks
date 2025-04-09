@@ -7,20 +7,17 @@
   <author>
     <name>{{account}}</name>
   </author>
-  {{#each bookmarks}}
+  {{#each shows}}
     <entry>
       <title>{{setTitle this}}</title>
       <link rel="alternate" href="{{url}}"/>
-      <id>{{projectUrl}}/bookmark/{{id}}</id>
+      <id>{{projectUrl}}/show/{{id}}</id>
       <updated>{{created_at}}</updated>
       {{#if description }}
         <summary type="html">{{description}}</summary>
       {{ else }}
         <summary type="html"> </summary>
       {{/if}}
-      {{#each tag_array}}
-        <category term="{{this}}" />
-      {{/each}}
     </entry>
   {{/each}}
 </feed>

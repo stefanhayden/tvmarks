@@ -6,7 +6,6 @@ import escapeHTML from 'escape-html';
 
 import { domain, account, simpleLogger, actorInfo, replaceEmptyText } from './src/util.js';
 import session, { isAuthenticated } from './src/session-auth.js';
-import * as bookmarksDb from './src/bookmarks-db.js';
 import * as apDb from './src/activity-pub-db.js';
 import { initTvshowDb } from './src/tvshow-db.js';
 import helpers from 'handlebars-helpers';
@@ -30,7 +29,6 @@ app.use((req, res, next) => {
 });
 
 app.set('site_name', actorInfo.displayName || 'Tvmarks');
-app.set('bookmarksDb', bookmarksDb);
 app.set('apDb', apDb);
 const tvdb = initTvshowDb();
 tvdb.init();
