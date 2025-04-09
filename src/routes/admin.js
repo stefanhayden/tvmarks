@@ -280,11 +280,11 @@ router.post('/reset', isAuthenticated, async (req, res) => {
   fs.readdir(directory, (err, files) => {
     if (err) throw err;
 
-    for (const file of files) {
+    files.forEach((file) => {
       fs.unlink(path.join(directory, file), (err) => {
         if (err) throw err;
       });
-    }
+    });
   });
 
   res.redirect('/admin');
@@ -309,7 +309,7 @@ router.get('/', isAuthenticated, async (req, res) => {
   }
 });
 
-export async function refreshShowData(req, res) {
+export async function refreshShowData(req) {
   const db = req.app.get('tvshowDb');
   const isRecentlyUpdated = await db.isRecentlyUpdated();
   console.log('isRecentlyUpdated', isRecentlyUpdated);
@@ -382,7 +382,7 @@ router.get('/update_show_data', isAuthenticated, async (req, res) => {
     console.log(err);
     return res.status(500).send('Internal Server Error');
   }
-  res.redirect('/admin');
+  return res.redirect('/admin');
 });
 
 router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
@@ -424,8 +424,6 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
 
       const episodes = await tvMaze.episodes(req.params.showId, true);
       const epPromises = episodes.map(async (ep) => {
-        let epImagePath = ep.image?.medium;
-
         await db.createEpisode({
           id: ep.id,
           show_id: req.params.showId,
@@ -438,7 +436,7 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
           airtime: ep.airtime,
           airstamp: ep.airstamp,
           runtime: ep.runtime,
-          image: epImagePath,
+          image: ep.image?.medium,
           summary: ep.summary,
           watched_at: null,
         });
@@ -460,7 +458,7 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
       };
       broadcastMessage(data, 'create', apDb, account, domain);
 
-      res.redirect(301, `/show/${show.id}`);
+      return res.redirect(301, `/show/${show.id}`);
     }
   } catch (err) {
     console.log(err);
@@ -491,7 +489,7 @@ router.post('/show/delete/:showId', isAuthenticated, async (req, res) => {
       broadcastMessage(show, 'delete', apDb, account, domain);
     }
     console.log('BACK TRO ADMIN');
-    res.redirect(301, `/admin`);
+    return res.redirect(301, `/admin`);
   } catch (err) {
     console.log(err);
     return res.status(500).send('Internal Server Error');
