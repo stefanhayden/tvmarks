@@ -1,6 +1,6 @@
 import express from 'express';
 import escapeHTML from 'escape-html';
-import { account, domain, removeEmpty } from '../util.js';
+import { account, domain } from '../util.js';
 import { isAuthenticated } from '../session-auth.js';
 import { broadcastMessage } from '../activitypub.js';
 
@@ -36,7 +36,7 @@ router.get('/:showId', async (req, res) => {
   // GROUP BY SEASON
   params.seasons = [];
   const seasons = episodes.reduce((acc, val) => (val.season > acc ? val.season : acc), 1);
-  for (var seasonId = 1; seasonId <= seasons; seasonId++) {
+  for (let seasonId = 1; seasonId <= seasons; seasonId += 1) {
     const eps = episodes.filter((val) => val.season === seasonId && val.number);
     params.seasons.push({
       title: `Season ${seasonId}`,
@@ -117,7 +117,7 @@ router.post('/:showId/episode/:episodeId/status', async (req, res) => {
 router.post('/:showId/episode/:episodeId/update', async (req, res) => {
   const apDb = req.app.get('apDb');
   const tvshowDb = req.app.get('tvshowDb');
-  const note = req.body.note;
+  const { note } = req.body;
   const updatedEp = await tvshowDb.updateEpisodeNote(req.params.episodeId, note);
 
   const addedShow = await tvshowDb.getShow(req.params.showId);
@@ -169,12 +169,12 @@ router.get('/:showId/episode/:episodeId', async (req, res) => {
 
   const show = await tvshowDb.getShow(req.params.showId);
   const episode = await tvshowDb.getEpisode(req.params.episodeId).then((e) => {
-    const days_untill = Math.round((new Date() - new Date(e.airdate)) / (24 * 60 * 60 * 1000));
+    const daysUntill = Math.round((new Date() - new Date(e.airdate)) / (24 * 60 * 60 * 1000));
     return {
       ...e,
       isWatched: e.watched_status === 'WATCHED',
       not_aired: new Date(e.airdate) > new Date(),
-      days_untill: days_untill < 0 ? Math.abs(days_untill) : 0,
+      days_untill: daysUntill < 0 ? Math.abs(daysUntill) : 0,
       show,
     };
   });
