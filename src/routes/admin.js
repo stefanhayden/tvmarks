@@ -1,15 +1,17 @@
 import express from 'express';
+import fs from 'fs';
+import path from 'path';
+import tvMaze from 'node-tvmaze';
+import escapeHTML from 'escape-html';
 // eslint-disable-next-line import/no-unresolved, node/no-missing-import
 import { stringify as csvStringify } from 'csv-stringify/sync'; // https://github.com/adaltas/node-csv/issues/323
 import { domain, actorInfo, parseJSON, account, removeEmpty } from '../util.js';
 import { isAuthenticated } from '../session-auth.js';
 import { lookupActorInfo, createFollowMessage, createUnfollowMessage, signAndSend, getInboxFromActorProfile } from '../activitypub.js';
-import tvMaze from 'node-tvmaze';
-import escapeHTML from 'escape-html';
+
 import { downloadImage } from '../download-image.js';
 import { broadcastMessage } from '../activitypub.js';
-import fs from 'fs';
-import path from 'path';
+
 
 const DATA_PATH = '/app/.data';
 

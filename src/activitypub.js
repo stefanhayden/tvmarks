@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import escapeHTML from 'escape-html';
 
 import { signedGetJSON, signedPostJSON } from './signature.js';
-import { actorInfo, actorMatchesUsername, replaceEmptyText } from './util.js';
+import { actorInfo, actorMatchesUsername } from './util.js';
 
 function getGuidFromPermalink(urlString) {
   return urlString.match(/(?:\/m\/)([a-zA-Z0-9+/]+)/)[1];
@@ -32,7 +32,7 @@ export function createNoteObject(data, account, domain) {
   const guidNote = crypto.randomBytes(16).toString('hex');
   const d = new Date();
 
-  let titleText = `<a href="https://${domain}/${data.path}" rel="nofollow noopener noreferrer">${data.name}</a>`;
+  // let titleText = `<a href="https://${domain}/${data.path}" rel="nofollow noopener noreferrer">${data.name}</a>`;
 
   // const name = escapeHTML(data.name);
   let description = escapeHTML(data.description || '');
@@ -48,7 +48,7 @@ export function createNoteObject(data, account, domain) {
     type: 'Note',
     published: d.toISOString(),
     attributedTo: `https://${domain}/u/${account}`,
-    content: content,
+    content,
     contentMap: {
       EN: content,
     },
@@ -74,7 +74,9 @@ export function createNoteObject(data, account, domain) {
       href: `https://${domain}/tagged/${showHashTag}`,
       name: `#${showHashTag}`,
     });
-  } catch (e) {}
+  } catch (e) {
+    console.error('failed to turn tvshow in to hashtag');
+  }
 
   return noteMessage;
 }
@@ -99,7 +101,7 @@ function createMessage(noteObject, dataId, account, domain, db) {
 async function createUpdateMessage(data, account, domain, db) {
   const guid = await db.getGuidForId(data.id);
 
-  let note = {
+  const note = {
     ...createNoteObject(data, account, domain),
     id: `https://${domain}/m/${guid}`,
     updated: new Date().toISOString(),

@@ -3,12 +3,12 @@ import express from 'express';
 import cors from 'cors';
 import { create } from 'express-handlebars';
 import escapeHTML from 'escape-html';
+import helpers from 'handlebars-helpers';
 
 import { domain, account, simpleLogger, actorInfo, replaceEmptyText } from './src/util.js';
 import session, { isAuthenticated } from './src/session-auth.js';
 import * as apDb from './src/activity-pub-db.js';
 import { initTvshowDb } from './src/tvshow-db.js';
-import helpers from 'handlebars-helpers';
 
 import routes from './src/routes/index.js';
 
@@ -24,7 +24,7 @@ app.use(express.json({ type: ['application/json', 'application/ld+json', 'applic
 app.use(session());
 
 app.use((req, res, next) => {
-  res.locals.loggedIn = req.session['loggedIn'];
+  res.locals.loggedIn = req.session.loggedIn;
   return next();
 });
 
