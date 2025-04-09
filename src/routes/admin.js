@@ -1,7 +1,7 @@
 import express from 'express';
 // eslint-disable-next-line import/no-unresolved, node/no-missing-import
 import { stringify as csvStringify } from 'csv-stringify/sync'; // https://github.com/adaltas/node-csv/issues/323
-import { domain, actorInfo, parseJSON, data, account, removeEmpty } from '../util.js';
+import { domain, actorInfo, parseJSON, account, removeEmpty } from '../util.js';
 import { isAuthenticated } from '../session-auth.js';
 import { lookupActorInfo, createFollowMessage, createUnfollowMessage, signAndSend, getInboxFromActorProfile } from '../activitypub.js';
 import tvMaze from 'node-tvmaze';
@@ -17,18 +17,28 @@ const ADMIN_LINKS = [
   { href: '/admin', label: 'Add new show' },
   { href: '/admin/followers', label: 'Permissions & followers' },
   { href: '/admin/following', label: 'Federated follows' },
-  { href: '/admin/import', label: 'Import data' },
+  { href: '/admin/update', label: 'Update Show data' },
   { href: '/admin/data', label: 'Data export' },
 ];
 
 const router = express.Router();
 
-router.get('/import', isAuthenticated, async (req, res) => {
-  const params = req.query.raw ? {} : { title: 'Import tvshows' };
+router.get('/update', isAuthenticated, async (req, res) => {
+  const params = req.query.raw ? {} : { title: 'Update Show data' };
   params.adminLinks = ADMIN_LINKS;
   params.currentPath = req.originalUrl;
+  
+  
+  const tvshowDb = req.app.get('tvshowDb');
+  
+  const updateHistory = await tvshowDb.getUpdateHistory();
+  const isRecentlyUpdated = await tvshowDb.isRecentlyUpdated();
+  
+  params.updateHistory = updateHistory;
+  params.isRecentlyUpdated = isRecentlyUpdated;
 
-  return res.render('admin/import', params);
+
+  return res.render('admin/update', params);
 });
 
 router.get('/followers', isAuthenticated, async (req, res) => {
@@ -298,6 +308,7 @@ router.get('/', isAuthenticated, async (req, res) => {
 export async function refreshShowData(req, res) {
   const db = req.app.get('tvshowDb');
   const isRecentlyUpdated = await db.isRecentlyUpdated();
+  console.log('isRecentlyUpdated', isRecentlyUpdated);
 
   if (!isRecentlyUpdated && !req.query.force) {
     console.log('Updated recently: skip show and episode update');

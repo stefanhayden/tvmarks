@@ -17,12 +17,14 @@ try {
   actorFileData = JSON.parse(accountFile);
   actorFileData.disabled = false;
 } catch (e) {
-  console.log('no account.json file found, assuming non-fediverse mode for now. restart the app to check again', new URL('../account.json', import.meta.url));
+  console.log(
+    'no account.json file found, assuming non-fediverse mode for now. restart the app to check again',
+    new URL('../account.json', import.meta.url),
+  );
   actorFileData = { disabled: true };
 }
 
 export const actorInfo = actorFileData;
-console.log('actorFileData', actorFileData)
 export const account = actorInfo.username || 'tvmarks';
 
 export const domain = (() => {
