@@ -24,9 +24,9 @@ router.get('/:guid', async (req, res) => {
     const showId = parts[1];
     const episodeId = parts[3];
     if (episodeId) {
-      return res.redirect(`/show/${id}/episode/${episodeId}`);
+      return res.redirect(`/show/${showId}/episode/${episodeId}`);
     }
-    return res.redirect(`/show/${id}`);
+    return res.redirect(`/show/${showId}`);
   }
 
   const result = await db.getMessage(guid);

@@ -58,10 +58,6 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     };
   }
 
-  function massageBookmark(bookmark) {
-    return addBookmarkDomain(insertRelativeTimestamp(bookmark));
-  }
-
   function massageComment(comment) {
     return generateLinkedDisplayName(stripMentionFromComment(stripHtmlFromComment(insertRelativeTimestamp(comment))));
   }
@@ -440,13 +436,6 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       console.error(dbError);
     }
     return undefined;
-  };
-
-  const getBookmarkCountForTags = async (tags) => {
-    const tagClauses = tags.map(() => `(tags like ? OR tags like ?)`).join(' AND ');
-    const tagParams = tags.map((tag) => [`%#${tag} %`, `%#${tag}`]).flat();
-    const result = await db.get.apply(db, [`SELECT count(id) as count from bookmarks WHERE ${tagClauses}`, ...tagParams]);
-    return result?.count;
   };
 
   const getUpdateHistory = async () => {
@@ -876,5 +865,6 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     deleteAllShows,
     deleteAllEpisodes,
     getAllInProgressShows,
+    getNetworkPosts,
   };
 }

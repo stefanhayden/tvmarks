@@ -26,7 +26,6 @@ export function login(req, res, next) {
       next(err);
     }
 
-
     if (req.body.password === process.env.ADMIN_KEY) {
       req.session.loggedIn = true;
     }
