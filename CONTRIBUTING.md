@@ -137,8 +137,8 @@ the account. You can read more about Glitch's hosting offerings on its
 
 ### Changing port
 
-You can set the env var `PORT` to any valid number to make Postmarks bind to
-that port. By default, Postmarks uses port 3000. (Don't do this if you're
+You can set the env var `PORT` to any valid number to make Tvmarks bind to
+that port. By default, Tvmarks uses port 3000. (Don't do this if you're
 developing on Glitch!)
 
 ### Logging persistence
@@ -154,35 +154,23 @@ to your .env file. This will cause all incoming requests to append to
 
 ### Testing Mastodon interoperability
 
-Postmarks aims to be interoperable with other Fediverse apps where it makes
+Tvmarks aims to be interoperable with other Fediverse apps where it makes
 sense to do so; one of the most common and obvious applications of that concept
-is in working with Mastodon. If you plan on manually QAing changes to Postmarks
+is in working with Mastodon. If you plan on manually QAing changes to Tvmarks
 you may want to set up a pair of testing surfaces, one being a persistent Glitch
-app running Postmarks, the other an account on a public Mastodon instance. You
+app running Tvmarks, the other an account on a public Mastodon instance. You
 may want this account to be locked and separate from any existing presence you
 have on Mastodon and associated Fediverse microblogging networks. Many Mastodon
 instances offer free accounts; you can take a look at
 [Join Mastodon](https://joinmastodon.org) to see who is offering open signups
 at this time.
 
-### Bookmark data sets
-
-We're [collecting CSV exports of Postmarks bookmarks](https://github.com/ckolderup/postmarks/wiki/Sample-bookmark-CSVs)
-for the purposes of making it easy to test Postmarks development instances
-with both "real-world" representative data as well as "edge case" data with
-large numbers of bookmarks, odd distributions of tag usage, or other unique
-things that might aid our work.
-
-If you believe you have a collection of bookmarks that you believe would be
-useful for reproducing a bug or testing a new feature, please feel free to
-include a link to download that CSV in the appropriate GitHub Issue or PR.
-GitHub itself can be used to host CSV files via [Gist](https://gist.github.com).
 
 ## Submissions (How to submit changes)
 
 ### Bugfixes
 
-If you believe you've found a bug in Postmarks, we'd appreciate it if you
+If you believe you've found a bug in Tvmarks, we'd appreciate it if you
 documented that bug in the GitHub Issues for the repo. This will help us work
 with you to determine if the bug exists, if it's already been logged somewhere,
 and what the desired behavior is.
@@ -195,7 +183,7 @@ issue was determined to be a duplicate of).
 
 ### Features
 
-If you plan to add a feature to the Postmarks codebase and have any interest in
+If you plan to add a feature to the Tvmarks codebase and have any interest in
 submitting that change to the original repo, we'd recommend that you first open
 a GitHub Issue and explain what it is that you'd like to see. Features
 considered for merging should fit within the vision outlined in
@@ -205,7 +193,7 @@ considered before you get into the development process to avoid extra work
 making changes that accommodate the ideas that come out of the conversation.
 
 If you have opened an issue and feel reasonably confident that the maintainers
-are open to your idea, you can fork the Postmarks repo, work on the feature on
+are open to your idea, you can fork the Tvmarks repo, work on the feature on
 a branch as described in the [Operations](#operations-how-to-develop-postmarks)
 section above, then submit a PR to the repo using your fork's branch.
 
@@ -234,16 +222,16 @@ of versioned release process in the future.
 
 ## Acknowledgments (How you will be recognized)
 
-Postmarks is still very early in its development and does not, as of this
+Tvmarks is still very early in its development and does not, as of this
 writing, have any kind of automated changelog or release process. When public
 updates are given, we will make an effort to include all work as well as credit
 the authors of that work in a format we feel is appropriate. You are welcome to
-contact the owner of the project ([Casey Kolderup](https://github.com/ckolderup)
+contact the owner of the project ([Stefan Hayden](https://github.com/stefanhayden)
 ) if you feel that credit was overlooked somewhere.
 
 If you submit a change to this repo, we will assume that it's okay to refer to
 the work you did using the username or display name you've set on GitHub in
-other places on the repo as well as in references to Postmarks' development on
+other places on the repo as well as in references to Tvmarks' development on
 blogs, social media, etc. If that's NOT the case, please indicate your wishes
 when submitting your PR and we'll accommodate you to the best of our abilities.
 
