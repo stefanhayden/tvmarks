@@ -176,7 +176,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
           console.log('Yes DB exists.. lets continue to app...');
         }
 
-        return db;
+        // return db;
       } catch (dbError) {
         console.error(dbError);
       }
@@ -512,9 +512,9 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     return undefined;
   };
 
-  const getEpisodesByShowId = async (show_id) => {
+  const getEpisodesByShowId = async (showId) => {
     try {
-      const result = await db.all('SELECT episodes.* from episodes WHERE episodes.show_id = ?', show_id);
+      const result = await db.all('SELECT episodes.* from episodes WHERE episodes.show_id = ?', showId);
       return result;
     } catch (dbError) {
       console.error(dbError);
@@ -711,9 +711,9 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     }
   };
 
-  const deleteEpisodesByShow = async (show_id) => {
+  const deleteEpisodesByShow = async (showId) => {
     try {
-      await db.run('DELETE from episodes WHERE show_id = ?', show_id);
+      await db.run('DELETE from episodes WHERE show_id = ?', showId);
     } catch (dbError) {
       console.error(dbError);
     }
