@@ -1,13 +1,10 @@
 {
   "env": {
     "browser": true,
-    "es2021": true
+    "es2021": true,
+    "jest/globals": true
   },
-  "extends": [
-    "airbnb-base",
-    "plugin:node/recommended",
-    "plugin:prettier/recommended"
-  ],
+  "extends": ["airbnb-base", "plugin:node/recommended", "plugin:prettier/recommended"],
   "parserOptions": {
     "ecmaVersion": "latest",
     "sourceType": "module"
@@ -23,5 +20,7 @@
         "js": "ignorePackages"
       }
     ]
-  }
+  },
+  "files": ["**/*.spec.js", "**/*.test.js"],
+  "plugins": ["jest"]
 }

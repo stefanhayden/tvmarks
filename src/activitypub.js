@@ -76,15 +76,6 @@ export function createNoteObject(data, account, domain) {
     });
   } catch (e) {}
 
-  // bookmark.tags?.split(' ').forEach((tag) => {
-  //   const tagName = tag.slice(1);
-  //   noteMessage.tag.push({
-  //     type: 'Hashtag',
-  //     href: `https://${domain}/tagged/${tagName}`,
-  //     name: tag,
-  //   });
-  // });
-
   return noteMessage;
 }
 

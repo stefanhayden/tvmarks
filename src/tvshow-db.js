@@ -448,10 +448,22 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     const result = await db.get.apply(db, [`SELECT count(id) as count from bookmarks WHERE ${tagClauses}`, ...tagParams]);
     return result?.count;
   };
+  
+  const getUpdateHistory = async () => {
+    try {
+      const result = await db.get(`SELECT last_checked from update_history`);
+      console.log(result)
+      return result.last_checked;
+    } catch (dbError) {
+      console.error(dbError);
+    }
+    return undefined;
+  }
 
   const isRecentlyUpdated = async () => {
     try {
-      const result = await db.get(`SELECT last_checked from update_history WHERE last_checked < CURRENT_DATE`);
+      const result = await db.get(`SELECT last_checked from update_history WHERE last_checked < datetime('now', '-7 day')`);
+      console.log('db isRecentlyUpdated', result)
       return !!result;
     } catch (dbError) {
       console.error(dbError);
@@ -461,7 +473,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
   const setRecentlyUpdated = async () => {
     try {
-      const result = await db.get(`UPDATE update_history SET last_checked = CURRENT_DATE`);
+      const result = await db.get(`UPDATE update_history SET last_checked = CURRENT_TIMESTAMP`);
       return result;
     } catch (dbError) {
       console.error(dbError);
@@ -837,6 +849,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     getShowsToWatch,
     getShowsAbandoned,
     getTvshowsForCSVExport,
+    getUpdateHistory,
     setRecentlyUpdated,
     isRecentlyUpdated,
     getEpisodes,

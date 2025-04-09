@@ -1,5 +1,5 @@
 import express from 'express';
-import { data, account, domain, removeEmpty } from '../util.js';
+import { account, domain, removeEmpty } from '../util.js';
 import { isAuthenticated } from '../session-auth.js';
 import { broadcastMessage } from '../activitypub.js';
 import escapeHTML from 'escape-html';
@@ -145,10 +145,8 @@ router.post('/:showId/episode/:episodeId/update', async (req, res) => {
 });
 
 router.post('/:showId/season/:seasonId/status', async (req, res) => {
-  const apDb = req.app.get('apDb');
   const tvshowDb = req.app.get('tvshowDb');
   const status = req.body.status === 'WATCHED' ? 'WATCHED' : null;
-  const comment = req.body.comment;
   const allSeasonEps = await tvshowDb.getEpisodesByShowId(req.params.showId);
 
   const thisSeasonEps =
