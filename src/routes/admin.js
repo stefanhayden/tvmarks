@@ -296,68 +296,68 @@ router.get('/', isAuthenticated, async (req, res) => {
 });
 
 export async function refreshShowData(req, res) {
-    const db = req.app.get('tvshowDb');
-    const isRecentlyUpdated = await db.isRecentlyUpdated();
+  const db = req.app.get('tvshowDb');
+  const isRecentlyUpdated = await db.isRecentlyUpdated();
 
-    if (!isRecentlyUpdated && !req.query.force) {
-      console.log('Updated recently: skip show and episode update');
-      return;
-    }
+  if (!isRecentlyUpdated && !req.query.force) {
+    console.log('Updated recently: skip show and episode update');
+    return;
+  }
 
-    const shows = await db.getAllInProgressShows();
-    shows.forEach(async (show) => {
-      // update show
-      const updatedShow = await tvMaze.show(show.id);
-      db.updateShow(updatedShow.id, {
-        id: updatedShow.id,
-        tvrage_id: updatedShow.externals.tvrage,
-        thetvdb_id: updatedShow.externals.thetvdb,
-        imdb_id: updatedShow.externals.imdb,
-        url: updatedShow.url,
-        summary: updatedShow.summary,
-        name: updatedShow.name,
-        type: updatedShow.type,
-        language: updatedShow.language,
-        status: updatedShow.status,
-        runtime: updatedShow.runtime,
-        averageRuntime: updatedShow.averageRuntime,
-        premiered: updatedShow.premiered,
-        ended: updatedShow.ended,
-        officialSite: updatedShow.officialSite,
-        network_name: updatedShow.network?.name,
-        network_country: updatedShow.network?.country.name,
-        network_country_code: updatedShow.network?.country.code,
-        network_country_timezone: updatedShow.network?.country.timezone,
-        image: updatedShow.image.medium,
-      });
-
-      // update episodes
-      const updatedEpisodes = await tvMaze.episodes(show.id, true);
-      const currentEpisodes = await db.getEpisodesByShowId(show.id);
-
-      updatedEpisodes.forEach((episode) => {
-        const found = currentEpisodes.find((e) => e.id === episode.id);
-        if (!found) {
-          const ep = episode;
-          db.createEpisode({
-            id: ep.id,
-            show_id: show.id,
-            url: ep.url,
-            name: ep.name,
-            season: ep.season,
-            number: ep.number,
-            type: ep.type,
-            airdate: ep.airdate,
-            airtime: ep.airtime,
-            airstamp: ep.airstamp,
-            runtime: ep.runtime,
-            image: ep.image?.medium,
-            summary: ep.summary,
-          });
-        }
-      });
+  const shows = await db.getAllInProgressShows();
+  shows.forEach(async (show) => {
+    // update show
+    const updatedShow = await tvMaze.show(show.id);
+    db.updateShow(updatedShow.id, {
+      id: updatedShow.id,
+      tvrage_id: updatedShow.externals.tvrage,
+      thetvdb_id: updatedShow.externals.thetvdb,
+      imdb_id: updatedShow.externals.imdb,
+      url: updatedShow.url,
+      summary: updatedShow.summary,
+      name: updatedShow.name,
+      type: updatedShow.type,
+      language: updatedShow.language,
+      status: updatedShow.status,
+      runtime: updatedShow.runtime,
+      averageRuntime: updatedShow.averageRuntime,
+      premiered: updatedShow.premiered,
+      ended: updatedShow.ended,
+      officialSite: updatedShow.officialSite,
+      network_name: updatedShow.network?.name,
+      network_country: updatedShow.network?.country.name,
+      network_country_code: updatedShow.network?.country.code,
+      network_country_timezone: updatedShow.network?.country.timezone,
+      image: updatedShow.image.medium,
     });
-    await db.setRecentlyUpdated();
+
+    // update episodes
+    const updatedEpisodes = await tvMaze.episodes(show.id, true);
+    const currentEpisodes = await db.getEpisodesByShowId(show.id);
+
+    updatedEpisodes.forEach((episode) => {
+      const found = currentEpisodes.find((e) => e.id === episode.id);
+      if (!found) {
+        const ep = episode;
+        db.createEpisode({
+          id: ep.id,
+          show_id: show.id,
+          url: ep.url,
+          name: ep.name,
+          season: ep.season,
+          number: ep.number,
+          type: ep.type,
+          airdate: ep.airdate,
+          airtime: ep.airtime,
+          airstamp: ep.airstamp,
+          runtime: ep.runtime,
+          image: ep.image?.medium,
+          summary: ep.summary,
+        });
+      }
+    });
+  });
+  await db.setRecentlyUpdated();
 }
 
 router.get('/update_show_data', isAuthenticated, async (req, res) => {
@@ -428,24 +428,25 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
           watched_at: null,
         });
       });
-      
+
       await Promise.all(epPromises);
 
       const addedShow = await db.getShow(req.params.showId);
-      
+
       // addedShow
       const data = {
         id: `show-${addedShow.id}`,
         path: `show/${addedShow.id}`,
         url: addedShow.url,
         description: req.body.description,
-        title: `Started Watching: <a href="https://${domain}/show/${addedShow.id}" rel="nofollow noopener noreferrer">${escapeHTML(addedShow.name)}</a>`
-      }
+        title: `Started Watching: <a href="https://${domain}/show/${addedShow.id}" rel="nofollow noopener noreferrer">${escapeHTML(
+          addedShow.name,
+        )}</a>`,
+      };
       broadcastMessage(data, 'create', apDb, account, domain);
 
       res.redirect(301, `/show/${show.id}`);
     }
-    
   } catch (err) {
     console.log(err);
     return res.status(500).send('Internal Server Error');
@@ -467,15 +468,14 @@ router.post('/show/delete/:showId', isAuthenticated, async (req, res) => {
       db.deleteShow(req.params.showId);
       db.deleteEpisodesByShow(req.params.showId);
 
-      const data = {
-        id: `show-${show.id}`,
-        path: `show/${show.id}`,
-        url: show.url
-      }
+      // const data = {
+      //   id: `show-${show.id}`,
+      //   path: `show/${show.id}`,
+      //   url: show.url,
+      // };
       broadcastMessage(show, 'delete', apDb, account, domain);
-      
     }
-    console.log('BACK TRO ADMIN')
+    console.log('BACK TRO ADMIN');
     res.redirect(301, `/admin`);
   } catch (err) {
     console.log(err);

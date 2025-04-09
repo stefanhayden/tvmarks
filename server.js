@@ -82,9 +82,6 @@ const hbs = create({
     projectUrl() {
       return `https://${app.get('domain')}`;
     },
-    searchUrl() {
-      return `https://${app.get('domain')}/opensearch.xml`;
-    },
     glitchProjectName() {
       return process.env.PROJECT_DOMAIN;
     },
@@ -99,15 +96,6 @@ const hbs = create({
     ifIn(item, array, options) {
       const lowercased = array.map((tag) => tag.toLowerCase());
       return lowercased.indexOf(item.toLowerCase()) >= 0 ? options.fn(this) : options.inverse(this);
-    },
-    removeTag(tag, path) {
-      return path
-        .split('/')
-        .filter((x) => x.toLowerCase() !== tag.toLowerCase())
-        .join('/');
-    },
-    ifThisTag(tag, path, options) {
-      return path.toLowerCase() === `/tagged/${tag}`.toLowerCase() ? options.fn(this) : options.inverse(this);
     },
     eq(a, b, options) {
       return a === b ? options.fn(this) : options.inverse(this);
