@@ -112,7 +112,7 @@ once you've verified that they look okay.
 
 The project offers a `.vscode` directory that will set some workspace settings
 and recommend VSCode extensions required to make all those settings work
-properly. You are not required to use VSCode to develop Postmarks. The settings
+properly. You are not required to use VSCode to develop Tvmarks. The settings
 included are mostly meant to make the ESLint + Prettier configs allow us to
 standardize code changes as much as possible and with as little friction for you
 as we can add. If you have concerns or suggestions about specific settings, you
@@ -127,7 +127,7 @@ available at unique hostnames on the internet. You can go to this URL:
 
 https://glitch.new/github.com/stefanhayden/tvmarks
 
-to spin up a new project that uses the current `main` branch of the Postmarks
+to spin up a new project that uses the current `main` branch of the Tvmarks
 repo. You'll be in a web-based IDE that auto-builds the project as you make
 changes. If you're not logged in to Glitch, the project will be archived after
 five days. You can create an account or log in to associate the project with
