@@ -65,7 +65,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
   function massageComment(comment) {
     return generateLinkedDisplayName(stripMentionFromComment(stripHtmlFromComment(insertRelativeTimestamp(comment))));
   }
-  
+
   /*
   We're using the sqlite wrapper so that we can make async / await connections
   - https://www.npmjs.com/package/sqlite
@@ -125,7 +125,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
               note TEXT,
               created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
               updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            );`
+            );`,
           );
           console.log('Table shows created');
 
@@ -448,22 +448,22 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     const result = await db.get.apply(db, [`SELECT count(id) as count from bookmarks WHERE ${tagClauses}`, ...tagParams]);
     return result?.count;
   };
-  
+
   const getUpdateHistory = async () => {
     try {
       const result = await db.get(`SELECT last_checked from update_history`);
-      console.log(result)
+      console.log(result);
       return result.last_checked;
     } catch (dbError) {
       console.error(dbError);
     }
     return undefined;
-  }
+  };
 
   const isRecentlyUpdated = async () => {
     try {
       const result = await db.get(`SELECT last_checked from update_history WHERE last_checked < datetime('now', '-7 day')`);
-      console.log('db isRecentlyUpdated', result)
+      console.log('db isRecentlyUpdated', result);
       return !!result;
     } catch (dbError) {
       console.error(dbError);
@@ -550,11 +550,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
   const updateEpisodeNote = async (id, note) => {
     try {
-      await db.run(
-        `UPDATE episodes SET note = ? WHERE id = ?`,
-        note,
-        id,
-      );
+      await db.run(`UPDATE episodes SET note = ? WHERE id = ?`, note, id);
 
       return await db.get('SELECT * from episodes WHERE id = ?', id);
     } catch (dbError) {
@@ -733,7 +729,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       console.error(dbError);
     }
   };
-  
+
   const getNetworkPosts = async () => {
     try {
       const result = await db.all('SELECT * from comments WHERE resource_id IS NULL ORDER BY created_at DESC');
@@ -743,11 +739,18 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       console.error(dbError);
     }
     return undefined;
-  }
+  };
 
   const createComment = async (showEpisodeId, name, url, content, visible = 0) => {
     try {
-      await db.run('INSERT INTO comments (name, url, content, resource_id, visible) VALUES (?, ?, ?, ?, ?)', name, url, content, showEpisodeId, visible);
+      await db.run(
+        'INSERT INTO comments (name, url, content, resource_id, visible) VALUES (?, ?, ?, ?, ?)',
+        name,
+        url,
+        content,
+        showEpisodeId,
+        visible,
+      );
     } catch (dbError) {
       console.error(dbError);
     }

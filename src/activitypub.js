@@ -32,7 +32,7 @@ export function createNoteObject(data, account, domain) {
   const guidNote = crypto.randomBytes(16).toString('hex');
   const d = new Date();
 
-  let titleText = `<a href="https://${domain}/${data.path}" rel="nofollow noopener noreferrer">${data.name}</a>`
+  let titleText = `<a href="https://${domain}/${data.path}" rel="nofollow noopener noreferrer">${data.name}</a>`;
 
   // const name = escapeHTML(data.name);
   let description = escapeHTML(data.description || '');
@@ -98,11 +98,11 @@ function createMessage(noteObject, dataId, account, domain, db) {
 
 async function createUpdateMessage(data, account, domain, db) {
   const guid = await db.getGuidForId(data.id);
-  
+
   let note = {
     ...createNoteObject(data, account, domain),
     id: `https://${domain}/m/${guid}`,
-    updated: (new Date()).toISOString()
+    updated: new Date().toISOString(),
   };
 
   const updateMessage = {
