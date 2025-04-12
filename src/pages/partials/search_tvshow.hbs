@@ -9,9 +9,14 @@
     <a href="/bookmark/{{bookmark.id}}" class="bookmark-date" title="{{bookmark.created_at}}">
       {{bookmark.timestamp}}
     </a>
-    <span class="bookmark-domain">
-      {{tvshow.network.name}} ({{{tvshow.network.country.code}}})
-    </span>
+    {{#if tvshow.network.name}}
+      <span class="bookmark-domain">
+          {{tvshow.network.name}}
+        {{#if tvshow.network.country.code}}
+          ({{{tvshow.network.country.code}}})
+        {{/if}}
+      </span>
+    {{/if}}
   </div>
   <div class="description">
     {{{tvshow.summary}}}

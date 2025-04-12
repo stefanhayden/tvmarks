@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
   let params = {};
 
   if (req.session.loggedIn) {
-    refreshShowData(req, res);
+    params.showDataRefreshed = await refreshShowData(req, res);
   }
 
   const tvshowDb = req.app.get('tvshowDb');
@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
   const showsUpToDate = await tvshowDb.getShowsUpToDate();
   const showsAbandoned = await tvshowDb.getShowsAbandoned();
   const showsToWatch = await tvshowDb.getShowsToWatch();
-  // test
+
   params = {
     ...params,
     shows,
@@ -70,13 +70,7 @@ router.get('/network', isAuthenticated, async (req, res) => {
 
   const posts = await tvshowDb.getNetworkPosts();
 
-  // TODO: make quickadd able to select from list of links in post
-  const linksInPosts = posts.map((post) => ({
-    ...post,
-    href: linkify.find(post.content)?.[0]?.href,
-  }));
-
-  return res.render('network', { title: 'Your network', posts: linksInPosts });
+  return res.render('network', { title: 'Your network', posts });
 });
 
 router.get('/index.xml', async (req, res) => {

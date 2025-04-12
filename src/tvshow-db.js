@@ -451,7 +451,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
   const isRecentlyUpdated = async () => {
     try {
-      const result = await db.get(`SELECT last_checked from update_history WHERE last_checked < datetime('now', '-7 day')`);
+      const result = await db.get(`SELECT last_checked from update_history WHERE last_checked > datetime(CURRENT_TIMESTAMP, '-3 day')`);
       console.log('db isRecentlyUpdated', result);
       return !!result;
     } catch (dbError) {
@@ -514,7 +514,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
   const getEpisodesByShowId = async (showId) => {
     try {
-      const result = await db.all('SELECT episodes.* from episodes WHERE episodes.show_id = ?', showId);
+      const result = await db.all('SELECT episodes.* from episodes WHERE episodes.show_id = ? ORDER BY number ASC', showId);
       return result;
     } catch (dbError) {
       console.error(dbError);
@@ -560,6 +560,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       VALUES (${keys.map((v) => `$${v}`).join(',')}, DateTime('now'), DateTime('now'))`,
         {
           $id: body.id,
+          $note: body.note,
           $tvrage_id: body.tvrage_id,
           $thetvdb_id: body.thetvdb_id,
           $imdb_id: body.imdb_id,
@@ -618,6 +619,23 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
           $network_country_code: body.network?.country?.code,
           $network_country_timezone: body.network?.country?.timezone,
           $image: body.image,
+        },
+      );
+
+      return await db.get('SELECT * from shows WHERE id = ?', id);
+    } catch (dbError) {
+      console.error(dbError);
+    }
+    return undefined;
+  };
+
+  const updateShowNote = async (id, body) => {
+    try {
+      await db.run(
+        `UPDATE shows SET note=$note, updated_at=DateTime('now') WHERE id = $id`,
+        {
+          $id: id,
+          $note: body.note,
         },
       );
 
@@ -745,9 +763,18 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     }
   };
 
-  const deleteComment = async (showEpisodeId) => {
+  const deleteComment = async (resourceId) => {
     try {
-      await db.run('DELETE FROM comments WHERE resource_id = ?', showEpisodeId);
+      console.log('deleteComment', resourceId)
+      return await db.run('DELETE FROM comments WHERE resource_id = ?', resourceId);
+    } catch (dbError) {
+      console.error(dbError);
+    }
+  };
+
+  const deleteCommentById = async (id) => {
+    try {
+      return await db.run('DELETE FROM comments WHERE id = ?', id);
     } catch (dbError) {
       console.error(dbError);
     }
@@ -851,6 +878,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     updateEpisodeNote,
     createShow,
     updateShow,
+    updateShowNote,
     deleteShow,
     createEpisode,
     updateEpisode,
@@ -858,6 +886,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     deleteEpisodesByShow,
     createComment,
     deleteComment,
+    deleteCommentById,
     toggleCommentVisibility,
     getAllComments,
     getVisibleComments,
