@@ -19,6 +19,8 @@ import { downloadImage } from '../download-image.js';
 
 const DATA_PATH = '/app/.data';
 
+const imageDirectory = 'public/shows';
+
 const ADMIN_LINKS = [
   { href: '/admin', label: 'Add new show' },
   { href: '/admin/followers', label: 'Permissions & followers' },
@@ -278,12 +280,11 @@ router.post('/reset', isAuthenticated, async (req, res) => {
   await db.deleteAllEpisodes();
 
   // delete all images
-  const directory = 'public/shows';
-  fs.readdir(directory, (err, files) => {
+  fs.readdir(imageDirectory, (err, files) => {
     if (err) throw err;
 
     files.forEach((file) => {
-      fs.unlink(path.join(directory, file), (err2) => {
+      fs.unlink(path.join(imageDirectory, file), (err2) => {
         if (err2) throw err2;
       });
     });
@@ -311,20 +312,95 @@ router.get('/', isAuthenticated, async (req, res) => {
   }
 });
 
+
+export async function fetchMissingImage(req, showId) {
+  const db = req.app.get('tvshowDb');
+  const show = await db.getShow(showId);
+  
+  const updatedShow = await tvMaze.show(show.id);
+
+  const fileExt = updatedShow.image.medium.split('.').reverse()[0];
+  const showImagePath = `shows/${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
+  await downloadImage(updatedShow.image.medium, showImagePath);
+
+  await db.updateShowImage(updatedShow.id, {
+    image: `/${showImagePath}`,
+  });
+}
+
+
+router.get('/fetchMissingImage/:showId', isAuthenticated, async (req, res) => {
+  try {
+    if (!req.params.showId) {
+      throw new Error('no show id provided');
+    }
+    
+    await fetchMissingImage(req, req.params.showId);
+  } catch (err) {
+    console.log(err);
+    return res.status(500).send('Internal Server Error');
+  }
+  return res.redirect(`/show/${req.params.showId}`);
+});
+
+
+export async function fetchMissingImages(req) {
+  const db = req.app.get('tvshowDb');
+  const limit = 100;
+  const offset = 0;
+  const shows = await db.getShows(limit, offset);
+  
+  const showsPromises = shows.map(async (show) => {
+    // CHECK IF IMAGE EXISTS
+    if (fs.existsSync(path.join(imageDirectory, show.image))) {
+      return;
+    }
+    const updatedShow = await tvMaze.show(show.id);
+
+    const fileExt = updatedShow.image.medium.split('.').reverse()[0];
+    const showImagePath = `shows/${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
+    await downloadImage(updatedShow.image.medium, showImagePath);
+    
+    await db.updateShowImage(updatedShow.id, {
+      image: `/${showImagePath}`,
+    });
+  });
+  
+  await Promise.all(showsPromises);
+}
+
+
+router.get('/fetchMissingImages', isAuthenticated, async (req, res) => {
+  try {
+    await fetchMissingImages(req);
+  } catch (err) {
+    console.log(err);
+    return res.status(500).send('Internal Server Error');
+  }
+  return res.redirect('/admin/update');
+});
+
+
 export async function refreshShowData(req) {
   const db = req.app.get('tvshowDb');
   const isRecentlyUpdated = await db.isRecentlyUpdated();
 
-  if (isRecentlyUpdated && !req.query.force || !req.query.force) {
+  if ((isRecentlyUpdated && !req.query.force) || !req.query.force) {
     console.log('Updated recently: skip show and episode update');
     return false;
   }
 
+  // const shows = await db.getAllInProgressShows();
   const shows = await db.getAllInProgressShows();
-  shows.forEach(async (show) => {
+  const showPromises = shows.map(async (show) => {
     // update show
     const updatedShow = await tvMaze.show(show.id);
-    db.updateShow(updatedShow.id, {
+
+    const fileExt = updatedShow.image.medium.split('.').reverse()[0];
+    const showImagePath = `shows/${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
+    await downloadImage(updatedShow.image.medium, showImagePath);
+
+    await db.updateShow(updatedShow.id, {
       id: updatedShow.id,
       tvrage_id: updatedShow.externals.tvrage,
       thetvdb_id: updatedShow.externals.thetvdb,
@@ -344,18 +420,18 @@ export async function refreshShowData(req) {
       network_country: updatedShow.network?.country.name,
       network_country_code: updatedShow.network?.country.code,
       network_country_timezone: updatedShow.network?.country.timezone,
-      image: updatedShow.image.medium,
+      image: `/${showImagePath}`,
     });
 
     // update episodes
     const updatedEpisodes = await tvMaze.episodes(show.id, true);
     const currentEpisodes = await db.getEpisodesByShowId(show.id);
 
-    updatedEpisodes.forEach((episode) => {
+    const epPromises = updatedEpisodes.map(async (episode) => {
       const found = currentEpisodes.find((e) => e.id === episode.id);
       if (!found) {
         const ep = episode;
-        db.createEpisode({
+        return await db.createEpisode({
           id: ep.id,
           show_id: show.id,
           url: ep.url,
@@ -372,7 +448,7 @@ export async function refreshShowData(req) {
         });
       } else {
         const ep = episode;
-        db.updateEpisode(ep.id, {
+        return await db.updateEpisode(ep.id, {
           id: ep.id,
           show_id: show.id,
           url: ep.url,
@@ -389,7 +465,12 @@ export async function refreshShowData(req) {
         });
       }
     });
+
+    return await Promise.all(epPromises);
   });
+
+  await Promise.all(showPromises);
+
   await db.setRecentlyUpdated();
   return true;
 }

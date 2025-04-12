@@ -64,7 +64,7 @@
       <legend>
         Show details
       </legend>
-      <form method="post" action="/show/{{show.id}}">
+      <form method="post" action="/show/{{show.id}}" onsubmit="this.querySelector('button').disabled = 'disabled'">
         <textarea name="note" placeholder="Add a note" style="width: 100%; height: 100px; margin-bottom: 10px; background: #fdf7fc">{{show.note}}</textarea>
         <details class="form-group">
           <summary>
@@ -124,7 +124,10 @@
     <h2>
       The Danger Zone
     </h2>
-    <form action="/show/{{episode.show_id}}/episode/{{episode.id}}/delete_hidden_comments" method="post" style="margin-bottom: 20px;">
+    <form action="/show/{{episode.show_id}}/episode/{{episode.id}}/delete_hidden_comments" 
+          method="post" 
+          onsubmit="this.querySelector('button').disabled = 'disabled'"
+          style="margin-bottom: 20px;">
       <p>
         Delete all hidden comments? They can't be recovered.
       </p>
@@ -134,9 +137,18 @@
 
 
 
-  <div style="float: right;">
-    {{#if @root.loggedIn}}
-      <form method="post" action="/admin/show/delete/{{{show.id}}}">
+  <div style="display:flex; gap: 10px; justify-content: right;">
+    {{#if @root.loggedIn}}    
+      <form method="get" 
+            action="/admin/fetchMissingImage/{{show.id}}"
+            onsubmit="this.querySelector('button').disabled = 'disabled'">
+        <button>
+          fetch new image
+        </button>
+      </form>
+    
+      <form method="post" action="/admin/show/delete/{{show.id}}"
+            onsubmit="this.querySelector('button').disabled = 'disabled'">
         <button>
           delete show
         </button>
