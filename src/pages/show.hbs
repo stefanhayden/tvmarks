@@ -64,8 +64,8 @@
       <legend>
         Show details
       </legend>
-      <form method="post" action="/show/{{episode.show_id}}">
-        <textarea name="note" placeholder="Add a note" style="width: 100%; height: 100px; margin-bottom: 10px; background: #fdf7fc">{{episode.note}}</textarea>
+      <form method="post" action="/show/{{show.id}}">
+        <textarea name="note" placeholder="Add a note" style="width: 100%; height: 100px; margin-bottom: 10px; background: #fdf7fc">{{show.note}}</textarea>
         <details class="form-group">
           <summary>
             <label for="bookmark_allowed">

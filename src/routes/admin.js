@@ -171,8 +171,10 @@ router.post('/followers/block', isAuthenticated, async (req, res) => {
     blocks = [req.body.actor];
   }
   const newBlocksText = JSON.stringify(blocks);
+
   try {
     // update into DB
+
     await db.setBlocks(newBlocksText);
 
     console.log('updated blocks!');
@@ -312,11 +314,10 @@ router.get('/', isAuthenticated, async (req, res) => {
 export async function refreshShowData(req) {
   const db = req.app.get('tvshowDb');
   const isRecentlyUpdated = await db.isRecentlyUpdated();
-  console.log('isRecentlyUpdated', isRecentlyUpdated);
 
-  if (!isRecentlyUpdated && !req.query.force) {
+  if (isRecentlyUpdated || !!req.query.force) {
     console.log('Updated recently: skip show and episode update');
-    return;
+    return false;
   }
 
   const shows = await db.getAllInProgressShows();
@@ -373,6 +374,7 @@ export async function refreshShowData(req) {
     });
   });
   await db.setRecentlyUpdated();
+  return true;
 }
 
 router.get('/update_show_data', isAuthenticated, async (req, res) => {
@@ -382,7 +384,7 @@ router.get('/update_show_data', isAuthenticated, async (req, res) => {
     console.log(err);
     return res.status(500).send('Internal Server Error');
   }
-  return res.redirect('/admin');
+  return res.redirect('/admin/update');
 });
 
 router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
@@ -403,6 +405,7 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
     await downloadImage(show.image.medium, showImagePath);
     await db.createShow({
       id: show.id,
+      note: req.body.description,
       tvrage_id: show.externals.tvrage,
       thetvdb_id: show.externals.thetvdb,
       imdb_id: show.externals.imdb,

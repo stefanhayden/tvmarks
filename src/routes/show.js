@@ -215,3 +215,14 @@ router.post('/:showId/episode/:episodeId/delete_hidden_comments', isAuthenticate
 
   return req.query.raw ? res.send(params) : res.redirect(`/show/${showId}/episode/${episodeId}`);
 });
+
+router.post('/:showId/update', isAuthenticated, async (req, res) => {
+  const { showId } = req.params;
+  const tvshowDb = req.app.get('tvshowDb');
+  
+  await tvshowDb.updateShowNote(showId, { note: req.body.note });
+  
+  // TODO - update fediverse post
+  
+  res.redirect(301, `/show/${showId}`);
+});
