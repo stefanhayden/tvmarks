@@ -315,7 +315,7 @@ export async function refreshShowData(req) {
   const db = req.app.get('tvshowDb');
   const isRecentlyUpdated = await db.isRecentlyUpdated();
 
-  if (isRecentlyUpdated || !!req.query.force) {
+  if (isRecentlyUpdated && !req.query.force || !req.query.force) {
     console.log('Updated recently: skip show and episode update');
     return false;
   }
@@ -356,6 +356,23 @@ export async function refreshShowData(req) {
       if (!found) {
         const ep = episode;
         db.createEpisode({
+          id: ep.id,
+          show_id: show.id,
+          url: ep.url,
+          name: ep.name,
+          season: ep.season,
+          number: ep.number,
+          type: ep.type,
+          airdate: ep.airdate,
+          airtime: ep.airtime,
+          airstamp: ep.airstamp,
+          runtime: ep.runtime,
+          image: ep.image?.medium,
+          summary: ep.summary,
+        });
+      } else {
+        const ep = episode;
+        db.updateEpisode(ep.id, {
           id: ep.id,
           show_id: show.id,
           url: ep.url,
