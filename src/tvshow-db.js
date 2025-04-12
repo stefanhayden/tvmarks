@@ -694,7 +694,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       await db.run(
         `UPDATE episodes SET show_id=$show_id, url=$url, name=$name, season=$season,
         number=$number, type=$type, airdate=$airdate, airtime=$airtime, airstamp=$airstamp,
-        runtime=$runtime, image=$image, summary=$summary, watched_at=$watched_at,
+        runtime=$runtime, image=$image, summary=$summary,
         updated_at=DateTime('now') WHERE id = $id`,
         {
           $id: id,
@@ -709,7 +709,6 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
           $airstamp: body.airstamp,
           $runtime: body.runtime,
           $image: body.image,
-          $watched_at: body.watched_at,
           $summary: body.summary,
         },
       );
