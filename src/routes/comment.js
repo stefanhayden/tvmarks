@@ -11,12 +11,11 @@ router.post('/:id/toggle', isAuthenticated, async (req, res) => {
   return res.redirect(req.get('Referrer'));
 });
 
-
 router.post('/:id/delete', isAuthenticated, async (req, res) => {
   const tvshowDb = req.app.get('tvshowDb');
 
   const a = await tvshowDb.deleteCommentById(req.params.id);
-  console.log('delete', a)
+
   return res.redirect(req.get('Referrer'));
 });
 
