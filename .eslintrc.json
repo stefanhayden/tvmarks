@@ -10,6 +10,7 @@
     "sourceType": "module"
   },
   "rules": {
+    "no-useless-escape": "error",
     "import/prefer-default-export": "off",
     "no-unused-vars": "warn",
     "no-console": "off",

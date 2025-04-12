@@ -196,6 +196,10 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  color: #AAAAAA;
+}
+
 input,
 textarea {
   width: 75%;

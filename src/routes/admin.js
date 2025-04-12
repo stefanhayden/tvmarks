@@ -312,16 +312,45 @@ router.get('/', isAuthenticated, async (req, res) => {
   }
 });
 
-//
-// TODO: need a way to get missing image
-//
-export async function fetchMissingImages() {
+
+export async function fetchMissingImage(req, showId) {
+  const db = req.app.get('tvshowDb');
+  const show = await db.getShow(showId);
+  
+  const updatedShow = await tvMaze.show(show.id);
+
+  const fileExt = updatedShow.image.medium.split('.').reverse()[0];
+  const showImagePath = `shows/${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
+  await downloadImage(updatedShow.image.medium, showImagePath);
+
+  await db.updateShowImage(updatedShow.id, {
+    image: `/${showImagePath}`,
+  });
+}
+
+
+router.get('/fetchMissingImage/:showId', isAuthenticated, async (req, res) => {
+  try {
+    if (!req.params.showId) {
+      throw new Error('no show id provided');
+    }
+    
+    await fetchMissingImage(req, req.params.showId);
+  } catch (err) {
+    console.log(err);
+    return res.status(500).send('Internal Server Error');
+  }
+  return res.redirect(`/show/${req.params.showId}`);
+});
+
+
+export async function fetchMissingImages(req) {
   const db = req.app.get('tvshowDb');
   const limit = 100;
   const offset = 0;
   const shows = await db.getShows(limit, offset);
   
-  shows.map(async (show) => {
+  const showsPromises = shows.map(async (show) => {
     // CHECK IF IMAGE EXISTS
     if (fs.existsSync(path.join(imageDirectory, show.image))) {
       return;
@@ -336,7 +365,20 @@ export async function fetchMissingImages() {
       image: `/${showImagePath}`,
     });
   });
+  
+  await Promise.all(showsPromises);
 }
+
+
+router.get('/fetchMissingImages', isAuthenticated, async (req, res) => {
+  try {
+    await fetchMissingImages(req);
+  } catch (err) {
+    console.log(err);
+    return res.status(500).send('Internal Server Error');
+  }
+  return res.redirect('/admin/update');
+});
 
 
 export async function refreshShowData(req) {
