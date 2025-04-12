@@ -643,6 +643,23 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     } catch (dbError) {
       console.error(dbError);
     }
+  }
+    
+
+  const updateShowImage = async (id, body) => {
+    try {
+      await db.run(
+        `UPDATE shows SET image=$image, updated_at=DateTime('now') WHERE id = $id`,
+        {
+          $id: id,
+          $image: body.image,
+        },
+      );
+
+      return await db.get('SELECT * from shows WHERE id = ?', id);
+    } catch (dbError) {
+      console.error(dbError);
+    }
     return undefined;
   };
 
@@ -878,6 +895,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     createShow,
     updateShow,
     updateShowNote,
+    updateShowImage,
     deleteShow,
     createEpisode,
     updateEpisode,
