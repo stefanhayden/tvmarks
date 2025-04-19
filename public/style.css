@@ -602,3 +602,28 @@ a.bookmark-date {
   border-bottom: var(--checkmarkFat) solid var(--checkmarkColor);
   border-right: var(--checkmarkFat) solid var(--checkmarkColor);
 }
+
+.tv-show-card {
+  flex-grow: 1; max-width: 230px; min-width: 190px;
+}
+
+@media screen and (max-width: 990px) {
+  .tv-show-card {
+    max-width: 33%;
+    min-width: 190px;
+  }
+}
+
+@media screen and (max-width: 750px) {
+  .tv-show-card {
+    max-width: 50%;
+    min-width: 190px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .tv-show-card {
+    max-width: 100%;
+    min-width: 190px;
+  }
+}
