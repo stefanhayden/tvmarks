@@ -1,0 +1,17 @@
+{{#if error}}
+  <p class="error">
+    {{error}}
+  </p>
+{{else}}
+
+  {{#if shows}}
+    <div style="display:flex; flex-wrap: wrap; gap: 0.5em; margin-bottom: 50px">
+      {{#each shows }}
+        {{> show_tvshow_card tvshow=this}}
+      {{/each}}
+    </div>
+
+    {{> pagination pageInfo=pageInfo }}
+  {{/if}}
+
+{{/if}}

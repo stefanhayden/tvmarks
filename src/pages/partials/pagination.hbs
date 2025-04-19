@@ -1,4 +1,4 @@
-{{#with pageInfo}}
+{{#with pagination}}
   <div class="pagination">
     {{#if hasPreviousPage }}
       <a href="{{url}}?offset={{previousOffset}}">
@@ -10,10 +10,10 @@
       </span>
     {{/if}}
     <span class="status">
-      Page {{currentPage}} of {{totalPages}}
+      Page {{currentPage}}
     </span>
     {{#if hasNextPage}}
-      <a href="{{../url}}?offset={{nextOffset}}">
+      <a href="{{url}}?offset={{nextOffset}}">
         Next
       </a>
     {{else}}
