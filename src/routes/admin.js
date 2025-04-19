@@ -344,17 +344,22 @@ router.get('/fetchMissingImage/:showId', isAuthenticated, async (req, res) => {
 });
 
 
-export async function fetchMissingImages(req) {
+export async function fetchMissingImages(req, maxImages = 50) {
   const db = req.app.get('tvshowDb');
-  const limit = 100;
+  const limit = 999999999;
   const offset = 0;
   const shows = await db.getShows(limit, offset);
+  let fetchedImages = 0;
   
   const showsPromises = shows.map(async (show) => {
     // CHECK IF IMAGE EXISTS
     if (fs.existsSync(path.join(imageDirectory, show.image))) {
       return;
     }
+    if (fetchedImages === maxImages) {
+      return;
+    }
+    
     const updatedShow = await tvMaze.show(show.id);
 
     const fileExt = updatedShow.image.medium.split('.').reverse()[0];
@@ -364,6 +369,7 @@ export async function fetchMissingImages(req) {
     await db.updateShowImage(updatedShow.id, {
       image: `/${showImagePath}`,
     });
+    fetchedImages += 1;
   });
   
   await Promise.all(showsPromises);
@@ -492,9 +498,9 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
     if (!req.params.showId) {
       throw new Error('no show id provided');
     }
-    const existingShow = db.getShow(req.params.showId);
+    const existingShow = await db.getShow(req.params.showId);
     if (existingShow) {
-      return res.redirect(301, `/show/${show.id}`);
+      return res.redirect(301, `/show/${existingShow.id}`);
     }
     
     // cleanup to be safe

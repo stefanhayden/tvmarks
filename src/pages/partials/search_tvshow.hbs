@@ -21,7 +21,7 @@
   <div class="description">
     {{{tvshow.summary}}}
   </div>
-  <form method="post" action="/admin/show/add/{{{tvshow.id}}}" style="margin-bottom: 10px;">
+  <form method="post" action="/admin/show/add/{{{tvshow.id}}}" style="margin-bottom: 10px;" onsubmit="this.querySelector('button').disabled = true">
     <textarea placeholder="I can't wait to watch!" name="description" style="height: 6rem; margin-bottom: 10px;"></textarea>
     <button>
       add show
