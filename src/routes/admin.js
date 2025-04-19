@@ -492,6 +492,12 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
     if (!req.params.showId) {
       throw new Error('no show id provided');
     }
+    const existingShow = db.getShow(req.params.showId);
+    if (existingShow) {
+      return res.redirect(301, `/show/${show.id}`);
+    }
+    
+    // cleanup to be safe
     await db.deleteShow(req.params.showId);
     await db.deleteEpisodesByShow(req.params.showId);
     await db.deleteEpisodesByShow(null);
@@ -583,11 +589,6 @@ router.post('/show/delete/:showId', isAuthenticated, async (req, res) => {
       db.deleteShow(req.params.showId);
       db.deleteEpisodesByShow(req.params.showId);
 
-      // const data = {
-      //   id: `show-${show.id}`,
-      //   path: `show/${show.id}`,
-      //   url: show.url,
-      // };
       broadcastMessage(show, 'delete', apDb, account, domain);
     }
     console.log('BACK TRO ADMIN');
