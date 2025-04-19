@@ -8,4 +8,4 @@ node_modules
 *.patch
 request_logs.txt
 .DS_Store
-public/shows/*
+show_images
