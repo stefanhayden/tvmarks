@@ -16,32 +16,39 @@ router.get('/', async (req, res) => {
 
   const tvshowDb = req.app.get('tvshowDb');
 
-  const limit = Math.max(req.query?.limit || 100, 1);
+  const limit = Math.max(req.query?.limit || 1, 1);
   const offset = Math.max(req.query?.offset || 0, 0);
   const currentPage = (limit + offset) / limit;
-  const shows = await tvshowDb.getShows(limit, offset);
-  const showsNotStarted = await tvshowDb.getShowsNotStarted();
-  const showsCompleted = await tvshowDb.getShowsCompleted();
-  const showsUpToDate = await tvshowDb.getShowsUpToDate();
-  const showsAbandoned = await tvshowDb.getShowsAbandoned();
-  const showsToWatch = await tvshowDb.getShowsToWatch();
+  // const shows = await tvshowDb.getShows(limit, offset);
+
+  const [showsNotStarted, showsCompleted, showsUpToDate, showsToWatch, showsAbandoned] = await Promise.all([
+    tvshowDb.getShowsNotStarted(),
+    tvshowDb.getShowsCompleted(),
+    tvshowDb.getShowsUpToDate(),
+    tvshowDb.getShowsToWatch(),
+    tvshowDb.getShowsAbandoned(),
+  ]);
+
+  const foundShows = showsNotStarted || showsCompleted || showsUpToDate || showsAbandoned || showsToWatch;
 
   params = {
     ...params,
-    shows,
+    limit,
+    foundShows,
     showsNotStarted,
+    seeAllShowsNotStarted: showsNotStarted.length > limit,
     showsCompleted,
+    seeAllShowsCompleted: showsCompleted.length > limit,
     showsUpToDate,
+    seeAllShowsUpToDate: showsUpToDate.length > limit,
     showsAbandoned,
+    seeAllShowsAbandoned: showsAbandoned.length > limit,
     showsToWatch,
+    seeAllShowsToWatch: showsToWatch.length > limit,
+    hideTitle: true
   };
 
-  if (!shows) params.error = data.errorMessage;
-
-  // Check in case the data is empty or not setup yet
-  if (shows && shows.length < 1) {
-    params.setup = data.setupMessage;
-  }
+  if (!foundShows) params.error = data.errorMessage;
 
   // params.title = title;
   params.pageInfo = {
@@ -54,6 +61,50 @@ router.get('/', async (req, res) => {
 
   // Send the page options or raw JSON data if the client requested it
   return req.query.raw ? res.send(params) : res.render('index', params);
+});
+
+router.get('/shows/:type', async (req, res) => {
+  const tvshowDb = req.app.get('tvshowDb');
+  const { type } = req.params;
+
+  const limit = Math.max(req.query?.limit || 25, 1);
+  const offset = Math.max(req.query?.offset || 0, 0);
+  const currentPage = (limit + offset) / limit;
+  const shows =
+    type === 'watch-next'
+      ? await tvshowDb.getShowsToWatch(limit, offset)
+      : type === 'up-to-date'
+      ? await tvshowDb.getShowsUpToDate(limit, offset)
+      : type === 'not-started'
+      ? await tvshowDb.getShowsNotStarted(limit, offset)
+      : type === 'completed'
+      ? await tvshowDb.getShowsCompleted(limit, offset)
+      : type === 'abandoned'
+      ? await tvshowDb.getShowsAbandoned(limit, offset)
+      : [];
+
+  let params = {
+    shows,
+    offset,
+    limit,
+  };
+
+  if (!shows) params.error = data.errorMessage;
+
+  params.title = type.split('-').join(' ');
+  params.pagination = {
+    url: `/shows/${type}`,
+    currentPage,
+    offset,
+    limit,
+    hasPreviousPage: currentPage > 1,
+    hasNextPage: shows.length === limit,
+    nextOffset: Math.min(offset + limit),
+    previousOffset: Math.max(offset - limit, 0),
+  };
+
+  // Send the page options or raw JSON data if the client requested it
+  return req.query.raw ? res.send(params) : res.render('shows-by-type', params);
 });
 
 router.get('/about', async (req, res) => {

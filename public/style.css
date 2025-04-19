@@ -130,7 +130,6 @@ a {
   .wrapper {
     display: grid;
     grid-template-columns: 5% 90% 5%;
-    grid-gap: 1rem;
   }
 }
 
@@ -440,14 +439,19 @@ a.bookmark-date {
 .pagination {
   font-size: .875rem;
   line-height: 1.25rem;
-}
-
-.pagination span + span:before {
-  content: " • ";
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
 }
 
 .pagination span:not(.status) {
   color: var(--color-dimmed);
+}
+
+.pagination a {
+  border: 1px solid;
+  border-radius: 5px;
+  padding: 5px;
 }
 
 .search {

@@ -4,56 +4,77 @@
   </p>
 {{else}}
 
-  {{#unless shows}}
+  {{#unless foundShows}}
     <h2>Welcome to Tvmarks!</h2>
     <p>Tvmarks is a single user self hosted website that help you track the shows you are watching and catalog shows you have weatched.</p>
     <p>If you have just set this site up then it's working! Login to search for show to add.</p>
   {{/unless}}
 
   {{#if showsToWatch}}
-  <h2>Watch Next</h2>
-  <div style="display:flex; flex-wrap: wrap; gap: 0.5em; margin-bottom: 50px">
-    {{#each showsToWatch }}
-      {{> show_tvshow_card tvshow=this}}
-    {{/each}}
-  </div>
+    {{#if seeAllShowsToWatch}}
+      <a href="/shows/watch-next" style="float:right;">see all</a>
+    {{/if}}
+    <h2>Watch Next</h2>
+    <div style="margin-bottom: 50px;">
+      <div style="display:flex; flex-wrap: wrap; gap: 0.5em;">
+        {{#each showsToWatch }}
+          {{> show_tvshow_card tvshow=this}}
+        {{/each}}
+      </div>
+    </div>
   {{/if}}
 
   {{#if showsUpToDate}}
-  <h2>Up To Date</h2>
-  <div style="display:flex; flex-wrap: wrap; gap: 0.5em; margin-bottom: 50px">
-    {{#each showsUpToDate }}
-      {{> show_tvshow_card tvshow=this}}
-    {{/each}}
-  </div>
+    {{#if seeAllShowsUpToDate}}
+      <a href="/shows/up-to-date" style="float:right;">see all</a>
+    {{/if}}
+    <h2>Up To Date</h2>
+    <div style="margin-bottom: 50px;">
+      <div style="display:flex; flex-wrap: wrap; gap: 0.5em;">
+        {{#each showsUpToDate }}
+          {{> show_tvshow_card tvshow=this}}
+        {{/each}}
+      </div>
+    </div>
   {{/if}}
 
   {{#if showsNotStarted}}
-  <h2>Not Started</h2>
-  <div style="display:flex; flex-wrap: wrap; gap: 0.5em; margin-bottom: 50px">
-    {{#each showsNotStarted }}
-      {{> show_tvshow_card tvshow=this}}
-    {{/each}}
-  </div>
+    {{#if seeAllShowsNotStarted}}
+      <a href="/shows/not-started" style="float:right;">see all</a>
+    {{/if}}
+    <h2>Not Started</h2>
+    <div style="margin-bottom: 50px;">
+      <div style="display:flex; flex-wrap: wrap; gap: 0.5em;">
+        {{#each showsNotStarted }}
+          {{> show_tvshow_card tvshow=this}}
+        {{/each}}
+      </div>
+    </div>
   {{/if}}
 
   {{#if showsAbandoned}}
-  <h2>Abandoned</h2>
-  <div style="display:flex; flex-wrap: wrap; gap: 0.5em; margin-bottom: 50px">
-    {{#each showsAbandoned }}
-      {{> show_tvshow_card tvshow=this}}
-    {{/each}}
-  </div>
+    {{#if seeAllShowsAbandoned}}
+      <a href="/shows/abandoned" style="float:right;">see all</a>
+    {{/if}}
+    <h2>Abandoned</h2>
+    <div style="margin-bottom: 50px;">
+      <div style="display:flex; flex-wrap: wrap; gap: 0.5em;">
+        {{#each showsAbandoned }}
+          {{> show_tvshow_card tvshow=this}}
+        {{/each}}
+      </div>
+    </div>
   {{/if}}
 
   {{#if showsCompleted}}
-  <h2>Completed</h2>
-  <div style="display:flex; flex-wrap: wrap; gap: 0.5em;">
-    {{#each showsCompleted }}
-      {{> show_tvshow_card tvshow=this}}
-    {{/each}}
-  </div>
+    {{#if seeAllShowsCompleted}}
+      <a href="/shows/completed" style="float:right;">see all</a>
+    {{/if}}
+    <h2>Completed</h2>
+    <div style="display:flex; flex-wrap: wrap; gap: 0.5em;">
+      {{#each showsCompleted }}
+        {{> show_tvshow_card tvshow=this}}
+      {{/each}}
+    </div>
   {{/if}}
-
-
 {{/if}}

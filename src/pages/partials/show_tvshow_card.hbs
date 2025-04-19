@@ -1,8 +1,9 @@
-<div class="">
-  <a href="/show/{{tvshow.id}}" style="">
+<div style="flex-grow: 1; max-width: 230px; min-width: 190px;">
+<!-- width: 210px; height: 295px; -->
+  <a href="/show/{{tvshow.id}}" style="display: block;">
     <img 
       src="{{{tvshow.image}}}"
-      style="display:block;"
+      style="display:block; width: 100%;"
       title="{{tvshow.name}} - watched {{tvshow.watched_episodes_count}} of {{tvshow.aired_episodes_count}} aired episodes"
     />
   </a>

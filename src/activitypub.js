@@ -253,12 +253,13 @@ export async function broadcastMessage(data, action, db, account, domain) {
     }
 
     console.log(`sending this message to all followers: ${JSON.stringify(message)}`);
-
+    console.log('followers', followers);
     // eslint-disable-next-line no-restricted-syntax
     for (const follower of followers) {
       const inbox = `${follower}/inbox`;
       const myURL = new URL(follower);
       const targetDomain = myURL.host;
+      console.log('test', {})
       signAndSend(message, account, domain, db, targetDomain, inbox);
     }
   }
