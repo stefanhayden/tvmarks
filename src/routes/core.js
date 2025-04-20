@@ -19,18 +19,17 @@ router.get('/', async (req, res) => {
   const limit = Math.max(req.query?.limit || 1, 1);
   const offset = Math.max(req.query?.offset || 0, 0);
   const currentPage = (limit + offset) / limit;
-  // const shows = await tvshowDb.getShows(limit, offset);
 
-  const [showsNotStarted, showsCompleted, showsUpToDate, showsToWatch, showsAbandoned] = await Promise.all([
-    tvshowDb.getShowsNotStarted(),
-    tvshowDb.getShowsCompleted(),
-    tvshowDb.getShowsUpToDate(),
+  const [showsToWatch, showsAbandoned, showsUpToDate, showsCompleted, showsNotStarted] = await Promise.all([
     tvshowDb.getShowsToWatch(),
     tvshowDb.getShowsAbandoned(),
+    tvshowDb.getShowsUpToDate(),
+    tvshowDb.getShowsCompleted(),
+    tvshowDb.getShowsNotStarted(),
   ]);
 
-  const foundShows = showsNotStarted || showsCompleted || showsUpToDate || showsAbandoned || showsToWatch;
-
+  const foundShows = showsToWatch || showsNotStarted || showsCompleted || showsUpToDate || showsAbandoned;
+  console.log('foundShows.length', foundShows.length);
   params = {
     ...params,
     limit,
@@ -45,7 +44,7 @@ router.get('/', async (req, res) => {
     seeAllShowsAbandoned: showsAbandoned.length > limit,
     showsToWatch,
     seeAllShowsToWatch: showsToWatch.length > limit,
-    hideTitle: true
+    hideTitle: true,
   };
 
   if (!foundShows) params.error = data.errorMessage;
@@ -117,8 +116,6 @@ router.get('/about', async (req, res) => {
 
 router.get('/network', isAuthenticated, async (req, res) => {
   const tvshowDb = req.app.get('tvshowDb');
-  // const bookmarksDb = req.app.get('bookmarksDb');
-
   const posts = await tvshowDb.getNetworkPosts();
 
   return res.render('network', { title: 'Your network', posts });

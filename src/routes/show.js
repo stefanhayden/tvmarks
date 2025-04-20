@@ -25,11 +25,12 @@ router.get('/:showId', async (req, res) => {
 
   const episodes = (await tvshowDb.getEpisodesByShowId(req.params.showId)).map((e) => {
     const daysUntill = e.airdate ? Math.round((now - new Date(e.airdate)) / (24 * 60 * 60 * 1000)) : undefined;
+
     return {
       ...e,
       isWatched: e.watched_status === 'WATCHED',
       not_aired: e.airdate ? new Date(e.airdate) > now : true,
-      days_untill: daysUntill < 0 ? Math.abs(daysUntill) : 'Unkown',
+      days_untill: daysUntill <= 0 ? Math.abs(daysUntill) : 'Unkown',
     };
   });
 
@@ -219,10 +220,10 @@ router.post('/:showId/episode/:episodeId/delete_hidden_comments', isAuthenticate
 router.post('/:showId/update', isAuthenticated, async (req, res) => {
   const { showId } = req.params;
   const tvshowDb = req.app.get('tvshowDb');
-  
+
   await tvshowDb.updateShowNote(showId, { note: req.body.note });
-  
+
   // TODO - update fediverse post
-  
+
   res.redirect(301, `/show/${showId}`);
 });

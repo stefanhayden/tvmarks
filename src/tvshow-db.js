@@ -242,14 +242,29 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
   const getShowsNotStarted = async (limit = 25, offset = 0) => {
     // We use a try catch block in case of db errors
     try {
-      const subQueryFilter = `episodes.show_id = shows.id AND episodes.number IS NOT NULL`;
       const results = await db.all(
-        `SELECT shows.* from shows
-        WHERE (SELECT count(*) from episodes where ${subQueryFilter} AND episodes.watched_status == 'WATCHED') == 0
+        `with all_shows as (
+          SELECT shows.*
+          , COUNT( CASE WHEN episodes.watched_status == 'WATCHED' THEN 1 END ) AS watched_episodes_count
+          from shows
+          LEFT JOIN episodes on shows.id = episodes.show_id AND episodes.number IS NOT NULL
+          GROUP BY shows.id
+          ORDER BY watched_at ASC
+        )
+        SELECT * from all_shows
+        WHERE watched_episodes_count == 0
         ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
         limit,
         offset,
       );
+      
+      // const results = await db.all(
+      //   `SELECT shows.* from shows
+      //   WHERE (SELECT count(*) from episodes where ${subQueryFilter} AND episodes.watched_status == 'WATCHED') == 0
+      //   ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
+      //   limit,
+      //   offset,
+      // );
       return results;
     } catch (dbError) {
       // Database connection error
@@ -261,13 +276,19 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
   const getShowsCompleted = async (limit = 25, offset = 0) => {
     // We use a try catch block in case of db errors
     try {
-      const subQueryFilter = `episodes.show_id = shows.id AND episodes.number IS NOT NULL`;
-      // episodes watched === episodes aired && show status == 'Ended'
       const results = await db.all(
-        `SELECT shows.* from shows
-        WHERE (SELECT count(*) from episodes where ${subQueryFilter} AND episodes.watched_status == 'WATCHED') == 
-        (SELECT count(*) from episodes where ${subQueryFilter} AND episodes.airdate < CURRENT_DATE)
-        AND shows.status == 'Ended'
+        `with all_shows as (
+          SELECT shows.*
+          , COUNT( CASE WHEN episodes.airdate < CURRENT_TIMESTAMP THEN 1 END ) AS aired_episodes_count
+          , COUNT( CASE WHEN episodes.watched_status == 'WATCHED' THEN 1 END ) AS watched_episodes_count
+          from shows
+          LEFT JOIN episodes on shows.id = episodes.show_id AND episodes.number IS NOT NULL
+          GROUP BY shows.id
+          ORDER BY watched_at ASC
+        )
+        SELECT * from all_shows
+        WHERE aired_episodes_count == watched_episodes_count
+        AND status == 'Ended'
         ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
         limit,
         offset,
@@ -284,14 +305,15 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     // We use a try catch block in case of db errors
     try {
       const timezoneMod = '-5 hour';
-      const subQueryFilter = `episodes.show_id = shows.id AND episodes.number IS NOT NULL`;
-
       const results = await db.all(
         `with all_shows as (
-          SELECT shows.*,
-          (SELECT count(*) from episodes where ${subQueryFilter} AND episodes.airdate < datetime(CURRENT_TIMESTAMP, 'localtime', '${timezoneMod}')) aired_episodes_count,
-          (SELECT count(*) from episodes where ${subQueryFilter} AND episodes.watched_status == 'WATCHED') watched_episodes_count
+          SELECT shows.*
+          , COUNT( CASE WHEN episodes.airdate < datetime(CURRENT_TIMESTAMP, 'localtime', '${timezoneMod}') THEN 1 END ) AS aired_episodes_count
+          , COUNT( CASE WHEN episodes.watched_status == 'WATCHED' THEN 1 END ) AS watched_episodes_count
           from shows
+          LEFT JOIN episodes on shows.id = episodes.show_id AND episodes.number IS NOT NULL
+          GROUP BY shows.id
+          ORDER BY watched_at ASC
         )
         SELECT all_shows.* from all_shows
         WHERE 
@@ -314,15 +336,19 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     // We use a try catch block in case of db errors
     try {
       const timezoneMod = '-5 hour';
-      const subQueryFilter = `episodes.show_id = shows.id AND episodes.number IS NOT NULL`;
       const results = await db.all(
-        `with all_shows as (
-          SELECT shows.*,
-          (SELECT count(*) from episodes where ${subQueryFilter}) episodes_count,
-          (SELECT count(*) from episodes where ${subQueryFilter} AND episodes.airdate < datetime(CURRENT_TIMESTAMP, 'localtime', '${timezoneMod}')) aired_episodes_count,
-          (SELECT count(*) from episodes where ${subQueryFilter} AND episodes.watched_status == 'WATCHED') watched_episodes_count,
-          (SELECT watched_at from episodes where ${subQueryFilter} AND episodes.watched_status == 'WATCHED') last_watched_date
+        `
+        with
+        all_shows as (
+          SELECT shows.* 
+          , COUNT( * ) AS episodes_count
+          , COUNT( CASE WHEN episodes.airdate < datetime(CURRENT_TIMESTAMP, 'localtime', '${timezoneMod}') THEN 1 END ) AS aired_episodes_count
+          , COUNT( CASE WHEN episodes.watched_status == 'WATCHED' THEN 1 END ) AS watched_episodes_count
+          , watched_at AS last_watched_date
           from shows
+          LEFT JOIN episodes on shows.id = episodes.show_id AND episodes.number IS NOT NULL
+          GROUP BY shows.id
+          ORDER BY watched_at ASC
         ),
         eps as (
           SELECT all_shows.*,
@@ -337,11 +363,12 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
               LIMIT 1
           ) next_episode_towatch_airdate
           from all_shows
+          WHERE
+            all_shows.watched_episodes_count > 0 AND
+            all_shows.aired_episodes_count > all_shows.watched_episodes_count
         )
         select * from eps
         WHERE
-          eps.watched_episodes_count > 0 AND
-          eps.aired_episodes_count > eps.watched_episodes_count AND
           (
             (
               (eps.status == 'Ended' OR eps.status == 'To Be Determined') AND
@@ -355,10 +382,12 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
               )
             )
           )
-        ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
+        ORDER BY updated_at DESC LIMIT ? OFFSET ?;
+        `,
         limit,
         offset,
       );
+      
       return results;
     } catch (dbError) {
       // Database connection error
@@ -370,15 +399,18 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
   const getShowsAbandoned = async (limit = 25, offset = 0) => {
     // We use a try catch block in case of db errors
     try {
-      const subQueryFilter = `episodes.show_id = shows.id AND episodes.number IS NOT NULL`;
+      const timezoneMod = '-5 hour';
       const results = await db.all(
         `with all_shows as (
-          SELECT shows.*,
-          (SELECT count(*) from episodes where ${subQueryFilter}) episodes_count,
-          (SELECT count(*) from episodes where ${subQueryFilter} AND episodes.airdate < CURRENT_DATE) aired_episodes_count,
-          (SELECT count(*) from episodes where ${subQueryFilter} AND episodes.watched_status == 'WATCHED') watched_episodes_count,
-          (SELECT watched_at from episodes where ${subQueryFilter} AND episodes.watched_status == 'WATCHED') last_watched_date
+          SELECT shows.* 
+          , COUNT( * ) AS episodes_count
+          , COUNT( CASE WHEN episodes.airdate < datetime(CURRENT_TIMESTAMP, 'localtime', '${timezoneMod}') THEN 1 END ) AS aired_episodes_count
+          , COUNT( CASE WHEN episodes.watched_status == 'WATCHED' THEN 1 END ) AS watched_episodes_count
+          , watched_at AS last_watched_date
           from shows
+          LEFT JOIN episodes on shows.id = episodes.show_id AND episodes.number IS NOT NULL
+          GROUP BY shows.id
+          ORDER BY watched_at ASC
         ),
         eps as (
           SELECT all_shows.*,
@@ -393,11 +425,12 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
               LIMIT 1
           ) next_episode_towatch_airdate
           from all_shows
+          WHERE
+            all_shows.watched_episodes_count > 0 AND
+            all_shows.aired_episodes_count > all_shows.watched_episodes_count
         )
         select * from eps
         WHERE
-          eps.watched_episodes_count > 0 AND
-          eps.aired_episodes_count > eps.watched_episodes_count AND
           (
             (
               eps.status == 'Ended' AND eps.last_watched_date < datetime('now', '-3 month')
