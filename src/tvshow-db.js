@@ -508,14 +508,19 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       const timezoneMod = '-5 hour';
       const subQueryFilter = `episodes.show_id = shows.id AND episodes.number IS NOT NULL`;
       const result = await db.get(
-        `SELECT 
-        shows.*,
-        (SELECT count(*) from episodes where ${subQueryFilter}) episodes_count,
-        (SELECT count(*) from episodes where ${subQueryFilter} AND episodes.airdate < datetime(CURRENT_TIMESTAMP, 'localtime', '${timezoneMod}')) aired_episodes_count,
-        (SELECT count(*) from episodes where ${subQueryFilter} AND episodes.watched_status == 'WATCHED') watched_episodes_count,
-        (SELECT watched_at from episodes where ${subQueryFilter} AND episodes.watched_status == 'WATCHED') last_watched_date,
-        (SELECT id from episodes where ${subQueryFilter} AND episodes.watched_status IS NULL ) last_watched_episode_id
-        from shows WHERE shows.id = ?`,
+        `with all_shows as (
+          SELECT shows.* 
+          , COUNT( * ) AS episodes_count
+          , COUNT( CASE WHEN episodes.airdate < datetime(CURRENT_TIMESTAMP, 'localtime', '${timezoneMod}') THEN 1 END ) AS aired_episodes_count
+          , COUNT( CASE WHEN episodes.watched_status == 'WATCHED' THEN 1 END ) AS watched_episodes_count
+          , (SELECT watched_at from episodes where ${subQueryFilter} AND episodes.watched_status == 'WATCHED') last_watched_date
+          , (SELECT id from episodes where ${subQueryFilter} AND episodes.watched_status IS NULL ) last_watched_episode_id
+          from shows
+          LEFT JOIN episodes on shows.id = episodes.show_id AND episodes.number IS NOT NULL
+          GROUP BY shows.id
+        )
+        SELECT * from all_shows WHERE id = ?
+        `,
         id,
       );
       return result;
