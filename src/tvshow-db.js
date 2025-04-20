@@ -257,6 +257,14 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
         limit,
         offset,
       );
+      
+      // const results = await db.all(
+      //   `SELECT shows.* from shows
+      //   WHERE (SELECT count(*) from episodes where ${subQueryFilter} AND episodes.watched_status == 'WATCHED') == 0
+      //   ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
+      //   limit,
+      //   offset,
+      // );
       return results;
     } catch (dbError) {
       // Database connection error
@@ -499,7 +507,6 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     try {
       const timezoneMod = '-5 hour';
       const subQueryFilter = `episodes.show_id = shows.id AND episodes.number IS NOT NULL`;
-      
       const result = await db.get(
         `with all_shows as (
           SELECT shows.* 
