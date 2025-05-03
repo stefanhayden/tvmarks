@@ -144,4 +144,12 @@
   {{/if}}
 
 
+      <form action="/show/{{episode.show_id}}/episode/{{episode.id}}/delete" 
+            method="post"
+            style="margin-bottom: 20px;"
+            onsubmit="this.querySelector('button').disabled = 'disabled'">
+
+        <button type="submit">Delete episode</button>
+      </form>
+
 {{/if}}

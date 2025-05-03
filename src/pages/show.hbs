@@ -6,6 +6,8 @@
   <div class="bookmarks">
     {{> show_tvshow tvshow=show}}
   </div>
+
+  next_episode_towatch_airdate: {{show.next_episode_towatch_airdate}}
   <div>
     <a id="episodes"></a>
     {{#each seasons}}
@@ -138,7 +140,22 @@
 
 
   <div style="display:flex; gap: 10px; justify-content: right;">
-    {{#if @root.loggedIn}}    
+    {{#if @root.loggedIn}} 
+      <form method="post" action="/show/{{show.id}}/abandon"
+            onsubmit="this.querySelector('button').disabled = 'disabled'">
+        {{#if show.abandoned}}
+          <input type="hidden" name="abandon" value="FALSE" />
+          <button>
+            resume
+          </button>
+        {{else}}
+          <input type="hidden" name="abandon" value="TRUE" />
+          <button>
+            abandon
+          </button>
+        {{/if}}
+      </form>
+    
       <form method="get" 
             action="/admin/fetchMissingImage/{{show.id}}"
             onsubmit="this.querySelector('button').disabled = 'disabled'">

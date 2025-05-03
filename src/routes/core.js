@@ -2,7 +2,7 @@ import express from 'express';
 import * as linkify from 'linkifyjs';
 import { data, actorInfo } from '../util.js';
 import { isAuthenticated } from '../session-auth.js';
-import { refreshShowData } from './admin.js';
+import { refreshShowData, refreshWatchNext } from './admin.js';
 
 const router = express.Router();
 export default router;
@@ -12,6 +12,7 @@ router.get('/', async (req, res) => {
 
   if (req.session.loggedIn) {
     params.showDataRefreshed = await refreshShowData(req, res);
+    refreshWatchNext(req);
   }
 
   const tvshowDb = req.app.get('tvshowDb');
@@ -28,28 +29,25 @@ router.get('/', async (req, res) => {
     tvshowDb.getShowsNotStarted(),
   ]);
 
-  const foundShows = showsToWatch || showsNotStarted || showsCompleted || showsUpToDate || showsAbandoned;
-  console.log('foundShows.length', foundShows.length);
+  const foundShows = (showsToWatch?.length || showsNotStarted?.length || showsCompleted?.length || showsUpToDate?.length || showsAbandoned?.length || 0) > 0;
+  console.log('foundShows', foundShows);
   params = {
     ...params,
     limit,
     foundShows,
     showsNotStarted,
-    seeAllShowsNotStarted: showsNotStarted.length > limit,
+    seeAllShowsNotStarted: showsNotStarted ? showsNotStarted.length > limit : false,
     showsCompleted,
-    seeAllShowsCompleted: showsCompleted.length > limit,
+    seeAllShowsCompleted: showsCompleted ? showsCompleted.length > limit : false,
     showsUpToDate,
-    seeAllShowsUpToDate: showsUpToDate.length > limit,
+    seeAllShowsUpToDate: showsUpToDate ? showsUpToDate.length > limit : false,
     showsAbandoned,
-    seeAllShowsAbandoned: showsAbandoned.length > limit,
+    seeAllShowsAbandoned: showsAbandoned ? showsAbandoned.length > limit : false,
     showsToWatch,
-    seeAllShowsToWatch: showsToWatch.length > limit,
+    seeAllShowsToWatch: showsToWatch ? showsToWatch.length > limit : false,
     hideTitle: true,
   };
 
-  if (!foundShows) params.error = data.errorMessage;
-
-  // params.title = title;
   params.pageInfo = {
     currentPage,
     offset,
@@ -57,7 +55,7 @@ router.get('/', async (req, res) => {
     hasPreviousPage: currentPage > 1,
     previousOffset: Math.max(offset - limit, 0),
   };
-
+  
   // Send the page options or raw JSON data if the client requested it
   return req.query.raw ? res.send(params) : res.render('index', params);
 });

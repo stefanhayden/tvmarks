@@ -15,6 +15,11 @@ router.get('/:showId', async (req, res) => {
   const apDb = req.app.get('apDb');
 
   const show = await tvshowDb.getShow(req.params.showId);
+
+  if (!show) {
+    return res.redirect(301, `/`);
+  }
+
   params.show = show;
   const comments = req.session.loggedIn
     ? await tvshowDb.getAllComments(`show-${req.params.showId}`)
@@ -60,13 +65,15 @@ router.get('/:showId', async (req, res) => {
   }
 
   if (show.last_watched_episode_id) {
-    params.seasons.forEach((s) =>
-      s.episodes.forEach((e) => {
-        if (show.last_watched_episode_id === e.id && new Date(e.airdate) < now) {
+    let lastEpId = null;
+    episodes.map((e) => {
+      if (e.number !== null) {
+        if (!params.show.watchNextEpisode && !e.isWatched && new Date(e.airdate) < now) {
           params.show.watchNextEpisode = e;
         }
-      }),
-    );
+        lastEpId = e.id;
+      }
+    });
   }
 
   const permissions = await apDb.getPermissions(`show-${show.id}`);
@@ -79,21 +86,51 @@ router.get('/:showId', async (req, res) => {
   return req.query.raw ? res.send(params) : res.render('show', params);
 });
 
+const getEpisodeStatusUpdatedValues = (allEps) => {
+  const aired_episodes_count = allEps.filter((ep) => new Date(ep.airdate) < new Date())?.length || 0;
+  const watched_episodes_count = allEps.filter((ep) => ep.watched_status === 'WATCHED')?.length || 0;
+
+  // reversed to make it easy to find last watched episode
+  const allEpsReversed = [...allEps].reverse();
+
+  const last_watched_episode_index = allEpsReversed.findIndex((ep) => ep.watched_status === 'WATCHED');
+  const last_watched_episode = allEpsReversed[last_watched_episode_index];
+  const last_watched_date = last_watched_episode?.watched_at;
+  const last_watched_episode_id = last_watched_episode?.id | null;
+
+  const next_episode_towatch = allEps.find((ep, index) => last_watched_episode_index - 1 === index);
+  const next_episode_towatch_airdate = next_episode_towatch?.airdate || null;
+
+  return {
+    aired_episodes_count,
+    watched_episodes_count,
+    last_watched_date,
+    last_watched_episode_id,
+    next_episode_towatch_airdate,
+    abandoned: 0,
+  };
+};
+
 router.post('/:showId/episode/:episodeId/status', async (req, res) => {
   const apDb = req.app.get('apDb');
   const tvshowDb = req.app.get('tvshowDb');
   const status = req.body.status === 'WATCHED' ? 'WATCHED' : null;
-  const updatedEp = await tvshowDb.updateEpisodeWatchStatus(req.params.episodeId, status);
 
-  const addedShow = await tvshowDb.getShow(req.params.showId);
+  const updatedEp = await tvshowDb.updateEpisodeWatchStatus(req.params.episodeId, status);
+  const allEpsWithNulls = await tvshowDb.getEpisodesByShowId(req.params.showId);
+
+  const allEps = allEpsWithNulls.filter((ep) => ep.number !== null);
+
+  const updatedShow = await tvshowDb.updateShow(req.params.showId, getEpisodeStatusUpdatedValues(allEps));
+
   if (status) {
     // watched ep
     const data = {
-      id: `show-${addedShow.id}-episode-${updatedEp.id}`,
-      path: `show/${addedShow.id}`,
-      url: addedShow.url,
+      id: `show-${updatedShow.id}-episode-${updatedEp.id}`,
+      path: `show/${updatedShow.id}`,
+      url: updatedShow.url,
       description: updatedEp.note || '',
-      title: `<a href="https://${domain}/show/${addedShow.id}" rel="nofollow noopener noreferrer">${escapeHTML(addedShow.name)}</a>: Watched s${
+      title: `<a href="https://${domain}/show/${updatedShow.id}" rel="nofollow noopener noreferrer">${escapeHTML(updatedShow.name)}</a>: Watched s${
         updatedEp.season
       }e${updatedEp.number}`,
     };
@@ -101,9 +138,9 @@ router.post('/:showId/episode/:episodeId/status', async (req, res) => {
   } else {
     // unwatched episode
     const data = {
-      id: `show-${addedShow.id}-episode-${updatedEp.id}`,
-      path: `show/${addedShow.id}`,
-      url: addedShow.url,
+      id: `show-${updatedShow.id}-episode-${updatedEp.id}`,
+      path: `show/${updatedShow.id}`,
+      url: updatedShow.url,
     };
     broadcastMessage(data, 'delete', apDb, account, domain);
   }
@@ -139,10 +176,28 @@ router.post('/:showId/episode/:episodeId/update', async (req, res) => {
   await apDb.setPermissions(id, req.body.allowed || '', req.body.blocked || '');
 
   if (req.body.returnHash) {
-    res.redirect(301, `/show/${req.params.showId}/episode/${req.params.episodeId}`);
+    return res.redirect(301, `/show/${req.params.showId}/episode/${req.params.episodeId}`);
   } else {
-    res.redirect(301, `/show/${req.params.showId}/episode/${req.params.episodeId}`);
+    return res.redirect(301, `/show/${req.params.showId}/episode/${req.params.episodeId}`);
   }
+});
+
+router.post('/:showId/episode/:episodeId/delete', async (req, res) => {
+  const tvshowDb = req.app.get('tvshowDb');
+
+  await tvshowDb.deleteEpisode(req.params.episodeId);
+
+  const allEpsWithNulls = await tvshowDb.getEpisodesByShowId(req.params.showId);
+  const allEps = allEpsWithNulls.filter((ep) => ep.number !== null);
+  const aired_episodes_count = allEps.filter((ep) => new Date(ep.airdate) < new Date())?.length || 0;
+  const watched_episodes_count = allEps.filter((ep) => ep.watched_status === 'WATCHED')?.length || 0;
+
+  await tvshowDb.updateShow(req.params.showId, {
+    aired_episodes_count,
+    watched_episodes_count,
+  });
+
+  return res.redirect(301, `/show/${req.params.showId}`);
 });
 
 router.post('/:showId/season/:seasonId/status', async (req, res) => {
@@ -159,6 +214,11 @@ router.post('/:showId/season/:seasonId/status', async (req, res) => {
 
   await Promise.all(thisSeasonEps.map((val) => tvshowDb.updateEpisodeWatchStatus(val.id, status)));
 
+  const allEpsWithNulls = await tvshowDb.getEpisodesByShowId(req.params.showId);
+  const allEps = allEpsWithNulls.filter((ep) => ep.number !== null);
+
+  await tvshowDb.updateShow(req.params.showId, getEpisodeStatusUpdatedValues(allEps));
+
   res.redirect(301, `/show/${req.params.showId}#season${req.params.seasonId}`);
 });
 
@@ -169,6 +229,11 @@ router.get('/:showId/episode/:episodeId', async (req, res) => {
   const apDb = req.app.get('apDb');
 
   const show = await tvshowDb.getShow(req.params.showId);
+
+  if (!show) {
+    return res.redirect(`/`);
+  }
+
   const episode = await tvshowDb.getEpisode(req.params.episodeId).then((e) => {
     const daysUntill = Math.round((new Date() - new Date(e.airdate)) / (24 * 60 * 60 * 1000));
     return {
@@ -215,6 +280,16 @@ router.post('/:showId/episode/:episodeId/delete_hidden_comments', isAuthenticate
   await tvshowDb.deleteHiddenComments(`show-${showId}-episode-${episodeId}`);
 
   return req.query.raw ? res.send(params) : res.redirect(`/show/${showId}/episode/${episodeId}`);
+});
+
+router.post('/:showId/abandon', isAuthenticated, async (req, res) => {
+  const { showId } = req.params;
+  const tvshowDb = req.app.get('tvshowDb');
+
+  const abandoned = req.body.abandon === 'TRUE';
+  await tvshowDb.updateShow(showId, { abandoned });
+
+  res.redirect(301, `/show/${showId}`);
 });
 
 router.post('/:showId/update', isAuthenticated, async (req, res) => {
