@@ -119,6 +119,15 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
               network_country_timezone TEXT,
               image TEXT,
               note TEXT,
+              
+              episodes_count INTEGER DEFAULT 0,
+              aired_episodes_count INTEGER DEFAULT 0,
+              watched_episodes_count INTEGER DEFAULT 0,
+              last_watched_date DATETIME DEFAULT NULL,
+              next_episode_towatch_airdate DATETIME DEFAULT NULL,
+              last_watched_episode_id INTEGER DEFAULT NULL,
+              abandoned BOOLEAN DEFAULT FALSE,
+              
               created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
               updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );`,
@@ -191,46 +200,23 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
   const getShows = async (limit = 10, offset = 0) => {
     // We use a try catch block in case of db errors
     try {
-      const timezoneMod = '-5 hour';
-      const subQueryFilter = `episodes.show_id = shows.id AND episodes.number IS NOT NULL`;
-      const results = await db.all(
-        `with all_shows as (
-          SELECT shows.*,
-          (SELECT count(*) from episodes where ${subQueryFilter}) episodes_count,
-          (SELECT count(*) from episodes where ${subQueryFilter} AND episodes.airdate < datetime(CURRENT_TIMESTAMP, 'localtime', '${timezoneMod}')) aired_episodes_count,
-          (SELECT count(*) from episodes where ${subQueryFilter} AND episodes.watched_status == 'WATCHED') watched_episodes_count,
-          (SELECT watched_at from episodes where ${subQueryFilter} AND episodes.watched_status == 'WATCHED') last_watched_date
-          from shows
-        ),
-        eps as (
-          SELECT all_shows.*,
-          (
-            SELECT
-              count(*) 
-              from episodes 
-            where 
-              episodes.show_id = all_shows.id AND
-              episodes.number IS NOT NULL AND
-              episodes.airdate < CURRENT_DATE AND
-              episodes.airdate < all_shows.last_watched_date
-          ) aired_episodes_at_last_watched_date_count,
-          (
-            SELECT
-              airdate 
-              from episodes 
-            where 
-              episodes.show_id = all_shows.id AND
-              episodes.number IS NOT NULL AND
-              episodes.airdate > all_shows.last_watched_date 
-              LIMIT 1
-          ) next_episode_towatch_airdate
-          from all_shows
-        )
-        select * from eps
-        ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
-        limit,
-        offset,
-      );
+      // const timezoneMod = '-5 hour';
+      // const subQueryFilter = `episodes.show_id = shows.id AND episodes.number IS NOT NULL`;
+      const results = await db.all(`select * from shows ORDER BY updated_at DESC LIMIT ? OFFSET ?`, limit, offset);
+      return results;
+    } catch (dbError) {
+      // Database connection error
+      console.error(dbError);
+    }
+    return undefined;
+  };
+
+  const getAllShows = async () => {
+    // We use a try catch block in case of db errors
+    try {
+      // const timezoneMod = '-5 hour';
+      // const subQueryFilter = `episodes.show_id = shows.id AND episodes.number IS NOT NULL`;
+      const results = await db.all(`select * from shows`);
       return results;
     } catch (dbError) {
       // Database connection error
@@ -243,28 +229,13 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     // We use a try catch block in case of db errors
     try {
       const results = await db.all(
-        `with all_shows as (
-          SELECT shows.*
-          , COUNT( CASE WHEN episodes.watched_status == 'WATCHED' THEN 1 END ) AS watched_episodes_count
-          from shows
-          LEFT JOIN episodes on shows.id = episodes.show_id AND episodes.number IS NOT NULL
-          GROUP BY shows.id
-          ORDER BY watched_at ASC
-        )
-        SELECT * from all_shows
+        `SELECT * from shows
         WHERE watched_episodes_count == 0
         ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
         limit,
         offset,
       );
-      
-      // const results = await db.all(
-      //   `SELECT shows.* from shows
-      //   WHERE (SELECT count(*) from episodes where ${subQueryFilter} AND episodes.watched_status == 'WATCHED') == 0
-      //   ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
-      //   limit,
-      //   offset,
-      // );
+
       return results;
     } catch (dbError) {
       // Database connection error
@@ -277,53 +248,14 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     // We use a try catch block in case of db errors
     try {
       const results = await db.all(
-        `with all_shows as (
-          SELECT shows.*
-          , COUNT( CASE WHEN episodes.airdate < CURRENT_TIMESTAMP THEN 1 END ) AS aired_episodes_count
-          , COUNT( CASE WHEN episodes.watched_status == 'WATCHED' THEN 1 END ) AS watched_episodes_count
-          from shows
-          LEFT JOIN episodes on shows.id = episodes.show_id AND episodes.number IS NOT NULL
-          GROUP BY shows.id
-          ORDER BY watched_at ASC
-        )
-        SELECT * from all_shows
+        `SELECT * from shows
         WHERE aired_episodes_count == watched_episodes_count
         AND status == 'Ended'
         ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
         limit,
         offset,
       );
-      return results;
-    } catch (dbError) {
-      // Database connection error
-      console.error(dbError);
-    }
-    return undefined;
-  };
 
-  const getShowsUpToDate = async (limit = 25, offset = 0) => {
-    // We use a try catch block in case of db errors
-    try {
-      const timezoneMod = '-5 hour';
-      const results = await db.all(
-        `with all_shows as (
-          SELECT shows.*
-          , COUNT( CASE WHEN episodes.airdate < datetime(CURRENT_TIMESTAMP, 'localtime', '${timezoneMod}') THEN 1 END ) AS aired_episodes_count
-          , COUNT( CASE WHEN episodes.watched_status == 'WATCHED' THEN 1 END ) AS watched_episodes_count
-          from shows
-          LEFT JOIN episodes on shows.id = episodes.show_id AND episodes.number IS NOT NULL
-          GROUP BY shows.id
-          ORDER BY watched_at ASC
-        )
-        SELECT all_shows.* from all_shows
-        WHERE 
-          all_shows.aired_episodes_count <= all_shows.watched_episodes_count
-          AND all_shows.aired_episodes_count > 0
-          AND all_shows.status != 'Ended'
-        ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
-        limit,
-        offset,
-      );
       return results;
     } catch (dbError) {
       // Database connection error
@@ -337,57 +269,56 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     try {
       const timezoneMod = '-5 hour';
       const results = await db.all(
-        `
-        with
-        all_shows as (
-          SELECT shows.* 
-          , COUNT( * ) AS episodes_count
-          , COUNT( CASE WHEN episodes.airdate < datetime(CURRENT_TIMESTAMP, 'localtime', '${timezoneMod}') THEN 1 END ) AS aired_episodes_count
-          , COUNT( CASE WHEN episodes.watched_status == 'WATCHED' THEN 1 END ) AS watched_episodes_count
-          , watched_at AS last_watched_date
-          from shows
-          LEFT JOIN episodes on shows.id = episodes.show_id AND episodes.number IS NOT NULL
-          GROUP BY shows.id
-          ORDER BY watched_at ASC
-        ),
-        eps as (
-          SELECT all_shows.*,
-          (
-            SELECT
-              airdate 
-              from episodes 
-            where 
-              episodes.show_id = all_shows.id AND
-              episodes.number IS NOT NULL AND
-              episodes.airdate > all_shows.last_watched_date 
-              LIMIT 1
-          ) next_episode_towatch_airdate
-          from all_shows
+        `select *
+        from shows
           WHERE
-            all_shows.watched_episodes_count > 0 AND
-            all_shows.aired_episodes_count > all_shows.watched_episodes_count
-        )
-        select * from eps
-        WHERE
-          (
+            abandoned != 1 AND
+            watched_episodes_count > 0 AND
+            next_episode_towatch_airdate <= date('now') AND
             (
-              (eps.status == 'Ended' OR eps.status == 'To Be Determined') AND
-              eps.last_watched_date > datetime('now', '-3 month')
-            ) OR
-            (
-              eps.status == 'Running' AND
               (
-                eps.next_episode_towatch_airdate > datetime('now', '-3 month') OR
-                eps.last_watched_date > datetime('now', '-3 month')
+                (status == 'Ended' OR status == 'To Be Determined') AND
+                last_watched_date > date('now', '-3 month')
+              ) OR
+              (
+                status == 'Running' AND
+                aired_episodes_count > watched_episodes_count AND
+                (
+                  next_episode_towatch_airdate > date('now', '-3 month') OR
+                  last_watched_date > date('now', '-3 month')
+                )
               )
             )
-          )
-        ORDER BY updated_at DESC LIMIT ? OFFSET ?;
+          ORDER BY updated_at DESC LIMIT ? OFFSET ?;
         `,
         limit,
         offset,
       );
-      
+
+      return results;
+    } catch (dbError) {
+      // Database connection error
+      console.error(dbError);
+    }
+    return undefined;
+  };
+
+  const getShowsUpToDate = async (limit = 25, offset = 0) => {
+    // We use a try catch block in case of db errors
+    try {
+      const timezoneMod = '-5 hour';
+      const results = await db.all(
+        `SELECT *
+          from shows
+        WHERE 
+          next_episode_towatch_airdate > date('now') OR
+          aired_episodes_count <= watched_episodes_count
+          AND status != 'Ended'
+        ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
+        limit,
+        offset,
+      );
+
       return results;
     } catch (dbError) {
       // Database connection error
@@ -401,51 +332,27 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     try {
       const timezoneMod = '-5 hour';
       const results = await db.all(
-        `with all_shows as (
-          SELECT shows.* 
-          , COUNT( * ) AS episodes_count
-          , COUNT( CASE WHEN episodes.airdate < datetime(CURRENT_TIMESTAMP, 'localtime', '${timezoneMod}') THEN 1 END ) AS aired_episodes_count
-          , COUNT( CASE WHEN episodes.watched_status == 'WATCHED' THEN 1 END ) AS watched_episodes_count
-          , watched_at AS last_watched_date
-          from shows
-          LEFT JOIN episodes on shows.id = episodes.show_id AND episodes.number IS NOT NULL
-          GROUP BY shows.id
-          ORDER BY watched_at ASC
-        ),
-        eps as (
-          SELECT all_shows.*,
-          (
-            SELECT
-              airdate 
-              from episodes 
-            where 
-              episodes.show_id = all_shows.id AND
-              episodes.number IS NOT NULL AND
-              episodes.airdate > all_shows.last_watched_date
-              LIMIT 1
-          ) next_episode_towatch_airdate
-          from all_shows
+        `select * from shows
           WHERE
-            all_shows.watched_episodes_count > 0 AND
-            all_shows.aired_episodes_count > all_shows.watched_episodes_count
-        )
-        select * from eps
-        WHERE
+            watched_episodes_count > 0 AND
+            next_episode_towatch_airdate <= date('now') AND
           (
             (
-              eps.status == 'Ended' AND eps.last_watched_date < datetime('now', '-3 month')
+              status == 'Ended' AND last_watched_date < date('now', '-3 month')
             )
             OR
             (
-              eps.status == 'Running' AND
-              eps.next_episode_towatch_airdate < datetime('now', '-3 month') AND
-              eps.last_watched_date < datetime('now', '-3 month')
+              status == 'Running' AND
+              next_episode_towatch_airdate < date('now', '-3 month') AND
+              last_watched_date < date('now', '-3 month')
             )
+            OR abandoned == 1
           )
-        ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
+          ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
         limit,
         offset,
       );
+
       return results;
     } catch (dbError) {
       // Database connection error
@@ -484,7 +391,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
   const isRecentlyUpdated = async () => {
     try {
-      const result = await db.get(`SELECT last_checked from update_history WHERE last_checked > datetime(CURRENT_TIMESTAMP, '-3 day')`);
+      const result = await db.get(`SELECT last_checked from update_history WHERE last_checked > datetime(CURRENT_TIMESTAMP, '-1 day')`);
       console.log('db isRecentlyUpdated', result);
       return !!result;
     } catch (dbError) {
@@ -505,24 +412,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
   const getShow = async (id) => {
     try {
-      const timezoneMod = '-5 hour';
-      const subQueryFilter = `episodes.show_id = shows.id AND episodes.number IS NOT NULL`;
-      const result = await db.get(
-        `with all_shows as (
-          SELECT shows.* 
-          , COUNT( * ) AS episodes_count
-          , COUNT( CASE WHEN episodes.airdate < datetime(CURRENT_TIMESTAMP, 'localtime', '${timezoneMod}') THEN 1 END ) AS aired_episodes_count
-          , COUNT( CASE WHEN episodes.watched_status == 'WATCHED' THEN 1 END ) AS watched_episodes_count
-          , (SELECT watched_at from episodes where ${subQueryFilter} AND episodes.watched_status == 'WATCHED') last_watched_date
-          , (SELECT id from episodes where ${subQueryFilter} AND episodes.watched_status IS NULL ) last_watched_episode_id
-          from shows
-          LEFT JOIN episodes on shows.id = episodes.show_id AND episodes.number IS NOT NULL
-          GROUP BY shows.id
-        )
-        SELECT * from all_shows WHERE id = ?
-        `,
-        id,
-      );
+      const result = await db.get(`SELECT * from shows WHERE id = ?`, id);
       return result;
     } catch (dbError) {
       console.error(dbError);
@@ -552,7 +442,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
   const getEpisodesByShowId = async (showId) => {
     try {
-      const result = await db.all('SELECT episodes.* from episodes WHERE episodes.show_id = ? ORDER BY number ASC', showId);
+      const result = await db.all('SELECT episodes.* from episodes WHERE episodes.show_id = ? ORDER BY season, number ASC', showId);
       return result;
     } catch (dbError) {
       console.error(dbError);
@@ -618,6 +508,11 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
           $network_country_code: body.network_country_code,
           $network_country_timezone: body.network_country_timezone,
           $image: body.image,
+          $episodes_count: body.episodes_count,
+          $aired_episodes_count: body.aired_episodes_count,
+          $watched_episodes_count: body.watched_episodes_count,
+          $last_watched_date: body.last_watched_date,
+          $next_episode_towatch_airdate: body.next_episode_towatch_airdate,
         },
       );
       return getShow(result.lastID);
@@ -629,34 +524,30 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
   const updateShow = async (id, body) => {
     try {
-      await db.run(
-        `UPDATE shows SET tvrage_id=$tvrage_id, thetvdb_id=$thetvdb_id, imdb_id=$imdb_id,
-        url=$url, summary=$summary, name=$name, type=$type, language=$language, status=$status,
-        runtime=$runtime, averageRuntime=$averageRuntime, premiered=$premiered, ended=$ended,
-        officialSite=$officialSite, network_name=$network_name, network_country=$network_country,
-        network_country_code=$network_country_code, network_country_timezone=$network_country_timezone,
-        image=$image, updated_at=DateTime('now') WHERE id = $id`,
+      const keys = Object.keys(body);
+      const data = keys.reduce((acc, val) => {
+        acc[`$${val}`] = body[val];
+        return acc;
+      }, {});
+      console.log(
+        'updateShow',
+        `UPDATE shows SET
+          ${keys.map((v) => `${v}=$${v}`).join(',')}, 
+          updated_at=DateTime('now') 
+          WHERE id = $id`,
         {
           $id: id,
-          $tvrage_id: body.tvrage_id,
-          $thetvdb_id: body.thetvdb_id,
-          $imdb_id: body.imdb_id,
-          $url: body.url,
-          $summary: body.summary,
-          $name: body.name,
-          $type: body.type,
-          $language: body.language,
-          $status: body.status,
-          $runtime: body.runtime,
-          $averageRuntime: body.averageRuntime,
-          $premiered: body.premiered,
-          $ended: body.ended,
-          $officialSite: body.officialSite,
-          $network_name: body.network?.name,
-          $network_country: body.network?.country,
-          $network_country_code: body.network?.country?.code,
-          $network_country_timezone: body.network?.country?.timezone,
-          $image: body.image,
+          ...data,
+        },
+      );
+      await db.run(
+        `UPDATE shows SET
+          ${keys.map((v) => `${v}=$${v}`).join(',')}, 
+          updated_at=DateTime('now') 
+          WHERE id = $id`,
+        {
+          $id: id,
+          ...data,
         },
       );
 
@@ -669,30 +560,23 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
   const updateShowNote = async (id, body) => {
     try {
-      await db.run(
-        `UPDATE shows SET note=$note, updated_at=DateTime('now') WHERE id = $id`,
-        {
-          $id: id,
-          $note: body.note,
-        },
-      );
+      await db.run(`UPDATE shows SET note=$note, updated_at=DateTime('now') WHERE id = $id`, {
+        $id: id,
+        $note: body.note,
+      });
 
       return await db.get('SELECT * from shows WHERE id = ?', id);
     } catch (dbError) {
       console.error(dbError);
     }
-  }
-    
+  };
 
   const updateShowImage = async (id, body) => {
     try {
-      await db.run(
-        `UPDATE shows SET image=$image, updated_at=DateTime('now') WHERE id = $id`,
-        {
-          $id: id,
-          $image: body.image,
-        },
-      );
+      await db.run(`UPDATE shows SET image=$image, updated_at=DateTime('now') WHERE id = $id`, {
+        $id: id,
+        $image: body.image,
+      });
 
       return await db.get('SELECT * from shows WHERE id = ?', id);
     } catch (dbError) {
@@ -819,7 +703,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
   const deleteComment = async (resourceId) => {
     try {
-      console.log('deleteComment', resourceId)
+      console.log('deleteComment', resourceId);
       return await db.run('DELETE FROM comments WHERE resource_id = ?', resourceId);
     } catch (dbError) {
       console.error(dbError);

@@ -312,11 +312,10 @@ router.get('/', isAuthenticated, async (req, res) => {
   }
 });
 
-
 export async function fetchMissingImage(req, showId) {
   const db = req.app.get('tvshowDb');
   const show = await db.getShow(showId);
-  
+
   const updatedShow = await tvMaze.show(show.id);
 
   const fileExt = updatedShow.image.medium.split('.').reverse()[0];
@@ -328,13 +327,12 @@ export async function fetchMissingImage(req, showId) {
   });
 }
 
-
 router.get('/fetchMissingImage/:showId', isAuthenticated, async (req, res) => {
   try {
     if (!req.params.showId) {
       throw new Error('no show id provided');
     }
-    
+
     await fetchMissingImage(req, req.params.showId);
   } catch (err) {
     console.log(err);
@@ -343,14 +341,12 @@ router.get('/fetchMissingImage/:showId', isAuthenticated, async (req, res) => {
   return res.redirect(`/show/${req.params.showId}`);
 });
 
-
+// to to set a max images to stop request from timing out
 export async function fetchMissingImages(req, maxImages = 50) {
   const db = req.app.get('tvshowDb');
-  const limit = 999999999;
-  const offset = 0;
-  const shows = await db.getShows(limit, offset);
+  const shows = await db.getAllShows();
   let fetchedImages = 0;
-  
+
   const showsPromises = shows.map(async (show) => {
     // CHECK IF IMAGE EXISTS
     if (fs.existsSync(path.join(imageDirectory, show.image))) {
@@ -359,22 +355,21 @@ export async function fetchMissingImages(req, maxImages = 50) {
     if (fetchedImages === maxImages) {
       return;
     }
-    
+
     const updatedShow = await tvMaze.show(show.id);
 
     const fileExt = updatedShow.image.medium.split('.').reverse()[0];
     const showImagePath = `shows/${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
     await downloadImage(updatedShow.image.medium, showImagePath);
-    
+
     await db.updateShowImage(updatedShow.id, {
       image: `/${showImagePath}`,
     });
     fetchedImages += 1;
   });
-  
+
   await Promise.all(showsPromises);
 }
-
 
 router.get('/fetchMissingImages', isAuthenticated, async (req, res) => {
   try {
@@ -386,25 +381,79 @@ router.get('/fetchMissingImages', isAuthenticated, async (req, res) => {
   return res.redirect('/admin/update');
 });
 
+export async function refreshWatchNext(req) {
+  const db = req.app.get('tvshowDb');
+  const shows = await db.getAllInProgressShows();
+
+  const showPromises = shows.map(async (show) => {
+    // episodes to update
+    const currentEpisodes = await db.getEpisodesByShowId(show.id);
+
+    const aired_episodes_count = currentEpisodes.filter((ep) => ep.number !== null && new Date(ep.airdate) < new Date()).length;
+
+    await db.updateShow(show.id, {
+      aired_episodes_count,
+    });
+  });
+
+  await Promise.all(showPromises);
+}
 
 export async function refreshShowData(req) {
   const db = req.app.get('tvshowDb');
   const isRecentlyUpdated = await db.isRecentlyUpdated();
 
   if ((isRecentlyUpdated && !req.query.force) || !req.query.force) {
-    console.log('Updated recently: skip show and episode update');
     return false;
   }
 
-  // const shows = await db.getAllInProgressShows();
   const shows = await db.getAllInProgressShows();
   const showPromises = shows.map(async (show) => {
-    // update show
+    // update data
     const updatedShow = await tvMaze.show(show.id);
+    const updatedEpisodes = await tvMaze.episodes(show.id, true);
+
+    // episodes to update
+    const currentEpisodesToUpdate = await db.getEpisodesByShowId(show.id);
+
+    const epPromises = updatedEpisodes.map(async (episode) => {
+      const found = currentEpisodesToUpdate.find((e) => e.id === episode.id);
+      const ep = episode;
+      const data = {
+        id: ep.id,
+        show_id: show.id,
+        url: ep.url,
+        name: ep.name,
+        season: ep.season,
+        number: ep.number,
+        type: ep.type,
+        airdate: ep.airdate,
+        airtime: ep.airtime,
+        airstamp: ep.airstamp,
+        runtime: ep.runtime,
+        image: ep.image?.medium,
+        summary: ep.summary,
+      };
+      if (found) {
+        return await db.updateEpisode(ep.id, data);
+      } else {
+        return await db.createEpisode(data);
+      }
+    });
+
+    await Promise.all(epPromises);
+
+    // updated episodes
+    const currentEpisodesWithNulls = await db.getEpisodesByShowId(show.id);
+    const currentEpisodes = currentEpisodesWithNulls.filter((ep) => ep.number !== null);
 
     const fileExt = updatedShow.image.medium.split('.').reverse()[0];
     const showImagePath = `shows/${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
     await downloadImage(updatedShow.image.medium, showImagePath);
+
+    const episodes_count = currentEpisodes.filter((ep) => ep.number !== null).length;
+    const aired_episodes_count = currentEpisodes.filter((ep) => ep.number !== null && new Date(ep.airdate) < new Date()).length;
+    const next_episode_towatch_airdate = currentEpisodes.find((ep) => ep.watched_status !== 'WATCHED')?.airdate || null;
 
     await db.updateShow(updatedShow.id, {
       id: updatedShow.id,
@@ -427,52 +476,10 @@ export async function refreshShowData(req) {
       network_country_code: updatedShow.network?.country.code,
       network_country_timezone: updatedShow.network?.country.timezone,
       image: `/${showImagePath}`,
+      episodes_count,
+      aired_episodes_count,
+      next_episode_towatch_airdate,
     });
-
-    // update episodes
-    const updatedEpisodes = await tvMaze.episodes(show.id, true);
-    const currentEpisodes = await db.getEpisodesByShowId(show.id);
-
-    const epPromises = updatedEpisodes.map(async (episode) => {
-      const found = currentEpisodes.find((e) => e.id === episode.id);
-      if (!found) {
-        const ep = episode;
-        return await db.createEpisode({
-          id: ep.id,
-          show_id: show.id,
-          url: ep.url,
-          name: ep.name,
-          season: ep.season,
-          number: ep.number,
-          type: ep.type,
-          airdate: ep.airdate,
-          airtime: ep.airtime,
-          airstamp: ep.airstamp,
-          runtime: ep.runtime,
-          image: ep.image?.medium,
-          summary: ep.summary,
-        });
-      } else {
-        const ep = episode;
-        return await db.updateEpisode(ep.id, {
-          id: ep.id,
-          show_id: show.id,
-          url: ep.url,
-          name: ep.name,
-          season: ep.season,
-          number: ep.number,
-          type: ep.type,
-          airdate: ep.airdate,
-          airtime: ep.airtime,
-          airstamp: ep.airstamp,
-          runtime: ep.runtime,
-          image: ep.image?.medium,
-          summary: ep.summary,
-        });
-      }
-    });
-
-    return await Promise.all(epPromises);
   });
 
   await Promise.all(showPromises);
@@ -502,13 +509,20 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
     if (existingShow) {
       return res.redirect(301, `/show/${existingShow.id}`);
     }
-    
+
     // cleanup to be safe
     await db.deleteShow(req.params.showId);
     await db.deleteEpisodesByShow(req.params.showId);
     await db.deleteEpisodesByShow(null);
 
     const show = await tvMaze.show(req.params.showId);
+    const episodes = await tvMaze.episodes(req.params.showId, true);
+
+    const episodes_count = episodes.filter((ep) => ep.number !== null).length;
+    const aired_episodes_count = episodes.filter((ep) => ep.number !== null && new Date(ep.airdate) < new Date()).length;
+    const watched_episodes_count = 0;
+    const last_watched_date = null;
+    const next_episode_towatch_airdate = episodes.find((ep) => ep.season === 1 && ep.number === 1)?.airdate || null;
 
     const fileExt = show.image.medium.split('.').reverse()[0];
     const showImagePath = `shows/${show.id}_${show.url.split('/').reverse()[0]}.${fileExt}`;
@@ -535,9 +549,13 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
       network_country_code: show.network?.country.code,
       network_country_timezone: show.network?.country.timezone,
       image: `/${showImagePath}`,
+      episodes_count,
+      aired_episodes_count,
+      watched_episodes_count,
+      last_watched_date,
+      next_episode_towatch_airdate,
     });
 
-    const episodes = await tvMaze.episodes(req.params.showId, true);
     const epPromises = episodes.map(async (ep) => {
       await db.createEpisode({
         id: ep.id,
@@ -597,22 +615,8 @@ router.post('/show/delete/:showId', isAuthenticated, async (req, res) => {
 
       broadcastMessage(show, 'delete', apDb, account, domain);
     }
-    console.log('BACK TRO ADMIN');
-    return res.redirect(301, `/admin`);
-  } catch (err) {
-    console.log(err);
-    return res.status(500).send('Internal Server Error');
-  }
-});
 
-router.post('/show/:showId/episode/:episodeId/watch', isAuthenticated, async (req, res) => {
-  const db = req.app.get('tvshowDb');
-  try {
-    const params = {};
-    if (req.params.showId && req.params.episodeId) {
-      db.setEpisodeWatched(req.body.watched);
-    }
-    return res.render('admin/search_tv', params); // TODO: redirect back to show
+    return res.redirect(301, `/admin`);
   } catch (err) {
     console.log(err);
     return res.status(500).send('Internal Server Error');
