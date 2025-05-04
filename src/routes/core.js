@@ -23,10 +23,10 @@ router.get('/', async (req, res) => {
 
   const [showsToWatch, showsAbandoned, showsUpToDate, showsCompleted, showsNotStarted] = await Promise.all([
     tvshowDb.getShowsToWatch(),
-    tvshowDb.getShowsAbandoned(),
-    tvshowDb.getShowsUpToDate(),
-    tvshowDb.getShowsCompleted(),
-    tvshowDb.getShowsNotStarted(),
+    tvshowDb.getShowsAbandoned(8),
+    tvshowDb.getShowsUpToDate(8),
+    tvshowDb.getShowsCompleted(8),
+    tvshowDb.getShowsNotStarted(8),
   ]);
 
   const foundShows = (showsToWatch?.length || showsNotStarted?.length || showsCompleted?.length || showsUpToDate?.length || showsAbandoned?.length || 0) > 0;
