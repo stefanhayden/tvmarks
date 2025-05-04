@@ -7,7 +7,6 @@
     {{> show_tvshow tvshow=show}}
   </div>
 
-  next_episode_towatch_airdate: {{show.next_episode_towatch_airdate}}
   <div>
     <a id="episodes"></a>
     {{#each seasons}}
@@ -52,14 +51,12 @@
         </div>
       </div>
 
-    
       {{#each this.episodes}}
         {{> episode episode=this}}
       {{/each}}
     </div>
     {{/each}}
   </div>
-
 
   {{#if @root.loggedIn}}
     <fieldset style="border:1px solid; padding: 20px; border-radius: 10px; margin-bottom: 20px;">

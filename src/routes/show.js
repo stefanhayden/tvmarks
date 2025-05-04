@@ -98,7 +98,7 @@ const getEpisodeStatusUpdatedValues = (allEps) => {
   const last_watched_date = last_watched_episode?.watched_at;
   const last_watched_episode_id = last_watched_episode?.id | null;
 
-  const next_episode_towatch = allEps.find((ep, index) => last_watched_episode_index - 1 === index);
+  const next_episode_towatch = allEpsReversed.find((ep, index) => last_watched_episode_index - 1 === index);
   const next_episode_towatch_airdate = next_episode_towatch?.airdate || null;
 
   return {
