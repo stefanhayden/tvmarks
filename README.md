@@ -17,13 +17,17 @@ To set your app up:
   - In your `.env` editor, create a key `ADMIN_KEY` and give it a text string as a value. This is your "password" when your browser prompts you, so make it as secure as you need to protect your data.
   - Add another key to your .env called `SESSION_SECRET` and generate a random string for its value. This is your [session secret](http://expressjs.com/en/resources/middleware/session.html#secret), used to generate the hashed version of your session that gets encoded with the cookies used to store your login. If you make this string too easily guessable, you make it easier for someone to hijack your session and gain unauthorized login. Also, if you ever change this string, it will invalidate all existing cookies.
   - If you've got a custom domain in front of your Glitch project, add a key to your .env called `PUBLIC_BASE_URL` with the value set to the hostname (the part after the https://) at which you want the project to be accessible.
-  - Edit the contents of `account.json.example` to set your `@username`, display name, bio, and avatar. (If you don't set a username, your default actor name will be 'bookmarks', so people will find you on the fediverse `@bookmarks@project-name.glitch.me`.)
-  - THEN: either rename `account.json.example` to `account.json`, or copy the contents into a new file called `account.json`. Whatever `username` you have in this file when the project first starts you'll need to retain or else you'll break your followers' connection to this account.
+  - Next we will configure the site communicate with the fediverse. Add another key to your .env called `DISPLAY_NAME` for the fediverse account
+  - Then in your `.env` editor, create a key `DESCRIPTION` and add a text description. Next add an `AVATAR` key add a URL to a profile image.
+  - Finally add a `USERNAME` key to the `.env` editor to set your `@username` for your app's feiverse accout. It will be used in this context: `@watching@project-name.glitch.me`. 
 - Otherwise:
   - Create a `.env` file in the root of the project.
   - Add the line `PUBLIC_BASE_URL=<hostname>` to your .env where \<hostname\> is the hostname of your instance.
   - Add the line `ADMIN_KEY=<key>` to your .env where \<key\> is the password you'll enter when the browser prompts you, and another line for `SESSION_SECRET=<secret>` where \<secret\> is a random string used when hashing your session for use in a secure cookie.
-  - Make a file called `account.json` in the project root. Copy the contents of `account.json.example` into it and edit the values to set your `@username`, display name, bio, and avatar. (If you don't set a username, your default actor name will be 'bookmarks', so people will find you on the fediverse `@bookmarks@project-name.glitch.me`.)
+  - Add the line `DISPLAY_NAME=<display_name>` to your .env where \<display_name\> is your app's fediverse display name.
+  - Add the line `DESCRIPTION=<description>` to your .env where \<description\> is your app's fediverse user description
+  - Add the line `AVATAR=<avatar>` to your .env where \<avatar\> is your app's fediverse user image
+  - Add the line `USERNAME=<name>` to your .env where \<name\> is your app's fediverse username.
 - If you're using Glitch, you should be done! If you're running this yourself, run `npm run start` via whatever mechanism you choose to use to host this website.
 - Click on the **Admin** link in the footer, and enter the password (whatever you set ADMIN_KEY to in the .env).
 - You should be logged in, at which point you can configure various settings, import bookmarks, and use the "Add" links in the header and footer (as well as the bookmarklet, available in the Admin section) to save new bookmarks.
