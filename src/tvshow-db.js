@@ -225,7 +225,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     return undefined;
   };
 
-  const getShowsNotStarted = async (limit = 25, offset = 0) => {
+  const getShowsNotStarted = async (limit = 24, offset = 0) => {
     // We use a try catch block in case of db errors
     try {
       const results = await db.all(
@@ -244,7 +244,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     return undefined;
   };
 
-  const getShowsCompleted = async (limit = 25, offset = 0) => {
+  const getShowsCompleted = async (limit = 24, offset = 0) => {
     // We use a try catch block in case of db errors
     try {
       const results = await db.all(
@@ -264,7 +264,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     return undefined;
   };
 
-  const getShowsToWatch = async (limit = 25, offset = 0) => {
+  const getShowsToWatch = async (limit = 24, offset = 0) => {
     // We use a try catch block in case of db errors
     try {
       const timezoneMod = '-5 hour';
@@ -303,7 +303,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     return undefined;
   };
 
-  const getShowsUpToDate = async (limit = 25, offset = 0) => {
+  const getShowsUpToDate = async (limit = 24, offset = 0) => {
     // We use a try catch block in case of db errors
     try {
       const timezoneMod = '-5 hour';
@@ -327,7 +327,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     return undefined;
   };
 
-  const getShowsAbandoned = async (limit = 25, offset = 0) => {
+  const getShowsAbandoned = async (limit = 24, offset = 0) => {
     // We use a try catch block in case of db errors
     try {
       const timezoneMod = '-5 hour';
