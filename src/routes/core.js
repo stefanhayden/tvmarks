@@ -64,7 +64,7 @@ router.get('/shows/:type', async (req, res) => {
   const tvshowDb = req.app.get('tvshowDb');
   const { type } = req.params;
 
-  const limit = Math.max(req.query?.limit || 25, 1);
+  const limit = Math.max(req.query?.limit || 24, 1);
   const offset = Math.max(req.query?.offset || 0, 0);
   const currentPage = (limit + offset) / limit;
   const shows =

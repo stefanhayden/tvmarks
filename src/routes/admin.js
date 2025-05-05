@@ -524,9 +524,12 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
     const last_watched_date = null;
     const next_episode_towatch_airdate = episodes.find((ep) => ep.season === 1 && ep.number === 1)?.airdate || null;
 
-    const fileExt = show.image.medium.split('.').reverse()[0];
+
+    const fileExt = show.image?.medium.split('.').reverse()[0];
     const showImagePath = `shows/${show.id}_${show.url.split('/').reverse()[0]}.${fileExt}`;
-    await downloadImage(show.image.medium, showImagePath);
+    if (show.image) {
+      await downloadImage(show.image.medium, showImagePath);
+    }
     await db.createShow({
       id: show.id,
       note: req.body.description,
@@ -548,7 +551,7 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
       network_country: show.network?.country.name,
       network_country_code: show.network?.country.code,
       network_country_timezone: show.network?.country.timezone,
-      image: `/${showImagePath}`,
+      image: show.image ? `/${showImagePath}` : null,
       episodes_count,
       aired_episodes_count,
       watched_episodes_count,

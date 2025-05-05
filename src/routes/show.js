@@ -289,7 +289,7 @@ router.post('/:showId/abandon', isAuthenticated, async (req, res) => {
   const abandoned = req.body.abandon === 'TRUE';
   await tvshowDb.updateShow(showId, { abandoned });
 
-  res.redirect(301, `/show/${showId}`);
+  res.redirect(301, `/`);
 });
 
 router.post('/:showId/update', isAuthenticated, async (req, res) => {

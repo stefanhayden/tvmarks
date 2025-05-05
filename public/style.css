@@ -627,3 +627,10 @@ a.bookmark-date {
     min-width: 190px;
   }
 }
+
+.patternBackground {
+  background-color: #fff1fc;
+  opacity: 1;
+  background: radial-gradient(circle, transparent 20%, #fff1fc 20%, #fff1fc 80%, transparent 80%, transparent), radial-gradient(circle, transparent 20%, #fff1fc 20%, #fff1fc 80%, transparent 80%, transparent) 25px 25px, linear-gradient(#ffd2f5 2px, transparent 2px) 0 -1px, linear-gradient(90deg, #ffd2f5 2px, #fff1fc 2px) -1px 0;
+  background-size: 50px 50px, 50px 50px, 25px 25px, 25px 25px;
+}
