@@ -313,6 +313,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
         WHERE 
           next_episode_towatch_airdate > date('now') OR
           aired_episodes_count <= watched_episodes_count
+          AND watched_episodes_count != 0
           AND status != 'Ended'
         ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
         limit,
