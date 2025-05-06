@@ -17,16 +17,14 @@ router.get('/', async (req, res) => {
 
   const tvshowDb = req.app.get('tvshowDb');
 
-  const limit = Math.max(req.query?.limit || 1, 1);
-  const offset = Math.max(req.query?.offset || 0, 0);
-  const currentPage = (limit + offset) / limit;
+  const limit = 8;
 
   const [showsToWatch, showsAbandoned, showsUpToDate, showsCompleted, showsNotStarted] = await Promise.all([
     tvshowDb.getShowsToWatch(),
-    tvshowDb.getShowsAbandoned(8),
-    tvshowDb.getShowsUpToDate(8),
-    tvshowDb.getShowsCompleted(8),
-    tvshowDb.getShowsNotStarted(8),
+    tvshowDb.getShowsAbandoned(limit),
+    tvshowDb.getShowsUpToDate(limit),
+    tvshowDb.getShowsCompleted(limit),
+    tvshowDb.getShowsNotStarted(limit),
   ]);
 
   const foundShows = (showsToWatch?.length || showsNotStarted?.length || showsCompleted?.length || showsUpToDate?.length || showsAbandoned?.length || 0) > 0;
@@ -46,14 +44,6 @@ router.get('/', async (req, res) => {
     showsToWatch,
     seeAllShowsToWatch: showsToWatch ? showsToWatch.length > limit : false,
     hideTitle: true,
-  };
-
-  params.pageInfo = {
-    currentPage,
-    offset,
-    limit,
-    hasPreviousPage: currentPage > 1,
-    previousOffset: Math.max(offset - limit, 0),
   };
   
   // Send the page options or raw JSON data if the client requested it

@@ -384,7 +384,7 @@ router.get('/fetchMissingImages', isAuthenticated, async (req, res) => {
 export async function refreshWatchNext(req) {
   const db = req.app.get('tvshowDb');
   const shows = await db.getAllAiredEpisodesCountByShow();
-
+console.log(shows)
   const showsToUpdate = shows
     .filter((s) => s.new_aired_episodes_count !== s.aired_episodes_count)
     .map((s) => ({ id: s.id, aired_episodes_count: s.new_aired_episodes_count }));
