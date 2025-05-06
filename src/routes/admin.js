@@ -381,9 +381,10 @@ router.get('/fetchMissingImages', isAuthenticated, async (req, res) => {
   return res.redirect('/admin/update');
 });
 
-export async function refreshWatchNext(req) {
+export async function refreshWatchNext(req, shows) {
   const db = req.app.get('tvshowDb');
-  const shows = await db.getAllInProgressShows();
+  // const shows = await db.getAllInProgressShows();
+  
 
   const showPromises = shows.map(async (show) => {
     // episodes to update
@@ -391,12 +392,16 @@ export async function refreshWatchNext(req) {
 
     const aired_episodes_count = currentEpisodes.filter((ep) => ep.number !== null && new Date(ep.airdate) < new Date()).length;
 
-    await db.updateShow(show.id, {
-      aired_episodes_count,
-    });
+    // await db.updateShow(show.id, {
+    //   aired_episodes_count,
+    // });
+    return {id: show.id, aired_episodes_count}
   });
 
-  await Promise.all(showPromises);
+  const showsToUpdate = await Promise.all(showPromises);
+  
+  
+  await db.updateAllAiredCounts(showsToUpdate)
 }
 
 export async function refreshShowData(req) {
