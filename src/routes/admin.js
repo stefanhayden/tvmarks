@@ -381,27 +381,15 @@ router.get('/fetchMissingImages', isAuthenticated, async (req, res) => {
   return res.redirect('/admin/update');
 });
 
-export async function refreshWatchNext(req, shows) {
+export async function refreshWatchNext(req) {
   const db = req.app.get('tvshowDb');
-  // const shows = await db.getAllInProgressShows();
-  
+  const shows = await db.getAllAiredEpisodesCountByShow();
 
-  const showPromises = shows.map(async (show) => {
-    // episodes to update
-    const currentEpisodes = await db.getEpisodesByShowId(show.id);
+  const showsToUpdate = shows
+    .filter((s) => s.new_aired_episodes_count !== s.aired_episodes_count)
+    .map((s) => ({ id: s.id, aired_episodes_count: s.new_aired_episodes_count }));
 
-    const aired_episodes_count = currentEpisodes.filter((ep) => ep.number !== null && new Date(ep.airdate) < new Date()).length;
-
-    // await db.updateShow(show.id, {
-    //   aired_episodes_count,
-    // });
-    return {id: show.id, aired_episodes_count}
-  });
-
-  const showsToUpdate = await Promise.all(showPromises);
-  
-  
-  await db.updateAllAiredCounts(showsToUpdate)
+  await db.updateAllAiredCounts(showsToUpdate);
 }
 
 export async function refreshShowData(req) {
@@ -528,7 +516,6 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
     const watched_episodes_count = 0;
     const last_watched_date = null;
     const next_episode_towatch_airdate = episodes.find((ep) => ep.season === 1 && ep.number === 1)?.airdate || null;
-
 
     const fileExt = show.image?.medium.split('.').reverse()[0];
     const showImagePath = `shows/${show.id}_${show.url.split('/').reverse()[0]}.${fileExt}`;

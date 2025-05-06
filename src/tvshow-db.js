@@ -550,7 +550,6 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
   };
   
   const updateAllAiredCounts = async (updates) => {
-    // [episode_id, aired_episodes_count]
     if (updates.length === 0) return;
     await db.run(`
       UPDATE  shows
@@ -785,8 +784,25 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
   const getAllInProgressShows = async () => {
     try {
-      return await db.all(`SELECT * FROM shows WHERE status != 'Ended'`);
+      return await db.all(`
+        SELECT * FROM shows WHERE status != 'Ended'
+      `);
       // return results.map((c) => massageComment(c));
+    } catch (dbError) {
+      console.error(dbError);
+    }
+    return undefined;
+  };
+
+  const getAllAiredEpisodesCountByShow = async () => {
+    try {
+      return await db.all(`
+        SELECT shows.id, shows.name, shows.aired_episodes_count, count(CASE WHEN episodes.show_id == shows.id THEN 1 END ) as new_aired_episodes_count
+        FROM shows
+        LEFT JOIN episodes ON shows.id == episodes.show_id
+        WHERE shows.status != 'Ended' AND episodes.number IS NOT NULL AND episodes.airdate < DateTime('now')
+        GROUP BY shows.id
+      `);
     } catch (dbError) {
       console.error(dbError);
     }
@@ -837,6 +853,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     deleteAllShows,
     deleteAllEpisodes,
     getAllInProgressShows,
+    getAllAiredEpisodesCountByShow,
     getNetworkPosts,
   };
 }
