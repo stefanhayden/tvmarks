@@ -18,16 +18,18 @@ router.get('/', async (req, res) => {
   const tvshowDb = req.app.get('tvshowDb');
 
   const limit = 8;
+  const limitShowsToWatch = 24;
 
   const [showsToWatch, showsAbandoned, showsUpToDate, showsCompleted, showsNotStarted] = await Promise.all([
-    tvshowDb.getShowsToWatch(),
+    tvshowDb.getShowsToWatch(limitShowsToWatch),
     tvshowDb.getShowsAbandoned(limit),
     tvshowDb.getShowsUpToDate(limit),
     tvshowDb.getShowsCompleted(limit),
     tvshowDb.getShowsNotStarted(limit),
   ]);
 
-  const foundShows = (showsToWatch?.length || showsNotStarted?.length || showsCompleted?.length || showsUpToDate?.length || showsAbandoned?.length || 0) > 0;
+  const foundShows =
+    (showsToWatch?.length || showsNotStarted?.length || showsCompleted?.length || showsUpToDate?.length || showsAbandoned?.length || 0) > 0;
 
   params = {
     ...params,
@@ -42,10 +44,10 @@ router.get('/', async (req, res) => {
     showsAbandoned,
     seeAllShowsAbandoned: showsAbandoned ? showsAbandoned.length === limit : false,
     showsToWatch,
-    seeAllShowsToWatch: showsToWatch ? showsToWatch.length === limit : false,
+    seeAllShowsToWatch: showsToWatch ? showsToWatch.length === limitShowsToWatch : false,
     hideTitle: true,
   };
-  
+
   // Send the page options or raw JSON data if the client requested it
   return req.query.raw ? res.send(params) : res.render('index', params);
 });
