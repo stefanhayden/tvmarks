@@ -87,7 +87,7 @@ router.get('/:showId', async (req, res) => {
 });
 
 const getEpisodeStatusUpdatedValues = (allEps) => {
-  const aired_episodes_count = allEps.filter((ep) => new Date(ep.airdate) < new Date())?.length || 0;
+  const aired_episodes_count = allEps.filter((ep) => ep.airdate !== null && new Date(ep.airdate) < new Date())?.length || 0;
   const watched_episodes_count = allEps.filter((ep) => ep.watched_status === 'WATCHED')?.length || 0;
 
   // reversed to make it easy to find last watched episode
@@ -98,7 +98,9 @@ const getEpisodeStatusUpdatedValues = (allEps) => {
   const last_watched_date = last_watched_episode?.watched_at;
   const last_watched_episode_id = last_watched_episode?.id | null;
 
-  const next_episode_towatch = allEpsReversed.find((ep, index) => last_watched_episode_index - 1 === index);
+  const next_episode_towatch =
+    allEpsReversed.find((ep, index) => last_watched_episode_index - 1 === index) ||
+    allEpsReversed.find((ep, index) => ep.watched_status !== 'WATCHED');
   const next_episode_towatch_airdate = next_episode_towatch?.airdate || null;
 
   return {

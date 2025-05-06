@@ -384,7 +384,7 @@ router.get('/fetchMissingImages', isAuthenticated, async (req, res) => {
 export async function refreshWatchNext(req) {
   const db = req.app.get('tvshowDb');
   const shows = await db.getAllAiredEpisodesCountByShow();
-console.log(shows)
+
   const showsToUpdate = shows
     .filter((s) => s.new_aired_episodes_count !== s.aired_episodes_count)
     .map((s) => ({ id: s.id, aired_episodes_count: s.new_aired_episodes_count }));
@@ -440,9 +440,13 @@ export async function refreshShowData(req) {
     const currentEpisodesWithNulls = await db.getEpisodesByShowId(show.id);
     const currentEpisodes = currentEpisodesWithNulls.filter((ep) => ep.number !== null);
 
-    const fileExt = updatedShow.image.medium.split('.').reverse()[0];
-    const showImagePath = `shows/${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
-    await downloadImage(updatedShow.image.medium, showImagePath);
+    let image;
+    if (updatedShow.image && updatedShow.image.medium) {
+      const fileExt = updatedShow.image.medium.split('.').reverse()[0];
+      const showImagePath = `shows/${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
+      await downloadImage(updatedShow.image.medium, showImagePath);
+      image = `/${showImagePath}`;
+    }
 
     const episodes_count = currentEpisodes.filter((ep) => ep.number !== null).length;
     const aired_episodes_count = currentEpisodes.filter((ep) => ep.number !== null && new Date(ep.airdate) < new Date()).length;
@@ -468,7 +472,7 @@ export async function refreshShowData(req) {
       network_country: updatedShow.network?.country.name,
       network_country_code: updatedShow.network?.country.code,
       network_country_timezone: updatedShow.network?.country.timezone,
-      image: `/${showImagePath}`,
+      image: image,
       episodes_count,
       aired_episodes_count,
       next_episode_towatch_airdate,

@@ -274,7 +274,10 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
           WHERE
             abandoned != 1 AND
             watched_episodes_count > 0 AND
-            next_episode_towatch_airdate <= date('now') AND
+            (
+              next_episode_towatch_airdate <= date('now') OR
+              watched_episodes_count < aired_episodes_count
+            ) AND
             (
               (
                 (status == 'Ended' OR status == 'To Be Determined') AND
@@ -311,8 +314,11 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
         `SELECT *
           from shows
         WHERE 
-          next_episode_towatch_airdate > date('now') OR
-          aired_episodes_count <= watched_episodes_count
+          (
+            (next_episode_towatch_airdate > date('now') AND aired_episodes_count == watched_episodes_count)
+            OR
+            aired_episodes_count <= watched_episodes_count
+          )
           AND watched_episodes_count != 0
           AND status != 'Ended'
         ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
@@ -800,7 +806,12 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
         SELECT shows.id, shows.name, shows.aired_episodes_count, count(CASE WHEN episodes.show_id == shows.id THEN 1 END ) as new_aired_episodes_count
         FROM shows
         LEFT JOIN episodes ON shows.id == episodes.show_id
-        WHERE shows.status != 'Ended' AND episodes.number IS NOT NULL AND episodes.airdate IS NOT NULL AND episodes.airdate < Date('now')
+        WHERE 
+          shows.status != 'Ended' 
+          AND episodes.number IS NOT NULL 
+          AND episodes.airdate IS NOT NULL 
+          AND episodes.airdate != '' 
+          AND episodes.airdate < Date('now')
         GROUP BY shows.id
       `);
     } catch (dbError) {
