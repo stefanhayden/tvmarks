@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
 
   if (req.session.loggedIn) {
     params.showDataRefreshed = await refreshShowData(req, res);
-    refreshWatchNext(req);
+    await refreshWatchNext(req);
   }
 
   const tvshowDb = req.app.get('tvshowDb');
