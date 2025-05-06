@@ -802,7 +802,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
         LEFT JOIN episodes ON shows.id == episodes.show_id
         WHERE shows.status != 'Ended' AND episodes.number IS NOT NULL AND episodes.airdate IS NOT NULL AND episodes.airdate < Date('now')
         GROUP BY shows.id
-      `); // episodes.airdate IS NOT NULL AND
+      `);
     } catch (dbError) {
       console.error(dbError);
     }
