@@ -13,7 +13,7 @@ import { open } from 'sqlite';
 import { stripHtml } from 'string-strip-html';
 import { timeSince, account, domain } from './util.js';
 
-const ACCOUNT_MENTION_REGEX = new RegExp(`^@${account}@${domain} `);
+const ACCOUNT_MENTION_REGEX = new RegExp(`^@${account}@${domain} `)
 
 export function initTvshowDb(dbFile = './.data/tvshows.db') {
   let db;
@@ -530,17 +530,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
         acc[`$${val}`] = body[val];
         return acc;
       }, {});
-      console.log(
-        'updateShow',
-        `UPDATE shows SET
-          ${keys.map((v) => `${v}=$${v}`).join(',')}, 
-          updated_at=DateTime('now') 
-          WHERE id = $id`,
-        {
-          $id: id,
-          ...data,
-        },
-      );
+
       await db.run(
         `UPDATE shows SET
           ${keys.map((v) => `${v}=$${v}`).join(',')}, 
@@ -558,6 +548,18 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     }
     return undefined;
   };
+  
+  const updateAllAiredCounts = async (updates) => {
+    // [episode_id, aired_episodes_count]
+    if (updates.length === 0) return;
+    await db.run(`
+      UPDATE  shows
+      SET     aired_episodes_count = CASE id
+          ${updates.map(u => `WHEN ${u.id} THEN '${u.aired_episodes_count}' \n`).join(' ')}
+        END
+      WHERE   id IN (${updates.map(u => `'${u.id}'`).join(', ')})
+    `)
+  }
 
   const updateShowNote = async (id, body) => {
     try {
@@ -819,6 +821,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     updateShow,
     updateShowNote,
     updateShowImage,
+    updateAllAiredCounts,
     deleteShow,
     createEpisode,
     updateEpisode,
