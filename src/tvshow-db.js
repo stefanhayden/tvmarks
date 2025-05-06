@@ -811,7 +811,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
           AND episodes.number IS NOT NULL 
           AND episodes.airdate IS NOT NULL 
           AND episodes.airdate != '' 
-          AND episodes.airdate < Date('now')
+          AND episodes.airdate <= Date('now')
         GROUP BY shows.id
       `);
     } catch (dbError) {
