@@ -12,6 +12,7 @@ router.get('/', async (req, res) => {
 
   if (req.session.loggedIn) {
     params.showDataRefreshed = await refreshShowData(req, res);
+    refreshWatchNext(req);
   }
 
   const tvshowDb = req.app.get('tvshowDb');
@@ -27,11 +28,7 @@ router.get('/', async (req, res) => {
     tvshowDb.getShowsCompleted(8),
     tvshowDb.getShowsNotStarted(8),
   ]);
-  
-  if (req.session.loggedIn) {
-    refreshWatchNext(req, [...showsToWatch, ...showsAbandoned, ...showsUpToDate, ...showsNotStarted].filter(s => s.status !== 'Ended'));
-  }
-  
+
   const foundShows = (showsToWatch?.length || showsNotStarted?.length || showsCompleted?.length || showsUpToDate?.length || showsAbandoned?.length || 0) > 0;
 
   params = {
