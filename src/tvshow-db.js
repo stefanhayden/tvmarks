@@ -800,9 +800,9 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
         SELECT shows.id, shows.name, shows.aired_episodes_count, count(CASE WHEN episodes.show_id == shows.id THEN 1 END ) as new_aired_episodes_count
         FROM shows
         LEFT JOIN episodes ON shows.id == episodes.show_id
-        WHERE shows.status != 'Ended' AND episodes.number IS NOT NULL AND episodes.airdate < DateTime('now')
+        WHERE shows.status != 'Ended' AND episodes.number IS NOT NULL AND episodes.airdate IS NOT NULL AND episodes.airdate < Date('now')
         GROUP BY shows.id
-      `);
+      `); // episodes.airdate IS NOT NULL AND
     } catch (dbError) {
       console.error(dbError);
     }
