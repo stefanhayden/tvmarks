@@ -1,7 +1,10 @@
 import express from 'express';
 import { synthesizeActivity } from '../../activitypub.js';
+import { inboxRoute } from './inbox.js'
 
 const router = express.Router();
+
+router.post('/:name/inbox', inboxRoute)
 
 router.get('/:name', async (req, res) => {
   let { name } = req.params;

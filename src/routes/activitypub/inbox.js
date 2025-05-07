@@ -207,9 +207,7 @@ async function handleDeleteRequest(req, res) {
   return res.status(200);
 }
 
-router.post('/', async function (req, res) {
-  // console.log(JSON.stringify(req.body));
-
+export const inboxRoute = async (req, res) => {
   if (typeof req.body.object === 'string' && req.body.type === 'Follow') {
     return handleFollowRequest(req, res);
   }
@@ -235,6 +233,8 @@ router.post('/', async function (req, res) {
     return handleFollowedPost(req, res);
   }
   return res.sendStatus(400);
-});
+}
+
+router.post('/', inboxRoute);
 
 export default router;
