@@ -13,7 +13,7 @@ import { open } from 'sqlite';
 import { stripHtml } from 'string-strip-html';
 import { timeSince, account, domain } from './util.js';
 
-const ACCOUNT_MENTION_REGEX = new RegExp(`^@${account}@${domain} `);
+const ACCOUNT_MENTION_REGEX = new RegExp(`^@${account}@${domain} `)
 
 export function initTvshowDb(dbFile = './.data/tvshows.db') {
   let db;
@@ -333,30 +333,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     }
     return undefined;
   };
-
-  // episodes_count: 5,
-  // aired_episodes_count: 3,
-  // watched_episodes_count: 1,
-  // last_watched_date: '2024-11-06',
-  // next_episode_towatch_airdate: '2024-11-06',
-  // last_watched_episode_id: null,
-  // abandoned: 0,
-  // created_at: '2025-05-06 22:59:27',
-  // updated_at: '2025-05-06 22:59:27'
-
-  // `select * from shows
-  // WHERE
-  //   1 > 0 AND
-  //   '2024-11-06' <= date('now') AND
-  // (
-  //   (
-  //     'Running' == 'Running' AND
-  //     '2024-11-06' < date('now', '-3 month') AND
-  //     '2024-11-06' < date('now', '-3 month')
-  //   )
-  // )
-  // ORDER BY updated_at DESC LIMIT ? OFFSET ?`
-
+  
   const getShowsAbandoned = async (limit = 24, offset = 0) => {
     // We use a try catch block in case of db errors
     try {
@@ -543,7 +520,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
           $watched_episodes_count: body.watched_episodes_count,
           $last_watched_date: body.last_watched_date,
           $next_episode_towatch_airdate: body.next_episode_towatch_airdate,
-          $abandoned: body.abandoned,
+          $abandoned: body.abandoned
         },
       );
       return getShow(result.lastID);
@@ -578,17 +555,17 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     }
     return undefined;
   };
-
+  
   const updateAllAiredCounts = async (updates) => {
     if (updates.length === 0) return;
     await db.run(`
       UPDATE  shows
       SET     aired_episodes_count = CASE id
-          ${updates.map((u) => `WHEN ${u.id} THEN '${u.aired_episodes_count}' \n`).join(' ')}
+          ${updates.map(u => `WHEN ${u.id} THEN '${u.aired_episodes_count}' \n`).join(' ')}
         END
-      WHERE   id IN (${updates.map((u) => `'${u.id}'`).join(', ')})
-    `);
-  };
+      WHERE   id IN (${updates.map(u => `'${u.id}'`).join(', ')})
+    `)
+  }
 
   const updateShowNote = async (id, body) => {
     try {
