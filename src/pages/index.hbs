@@ -5,8 +5,23 @@
 {{else}}
   {{#unless foundShows}}
     <h2>Welcome to Tvmarks!</h2>
-    <p>Tvmarks is a single user self hosted website that help you track the shows you are watching and catalog shows you have weatched.</p>
-    <p>If you have just set this site up then it's working! Login to search for show to add.</p>
+    <p>Tvmarks is a single user self hosted website that help you track the shows you are watching and catalog shows you have watched.</p>
+    
+    {{#if isReadyToLogin}}
+      <p>If you have just set this site up then it's working! Login to search for show to add.</p>
+    {{/if}}
+
+    {{#unless isReadyToLogin}}
+      <h2>Start your setup</h2>
+    {{/unless}}
+    {{#if noSecret}}
+      <h3>SESSION_SECRET</h3>
+      <p>You have not yet set up a <code>SESSION_SECRET</code> in your enviorment. This is needed to remember if you are logged in. See the <code>README.md</code> to learn more.</p>
+    {{/if}}
+    {{#if noAdminKey}}
+      <h3>ADMIN_KEY</h3>
+      <p>You have not yet set up a <code>ADMIN_KEY</code> in your enviorment. This will be your login password. See the <code>README.md</code> to learn more.</p>
+    {{/if}}
   {{/unless}}
 
   {{#if showsToWatch}}

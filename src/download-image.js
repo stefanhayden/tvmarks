@@ -4,8 +4,8 @@ import fs from 'fs';
 export function downloadImage(imageUrl, imagePath) {
   const path = `public/${imagePath}`;
 
-  if (!fs.existsSync('public/shows')) {
-    fs.mkdirSync('public/shows');
+  if (!fs.existsSync('.data/show_images')) {
+    fs.mkdirSync('.data/show_images');
   }
 
   const file = fs.createWriteStream(path);

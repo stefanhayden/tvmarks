@@ -45,6 +45,9 @@ router.get('/', async (req, res) => {
     showsToWatch,
     seeAllShowsToWatch: showsToWatch ? showsToWatch.length === limitShowsToWatch : false,
     hideTitle: true,
+    noSecret: !process.env.SESSION_SECRET,
+    noAdminKey: !process.env.ADMIN_KEY,
+    isReadyToLogin: !!process.env.SESSION_SECRET && !!process.env.ADMIN_KEY
   };
 
   // Send the page options or raw JSON data if the client requested it
