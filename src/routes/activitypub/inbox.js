@@ -25,7 +25,6 @@ async function sendAcceptMessage(thebody, name, domain, req, res, targetDomain) 
 }
 
 async function handleFollowRequest(req, res) {
-  console.log('handleFollowRequest', req.body)
   const domain = req.app.get('domain');
   const apDb = req.app.get('apDb');
 
@@ -209,8 +208,6 @@ async function handleDeleteRequest(req, res) {
 }
 
 export const inboxRoute = async (req, res) => {
-  // console.log(JSON.stringify(req.body));
-
   if (typeof req.body.object === 'string' && req.body.type === 'Follow') {
     return handleFollowRequest(req, res);
   }

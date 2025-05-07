@@ -157,8 +157,6 @@ export async function createUnfollowMessage(account, domain, target, db) {
 
   const messageRows = await db.findMessage(target);
 
-  console.log('result', messageRows);
-
   const followMessages = messageRows?.filter((row) => {
     const message = JSON.parse(row.message || '{}');
     return message.type === 'Follow' && message.object === target;
@@ -181,7 +179,7 @@ export async function createUnfollowMessage(account, domain, target, db) {
 export async function getInboxFromActorProfile(profileUrl) {
   const response = await signedGetJSON(`${profileUrl}`);
   const data = await response.json();
-console.log('getInboxFromActorProfile', data)
+  
   if (data?.inbox) {
     return data.inbox;
   }
@@ -259,7 +257,7 @@ export async function broadcastMessage(data, action, db, account, domain) {
       const inbox = `${follower}/inbox`;
       const myURL = new URL(follower);
       const targetDomain = myURL.host;
-      console.log('test', {})
+      
       signAndSend(message, account, domain, db, targetDomain, inbox);
     }
   }

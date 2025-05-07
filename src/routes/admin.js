@@ -76,7 +76,7 @@ router.get('/followers', isAuthenticated, async (req, res) => {
 
   params.allowed = permissions?.allowed || '';
   params.blocked = permissions?.blocked || '';
-  
+
   return res.render('admin/followers', params);
 });
 
