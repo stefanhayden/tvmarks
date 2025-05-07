@@ -16,13 +16,13 @@
 
 ### Object Model
 
-| Object Kind | Description                                              |
-| ----------- | -------------------------------------------------------- |
-| Actor       | The single actor associated with the Tvmarks instance.   |
-| Show        | A Tvmarks tv show (`Note`)                               |
-| Episode     | A Tvmarks tv episode (`Note`)                            |
-| Comment     | A comment on a bookmark (`Note`)                         |
-| Message     | An ActivityPub `Note` published by the Actor             |
+| Object Kind | Description                                            |
+| ----------- | ------------------------------------------------------ |
+| Actor       | The single actor associated with the Tvmarks instance. |
+| Show        | A Tvmarks tv show (`Note`)                             |
+| Episode     | A Tvmarks tv episode (`Note`)                          |
+| Comment     | A comment on a bookmark (`Note`)                       |
+| Message     | An ActivityPub `Note` published by the Actor           |
 
 ### Actor
 
@@ -31,7 +31,7 @@ the actor URI or the Mastodon-compatible account name (@username@domain).
 
 Followers of the Tvmarks actor will receive ActivityPub activities to notify them when bookmarks are added, updated or deleted.
 
-Followers may comment on a bookmark and that comment may be made visible in the frontend by the administrator of the Tvmarks instance. Prior comments may be deleted.
+Followers may comment on a show or episode and that comment may be made visible in the frontend by the administrator of the Tvmarks instance. Prior comments may be deleted.
 
 The Tvmarks actor may follow other actors. Received notes can be reviewed and may be converted into local bookmarks.
 

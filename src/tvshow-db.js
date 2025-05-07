@@ -333,7 +333,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     }
     return undefined;
   };
-
+  
   const getShowsAbandoned = async (limit = 24, offset = 0) => {
     // We use a try catch block in case of db errors
     try {
@@ -520,6 +520,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
           $watched_episodes_count: body.watched_episodes_count,
           $last_watched_date: body.last_watched_date,
           $next_episode_towatch_airdate: body.next_episode_towatch_airdate,
+          $abandoned: body.abandoned
         },
       );
       return getShow(result.lastID);

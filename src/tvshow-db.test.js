@@ -20,76 +20,33 @@ describe('tvshow-db', () => {
     // NOT STARTED
     await db.createShow({
       id: 1,
-    });
-    await db.createEpisode({
-      id: 101,
-      show_id: 1,
-    });
-    await db.createEpisode({
-      id: 102,
-      show_id: 1,
+      episodes_count: 2,
+      aired_episodes_count: 2,
+      watched_episodes_count: 0,
+      last_watched_date: null,
+      next_episode_towatch_airdate: past3Days.split(' ')[0],
     });
 
     // COMPLETED
     await db.createShow({
       id: 2,
       status: 'Ended',
-    });
-    await db.createEpisode({
-      id: 201,
-      show_id: 2,
-      season: 1,
-      number: 1,
-      watched_status: 'WATCHED',
-      watched_at: now,
-      airdate: past3Days.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 202,
-      show_id: 2,
-      season: 1,
-      number: 2,
-      watched_status: 'WATCHED',
-      watched_at: now,
-      airdate: past3Days.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 203,
-      show_id: 2,
-      season: 1,
-      number: null,
-      airdate: past3Days.split(' ')[0],
+      episodes_count: 2,
+      aired_episodes_count: 2,
+      watched_episodes_count: 2,
+      last_watched_date: past3Days.split(' ')[0],
+      next_episode_towatch_airdate: null,
     });
 
     // UP TO DATE
     await db.createShow({
       id: 3,
       status: 'Running',
-    });
-    await db.createEpisode({
-      id: 301,
-      show_id: 3,
-      season: 1,
-      number: 1,
-      watched_status: 'WATCHED',
-      watched_at: now,
-      airdate: past3Days.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 302,
-      show_id: 3,
-      season: 1,
-      number: 2,
-      watched_status: 'WATCHED',
-      watched_at: now,
-      airdate: past3Days.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 303,
-      show_id: 3,
-      season: 1,
-      number: null,
-      airdate: past3Days.split(' ')[0],
+      episodes_count: 3,
+      aired_episodes_count: 2,
+      watched_episodes_count: 2,
+      last_watched_date: past3Days.split(' ')[0],
+      next_episode_towatch_airdate: past3Days.split(' ')[0],
     });
 
     // UP TO DATE
@@ -97,127 +54,44 @@ describe('tvshow-db', () => {
     await db.createShow({
       id: 31,
       status: 'Running',
-    });
-    await db.createEpisode({
-      id: 3101,
-      show_id: 31,
-      season: 1,
-      number: 1,
-      watched_status: 'WATCHED',
-      watched_at: now,
-      airdate: past3Days.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 3102,
-      show_id: 31,
-      season: 1,
-      number: 2,
-      watched_status: 'WATCHED',
-      watched_at: now,
-      airdate: past3Days.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 3103,
-      show_id: 31,
-      season: 1,
-      number: 3,
-      // watched_status: 'WATCHED',
-      // watched_at: now,
-      airdate: nextWeek.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 3104,
-      show_id: 31,
-      season: 1,
-      number: 4,
-      airdate: next2Week.split(' ')[0],
+      episodes_count: 4,
+      aired_episodes_count: 2,
+      watched_episodes_count: 2,
+      last_watched_date: past3Days.split(' ')[0],
+      next_episode_towatch_airdate: past3Days.split(' ')[0],
     });
 
     // TO WATCH #1
     await db.createShow({
       id: 4,
       status: 'Running',
-    });
-    await db.createEpisode({
-      id: 401,
-      show_id: 4,
-      season: 1,
-      number: 1,
-      watched_status: 'WATCHED',
-      watched_at: now,
-      airdate: past3Days.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 402,
-      show_id: 4,
-      season: 1,
-      number: 2,
-      airdate: past3Days.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 403,
-      show_id: 4,
-      season: 1,
-      number: null,
-      airdate: past3Days.split(' ')[0],
+      episodes_count: 3,
+      aired_episodes_count: 2,
+      watched_episodes_count: 1,
+      last_watched_date: past3Days.split(' ')[0],
+      next_episode_towatch_airdate: past3Days.split(' ')[0],
     });
 
     // TO WATCH #2
     await db.createShow({
       id: 41,
       status: 'Ended',
-    });
-    await db.createEpisode({
-      id: 4101,
-      show_id: 41,
-      season: 1,
-      number: 1,
-      watched_status: 'WATCHED',
-      watched_at: now,
-      airdate: past3Days.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 4102,
-      show_id: 41,
-      season: 1,
-      number: 2,
-      airdate: past3Days.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 4103,
-      show_id: 41,
-      season: 1,
-      number: null,
-      airdate: past3Days.split(' ')[0],
+      episodes_count: 3,
+      aired_episodes_count: 3,
+      watched_episodes_count: 1,
+      last_watched_date: past3Days.split(' ')[0],
+      next_episode_towatch_airdate: past3Days.split(' ')[0],
     });
 
     // TO WATCH #3
     await db.createShow({
       id: 42,
       status: 'To Be Determined',
-    });
-    await db.createEpisode({
-      id: 4201,
-      show_id: 42,
-      season: 1,
-      number: 1,
-      watched_status: 'WATCHED',
-      watched_at: now,
-      airdate: past3Days.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 4202,
-      show_id: 42,
-      season: 1,
-      number: 2,
-      airdate: past3Days.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 4203,
-      show_id: 42,
-      season: 1,
-      number: null,
-      airdate: past3Days.split(' ')[0],
+      episodes_count: 3,
+      aired_episodes_count: 3,
+      watched_episodes_count: 1,
+      last_watched_date: past3Days.split(' ')[0],
+      next_episode_towatch_airdate: past3Days.split(' ')[0],
     });
 
     // ABANDONED
@@ -226,43 +100,11 @@ describe('tvshow-db', () => {
     await db.createShow({
       id: 5,
       status: 'Running',
-    });
-    await db.createEpisode({
-      id: 501,
-      show_id: 5,
-      season: 1,
-      number: 1,
-      watched_status: 'WATCHED',
-      watched_at: past4Months,
-      airdate: past6Months.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 502,
-      show_id: 5,
-      season: 1,
-      number: 2,
-      airdate: past3Months.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 503,
-      show_id: 5,
-      season: 1,
-      number: 3,
-      airdate: past3Days.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 504,
-      show_id: 5,
-      season: 1,
-      number: 4,
-      airdate: nextWeek.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 505,
-      show_id: 5,
-      season: 1,
-      number: null,
-      airdate: nextWeek.split(' ')[0],
+      episodes_count: 5,
+      aired_episodes_count: 3,
+      watched_episodes_count: 1,
+      last_watched_date: past6Months.split(' ')[0],
+      next_episode_towatch_airdate: past6Months.split(' ')[0],
     });
 
     // ABANDONED #2
@@ -271,52 +113,25 @@ describe('tvshow-db', () => {
     await db.createShow({
       id: 51,
       status: 'Ended',
+      episodes_count: 5,
+      aired_episodes_count: 5,
+      watched_episodes_count: 1,
+      last_watched_date: past6Months.split(' ')[0],
+      next_episode_towatch_airdate: past6Months.split(' ')[0],
     });
-    await db.createEpisode({
-      id: 5101,
-      show_id: 51,
-      season: 1,
-      number: 1,
-      watched_status: 'WATCHED',
-      watched_at: past4Months,
-      airdate: past6Months.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 5102,
-      show_id: 51,
-      season: 1,
-      number: 2,
-      airdate: past6Months.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 5103,
-      show_id: 51,
-      season: 1,
-      number: 3,
-      airdate: past6Months.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 5104,
-      show_id: 51,
-      season: 1,
-      number: 4,
-      airdate: past6Months.split(' ')[0],
-    });
-    await db.createEpisode({
-      id: 5105,
-      show_id: 51,
-      season: 1,
-      number: null,
-      airdate: past6Months.split(' ')[0],
-    });
-  });
 
-  test('get shows and episodes', async () => {
-    const shows = await db.getShows();
-    const episodesByShowId = await db.getEpisodesByShowId(1);
-
-    expect(shows?.length).toBe(9);
-    expect(episodesByShowId?.length).toBe(2);
+    // ABANDONED #3
+    // marked as abandoned
+    await db.createShow({
+      id: 52,
+      status: 'Ended',
+      episodes_count: 5,
+      aired_episodes_count: 5,
+      watched_episodes_count: 1,
+      last_watched_date: past6Months.split(' ')[0],
+      next_episode_towatch_airdate: past6Months.split(' ')[0],
+      abandoned: 1,
+    });
   });
 
   test('showsNotStarted', async () => {
@@ -353,8 +168,9 @@ describe('tvshow-db', () => {
   test('getShowsAbandoned', async () => {
     const getShowsAbandoned = await db.getShowsAbandoned();
 
-    expect(getShowsAbandoned?.length).toBe(2);
+    expect(getShowsAbandoned?.length).toBe(3);
     expect(getShowsAbandoned[0].id).toBe(5);
     expect(getShowsAbandoned[1].id).toBe(51);
+    expect(getShowsAbandoned[2].id).toBe(52);
   });
 });

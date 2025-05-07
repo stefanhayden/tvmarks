@@ -259,7 +259,7 @@ export async function broadcastMessage(data, action, db, account, domain) {
       const inbox = `${follower}/inbox`;
       const myURL = new URL(follower);
       const targetDomain = myURL.host;
-      console.log('test', {})
+      console.log('test', {});
       signAndSend(message, account, domain, db, targetDomain, inbox);
     }
   }

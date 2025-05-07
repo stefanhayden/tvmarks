@@ -429,9 +429,8 @@ export async function refreshShowData(req) {
       };
       if (found) {
         return await db.updateEpisode(ep.id, data);
-      } else {
-        return await db.createEpisode(data);
       }
+      return await db.createEpisode(data);
     });
 
     await Promise.all(epPromises);
@@ -472,7 +471,7 @@ export async function refreshShowData(req) {
       network_country: updatedShow.network?.country.name,
       network_country_code: updatedShow.network?.country.code,
       network_country_timezone: updatedShow.network?.country.timezone,
-      image: image,
+      image,
       episodes_count,
       aired_episodes_count,
       next_episode_towatch_airdate,
