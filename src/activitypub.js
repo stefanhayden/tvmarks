@@ -181,7 +181,7 @@ export async function createUnfollowMessage(account, domain, target, db) {
 export async function getInboxFromActorProfile(profileUrl) {
   const response = await signedGetJSON(`${profileUrl}`);
   const data = await response.json();
-
+console.log('getInboxFromActorProfile', data)
   if (data?.inbox) {
     return data.inbox;
   }
@@ -214,7 +214,7 @@ export async function broadcastMessage(data, action, db, account, domain) {
 
   const result = await db.getFollowers();
   const followers = JSON.parse(result);
-
+  
   if (followers === null) {
     console.log(`No followers for account ${account}@${domain}`);
   } else {
@@ -259,7 +259,7 @@ export async function broadcastMessage(data, action, db, account, domain) {
       const inbox = `${follower}/inbox`;
       const myURL = new URL(follower);
       const targetDomain = myURL.host;
-      console.log('test', {});
+      console.log('test', {})
       signAndSend(message, account, domain, db, targetDomain, inbox);
     }
   }
