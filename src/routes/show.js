@@ -179,9 +179,8 @@ router.post('/:showId/episode/:episodeId/update', async (req, res) => {
 
   if (req.body.returnHash) {
     return res.redirect(301, `/show/${req.params.showId}/episode/${req.params.episodeId}`);
-  } else {
-    return res.redirect(301, `/show/${req.params.showId}/episode/${req.params.episodeId}`);
   }
+  return res.redirect(301, `/show/${req.params.showId}/episode/${req.params.episodeId}`);
 });
 
 router.post('/:showId/episode/:episodeId/delete', async (req, res) => {

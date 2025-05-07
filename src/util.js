@@ -16,7 +16,7 @@ if (process.env.USERNAME) {
   const { AVATAR, USERNAME, DISPLAY_NAME, DESCRIPTION } = process.env;
   actorFileData.disabled = false;
   actorFileData.avatar = AVATAR || 'https://cdn.glitch.global/5aacd173-98f2-4f1f-83c1-d07815d82bf3/tvmarksLogo.png?v=1742129685337';
-  const username = USERNAME.slice(0,1) === '@' ? USERNAME.slice(1) : USERNAME;
+  const username = USERNAME.slice(0, 1) === '@' ? USERNAME.slice(1) : USERNAME;
   actorFileData.username = username;
   actorFileData.displayName = DISPLAY_NAME || 'My Tvmarks';
   actorFileData.description = DESCRIPTION || 'An ActivityPub tv tracking and sharing site built with Tvmarks';

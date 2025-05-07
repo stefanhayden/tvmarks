@@ -1,5 +1,4 @@
 import express from 'express';
-import * as linkify from 'linkifyjs';
 import { data, actorInfo } from '../util.js';
 import { isAuthenticated } from '../session-auth.js';
 import { refreshShowData, refreshWatchNext } from './admin.js';
@@ -72,7 +71,7 @@ router.get('/shows/:type', async (req, res) => {
       ? await tvshowDb.getShowsAbandoned(limit, offset)
       : [];
 
-  let params = {
+  const params = {
     shows,
     offset,
     limit,
@@ -109,32 +108,4 @@ router.get('/network', isAuthenticated, async (req, res) => {
   const posts = await tvshowDb.getNetworkPosts();
 
   return res.render('network', { title: 'Your network', posts });
-});
-
-router.get('/index.xml', async (req, res) => {
-  const params = {};
-  const tvshowDb = req.app.get('tvshowDb');
-
-  const shows = await tvshowDb.getShows(20, 0);
-  if (!shows) params.error = data.errorMessage;
-
-  if (shows && shows.length < 1) {
-    params.setup = data.setupMessage;
-  } else {
-    params.shows = shows.map((show) => {
-      const createdAt = new Date(`${show.created_at}Z`);
-      return {
-        ...show,
-        created_at: createdAt.toISOString(),
-      };
-    });
-    const lastUpdated = new Date(shows[0].created_at);
-    params.last_updated = lastUpdated.toISOString();
-  }
-
-  params.feedTitle = req.app.get('site_name');
-  params.layout = false;
-
-  res.type('application/atom+xml');
-  return res.render('shows-xml', params);
 });
