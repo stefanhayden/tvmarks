@@ -3,6 +3,7 @@ import escapeHTML from 'escape-html';
 import { account, domain } from '../util.js';
 import { isAuthenticated } from '../session-auth.js';
 import { broadcastMessage } from '../activitypub.js';
+import { refreshShowEpisodesData } from './admin.js';
 
 const router = express.Router();
 export default router;
@@ -29,12 +30,12 @@ router.get('/:showId', async (req, res) => {
   params.comment_count = comments.length || 0;
 
   const episodes = (await tvshowDb.getEpisodesByShowId(req.params.showId)).map((e) => {
-    const daysUntill = e.airdate ? Math.round((now - new Date(e.airdate)) / (24 * 60 * 60 * 1000)) : undefined;
+    const daysUntill = e.airstamp ? Math.round((now - new Date(e.airstamp)) / (24 * 60 * 60 * 1000)) : undefined;
 
     return {
       ...e,
       isWatched: e.watched_status === 'WATCHED',
-      not_aired: e.airdate ? new Date(e.airdate) > now : true,
+      not_aired: e.airstamp ? new Date(e.airstamp) > now : true,
       days_untill: daysUntill <= 0 ? Math.abs(daysUntill) : 'Unkown',
     };
   });
@@ -68,7 +69,7 @@ router.get('/:showId', async (req, res) => {
     let lastEpId = null;
     episodes.map((e) => {
       if (e.number !== null) {
-        if (!params.show.watchNextEpisode && !e.isWatched && new Date(e.airdate) < now) {
+        if (!params.show.watchNextEpisode && !e.isWatched && new Date(e.airstamp) < now) {
           params.show.watchNextEpisode = e;
         }
         lastEpId = e.id;
@@ -87,7 +88,7 @@ router.get('/:showId', async (req, res) => {
 });
 
 const getEpisodeStatusUpdatedValues = (allEps) => {
-  const aired_episodes_count = allEps.filter((ep) => ep.airdate !== null && new Date(ep.airdate) < new Date())?.length || 0;
+  const aired_episodes_count = allEps.filter((ep) => ep.airstamp !== null && new Date(ep.airstamp) < new Date())?.length || 0;
   const watched_episodes_count = allEps.filter((ep) => ep.watched_status === 'WATCHED')?.length || 0;
 
   // reversed to make it easy to find last watched episode
@@ -190,7 +191,7 @@ router.post('/:showId/episode/:episodeId/delete', async (req, res) => {
 
   const allEpsWithNulls = await tvshowDb.getEpisodesByShowId(req.params.showId);
   const allEps = allEpsWithNulls.filter((ep) => ep.number !== null);
-  const aired_episodes_count = allEps.filter((ep) => new Date(ep.airdate) < new Date())?.length || 0;
+  const aired_episodes_count = allEps.filter((ep) => new Date(ep.airstamp) < new Date())?.length || 0;
   const watched_episodes_count = allEps.filter((ep) => ep.watched_status === 'WATCHED')?.length || 0;
 
   await tvshowDb.updateShow(req.params.showId, {
@@ -208,9 +209,9 @@ router.post('/:showId/season/:seasonId/status', async (req, res) => {
 
   const thisSeasonEps =
     req.params.seasonId === 'SPECIAL'
-      ? allSeasonEps.filter((val) => val.number === null && (new Date() > new Date(val.airdate) || status === null))
+      ? allSeasonEps.filter((val) => val.number === null && (new Date() > new Date(val.airstamp) || status === null))
       : allSeasonEps.filter(
-          (val) => val.season === Number(req.params.seasonId) && val.number !== null && (new Date() > new Date(val.airdate) || status === null),
+          (val) => val.season === Number(req.params.seasonId) && val.number !== null && (new Date() > new Date(val.airstamp) || status === null),
         );
 
   await Promise.all(thisSeasonEps.map((val) => tvshowDb.updateEpisodeWatchStatus(val.id, status)));
@@ -236,11 +237,11 @@ router.get('/:showId/episode/:episodeId', async (req, res) => {
   }
 
   const episode = await tvshowDb.getEpisode(req.params.episodeId).then((e) => {
-    const daysUntill = Math.round((new Date() - new Date(e.airdate)) / (24 * 60 * 60 * 1000));
+    const daysUntill = Math.round((new Date() - new Date(e.airstamp)) / (24 * 60 * 60 * 1000));
     return {
       ...e,
       isWatched: e.watched_status === 'WATCHED',
-      not_aired: new Date(e.airdate) > new Date(),
+      not_aired: new Date(e.airstamp) > new Date(),
       days_untill: daysUntill < 0 ? Math.abs(daysUntill) : 0,
       show,
     };
@@ -300,6 +301,14 @@ router.post('/:showId/update', isAuthenticated, async (req, res) => {
   await tvshowDb.updateShowNote(showId, { note: req.body.note });
 
   // TODO - update fediverse post
+
+  res.redirect(301, `/show/${showId}`);
+});
+
+router.post('/:showId/refresh', isAuthenticated, async (req, res) => {
+  const { showId } = req.params;
+
+  await refreshShowEpisodesData(req, showId);
 
   res.redirect(301, `/show/${showId}`);
 });

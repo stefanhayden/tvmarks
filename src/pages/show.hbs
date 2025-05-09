@@ -153,7 +153,15 @@
         {{/if}}
       </form>
     
-      <form method="get" 
+      <form method="post" 
+            action="/show/{{show.id}}/refresh"
+            onsubmit="this.querySelector('button').disabled = 'disabled'">
+        <button>
+          refresh show data
+        </button>
+      </form>
+    
+      <form method="post" 
             action="/admin/fetchMissingImage/{{show.id}}"
             onsubmit="this.querySelector('button').disabled = 'disabled'">
         <button>

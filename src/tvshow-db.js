@@ -13,7 +13,7 @@ import { open } from 'sqlite';
 import { stripHtml } from 'string-strip-html';
 import { timeSince, account, domain } from './util.js';
 
-const ACCOUNT_MENTION_REGEX = new RegExp(`^@${account}@${domain} `)
+const ACCOUNT_MENTION_REGEX = new RegExp(`^@${account}@${domain} `);
 
 export function initTvshowDb(dbFile = './.data/tvshows.db') {
   let db;
@@ -53,7 +53,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     // with a code change that sees JS-generated timestamps at the time of
     // SQLite INSERTs, we can just append the UTC indicator to the string when parsing it.
     return {
-      timestamp: timeSince(new Date(`${object.created_at}Z`).getTime()),
+      timestamp: timeSince(new DateTime(`${object.created_at}Z`).getTime()),
       ...object,
     };
   }
@@ -333,7 +333,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     }
     return undefined;
   };
-  
+
   const getShowsAbandoned = async (limit = 24, offset = 0) => {
     // We use a try catch block in case of db errors
     try {
@@ -520,7 +520,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
           $watched_episodes_count: body.watched_episodes_count,
           $last_watched_date: body.last_watched_date,
           $next_episode_towatch_airdate: body.next_episode_towatch_airdate,
-          $abandoned: body.abandoned
+          $abandoned: body.abandoned,
         },
       );
       return getShow(result.lastID);
@@ -555,17 +555,17 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     }
     return undefined;
   };
-  
+
   const updateAllAiredCounts = async (updates) => {
     if (updates.length === 0) return;
     await db.run(`
       UPDATE  shows
       SET     aired_episodes_count = CASE id
-          ${updates.map(u => `WHEN ${u.id} THEN '${u.aired_episodes_count}' \n`).join(' ')}
+          ${updates.map((u) => `WHEN ${u.id} THEN '${u.aired_episodes_count}' \n`).join(' ')}
         END
-      WHERE   id IN (${updates.map(u => `'${u.id}'`).join(', ')})
-    `)
-  }
+      WHERE   id IN (${updates.map((u) => `'${u.id}'`).join(', ')})
+    `);
+  };
 
   const updateShowNote = async (id, body) => {
     try {
@@ -630,7 +630,45 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
         },
       );
 
-      return getEpisode(result.lastID);
+      return result.lastID;
+    } catch (dbError) {
+      console.error(dbError);
+    }
+    return undefined;
+  };
+
+  const createEpisodes = async (body) => {
+    try {
+      const keys = Object.keys(body[0]);
+
+      const result = await db.run(
+        `INSERT INTO episodes 
+      (
+        ${keys.join(',')}, created_at, updated_at
+      ) 
+      VALUES ${body.map((b, rowIndex) => `(${keys.map((v) => `$${v}${rowIndex}`).join(',')}, DateTime('now'), DateTime('now'))`).join(', ')}`,
+        body
+          .map((b, i) => ({
+            [`$id${i}`]: b.id,
+            [`$show_id${i}`]: b.show_id,
+            [`$url${i}`]: b.url,
+            [`$name${i}`]: b.name,
+            [`$season${i}`]: b.season,
+            [`$number${i}`]: b.number,
+            [`$type${i}`]: b.type,
+            [`$airdate${i}`]: b.airdate,
+            [`$airtime${i}`]: b.airtime,
+            [`$airstamp${i}`]: b.airstamp,
+            [`$runtime${i}`]: b.runtime,
+            [`$image${i}`]: b.image,
+            [`$summary${i}`]: b.summary,
+            [`$watched_status${i}`]: b.watched_status,
+            [`$watched_at${i}`]: b.watched_at,
+          }))
+          .flat(),
+      );
+
+      return result;
     } catch (dbError) {
       console.error(dbError);
     }
@@ -810,9 +848,9 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
         WHERE 
           shows.status != 'Ended' 
           AND episodes.number IS NOT NULL 
-          AND episodes.airdate IS NOT NULL 
-          AND episodes.airdate != '' 
-          AND episodes.airdate <= Date('now')
+          AND episodes.airstamp IS NOT NULL 
+          AND episodes.airstamp != '' 
+          AND episodes.airstamp <= DateTime('now')
         GROUP BY shows.id
       `);
     } catch (dbError) {
@@ -852,6 +890,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     updateAllAiredCounts,
     deleteShow,
     createEpisode,
+    createEpisodes,
     updateEpisode,
     deleteEpisode,
     deleteEpisodesByShow,
