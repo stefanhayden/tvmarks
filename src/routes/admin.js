@@ -327,7 +327,7 @@ export async function fetchMissingImage(req, showId) {
   });
 }
 
-router.get('/fetchMissingImage/:showId', isAuthenticated, async (req, res) => {
+router.post('/fetchMissingImage/:showId', isAuthenticated, async (req, res) => {
   try {
     if (!req.params.showId) {
       throw new Error('no show id provided');
@@ -390,6 +390,43 @@ export async function refreshWatchNext(req) {
     .map((s) => ({ id: s.id, aired_episodes_count: s.new_aired_episodes_count }));
 
   await db.updateAllAiredCounts(showsToUpdate);
+}
+
+export async function refreshShowEpisodesData(req, showId) {
+  console.log('refreshShowEpisodesData');
+  const db = req.app.get('tvshowDb');
+  // update data
+  const updatedEpisodes = await tvMaze.episodes(showId, true);
+
+  const currentEpisodesToUpdate = await db.getEpisodesByShowId(showId);
+
+  const epPromises = updatedEpisodes.map(async (episode) => {
+    const found = currentEpisodesToUpdate.find((e) => e.id === episode.id);
+    const ep = episode;
+    const data = {
+      id: ep.id,
+      show_id: showId,
+      url: ep.url,
+      name: ep.name,
+      season: ep.season,
+      number: ep.number,
+      type: ep.type,
+      airdate: ep.airdate,
+      airtime: ep.airtime,
+      airstamp: ep.airstamp,
+      runtime: ep.runtime,
+      image: ep.image?.medium,
+      summary: ep.summary,
+    };
+    if (found) {
+      console.log('ep found', data);
+      return await db.updateEpisode(ep.id, data);
+    } else {
+      return await db.createEpisode(data);
+    }
+  });
+
+  return await Promise.all(epPromises);
 }
 
 export async function refreshShowData(req) {
@@ -573,6 +610,25 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
         watched_at: null,
       });
     });
+
+    // await db.createEpisodes(
+    //   episodes.map((ep) => ({
+    //     id: ep.id,
+    //     show_id: req.params.showId,
+    //     url: ep.url,
+    //     name: ep.name,
+    //     season: ep.season,
+    //     number: ep.number,
+    //     type: ep.type,
+    //     airdate: ep.airdate,
+    //     airtime: ep.airtime,
+    //     airstamp: ep.airstamp,
+    //     runtime: ep.runtime,
+    //     image: ep.image?.medium,
+    //     summary: ep.summary,
+    //     watched_at: null,
+    //   })),
+    // );
 
     await Promise.all(epPromises);
 
