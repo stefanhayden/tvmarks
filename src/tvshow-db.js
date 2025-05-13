@@ -457,6 +457,16 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     return undefined;
   };
 
+  const getRecentEpisodesByShowId = async (showId) => {
+    try {
+      const result = await db.all(`SELECT episodes.* from episodes WHERE airstamp > datetime(CURRENT_TIMESTAMP, '-1 year') AND episodes.show_id = ? ORDER BY season, number ASC`, showId);
+      return result;
+    } catch (dbError) {
+      console.error(dbError);
+    }
+    return undefined;
+  };
+
   const updateEpisodeWatchStatus = async (id, status) => {
     try {
       await db.run(
@@ -881,6 +891,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     getEpisodes,
     getEpisode,
     getEpisodesByShowId,
+    getRecentEpisodesByShowId,
     updateEpisodeWatchStatus,
     updateEpisodeNote,
     createShow,
