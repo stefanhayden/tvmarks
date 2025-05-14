@@ -187,7 +187,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
         // return db;
       } catch (dbError) {
-        console.error(dbError);
+        console.error('failed init', dbError);
       }
     });
   };
@@ -206,7 +206,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       return results;
     } catch (dbError) {
       // Database connection error
-      console.error(dbError);
+      console.error('failed getShows', dbError);
     }
     return undefined;
   };
@@ -220,7 +220,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       return results;
     } catch (dbError) {
       // Database connection error
-      console.error(dbError);
+      console.error('failed getAllShows', dbError);
     }
     return undefined;
   };
@@ -239,7 +239,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       return results;
     } catch (dbError) {
       // Database connection error
-      console.error(dbError);
+      console.error('failed getShowsNotStarted', dbError);
     }
     return undefined;
   };
@@ -259,7 +259,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       return results;
     } catch (dbError) {
       // Database connection error
-      console.error(dbError);
+      console.error('failed getShowsCompleted', dbError);
     }
     return undefined;
   };
@@ -301,7 +301,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       return results;
     } catch (dbError) {
       // Database connection error
-      console.error(dbError);
+      console.error('failed getShowsToWatch', dbError);
     }
     return undefined;
   };
@@ -329,7 +329,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       return results;
     } catch (dbError) {
       // Database connection error
-      console.error(dbError);
+      console.error('failed getShowsUpToDate', dbError);
     }
     return undefined;
   };
@@ -363,7 +363,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       return results;
     } catch (dbError) {
       // Database connection error
-      console.error(dbError);
+      console.error('failed getShowsAbandoned', dbError);
     }
     return undefined;
   };
@@ -380,7 +380,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       return [columnTitles].concat(results);
     } catch (dbError) {
       // Database connection error
-      console.error(dbError);
+      console.error('failed getTvshowsForCSVExport', dbError);
     }
     return undefined;
   };
@@ -391,7 +391,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       console.log(result);
       return result.last_checked;
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed getUpdateHistory', dbError);
     }
     return undefined;
   };
@@ -402,7 +402,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       console.log('db isRecentlyUpdated', result);
       return !!result;
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed isRecentlyUpdated', dbError);
     }
     return undefined;
   };
@@ -412,7 +412,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       const result = await db.get(`UPDATE update_history SET last_checked = CURRENT_TIMESTAMP`);
       return result;
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed setRecentlyUpdated', dbError);
     }
     return undefined;
   };
@@ -422,7 +422,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       const result = await db.get(`SELECT * from shows WHERE id = ?`, id);
       return result;
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed getShow', dbError);
     }
     return undefined;
   };
@@ -432,7 +432,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       const result = await db.all('SELECT episodes.* from episodes');
       return result;
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed getEpisodes', dbError);
     }
     return undefined;
   };
@@ -442,7 +442,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       const result = await db.get('SELECT episodes.* from episodes WHERE episodes.id = ?', id);
       return result;
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed to getEpisode', id, dbError);
     }
     return undefined;
   };
@@ -452,7 +452,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       const result = await db.all('SELECT episodes.* from episodes WHERE episodes.show_id = ? ORDER BY season, number ASC', showId);
       return result;
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed getEpisodesByShowId', dbError);
     }
     return undefined;
   };
@@ -462,7 +462,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       const result = await db.all(`SELECT episodes.* from episodes WHERE airstamp > datetime(CURRENT_TIMESTAMP, '-1 year') AND episodes.show_id = ? ORDER BY season, number ASC`, showId);
       return result;
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed getRecentEpisodesByShowId', dbError);
     }
     return undefined;
   };
@@ -477,7 +477,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
       return await db.get('SELECT * from episodes WHERE id = ?', id);
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed updateEpisodeWatchStatus', dbError);
     }
     return undefined;
   };
@@ -488,7 +488,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
       return await db.get('SELECT * from episodes WHERE id = ?', id);
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed updateEpisodeNote', dbError);
     }
     return undefined;
   };
@@ -535,7 +535,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       );
       return getShow(result.lastID);
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed createShow', dbError);
     }
     return undefined;
   };
@@ -561,7 +561,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
       return await db.get('SELECT * from shows WHERE id = ?', id);
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed updateShow', dbError);
     }
     return undefined;
   };
@@ -586,7 +586,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
       return await db.get('SELECT * from shows WHERE id = ?', id);
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed updateShowNote', dbError);
     }
   };
 
@@ -599,7 +599,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
       return await db.get('SELECT * from shows WHERE id = ?', id);
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed updateShowImage', mdbError);
     }
     return undefined;
   };
@@ -608,7 +608,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     try {
       await db.run('DELETE from shows WHERE id = ?', id);
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed deleteShow', dbError);
     }
   };
 
@@ -642,7 +642,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
       return result.lastID;
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed createEpisode', body, dbError);
     }
     return undefined;
   };
@@ -680,7 +680,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
       return result;
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed to update', id, body, dbError);
     }
     return undefined;
   };
@@ -711,7 +711,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
       return await db.get('SELECT * from shows WHERE id = ?', id);
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed to update', id, body, dbError);
     }
     return undefined;
   };
@@ -720,7 +720,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     try {
       await db.run('DELETE from episodes WHERE id = ?', id);
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed deleteEpisode', dbError);
     }
   };
 
@@ -728,7 +728,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     try {
       await db.run('DELETE from episodes WHERE show_id = ?', showId);
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed deleteEpisodesByShow', dbError);
     }
   };
 
@@ -738,7 +738,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
       return result;
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed getNetworkPosts', dbError);
     }
     return undefined;
   };
@@ -754,7 +754,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
         visible,
       );
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed createComment', dbError);
     }
   };
 
@@ -763,7 +763,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       console.log('deleteComment', resourceId);
       return await db.run('DELETE FROM comments WHERE resource_id = ?', resourceId);
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed deleteComment', dbError);
     }
   };
 
@@ -771,7 +771,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     try {
       return await db.run('DELETE FROM comments WHERE id = ?', id);
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed deleteCommentById', dbError);
     }
   };
 
@@ -779,7 +779,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     try {
       await db.run('UPDATE comments SET visible = ((visible | 1) - (visible & 1)) WHERE id = ?', commentId);
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed toggleCommentVisibility', dbError);
     }
   };
 
@@ -788,7 +788,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       const results = await db.all('SELECT * FROM comments WHERE resource_id = ?', showEpisodeId);
       return results.map((c) => massageComment(c));
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed getAllComments', dbError);
     }
     return undefined;
   };
@@ -798,7 +798,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       const results = await db.all('SELECT * FROM comments WHERE visible = 1 AND resource_id = ?', showEpisodeId);
       return results.map((c) => massageComment(c));
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed getVisibleComments', dbError);
     }
     return undefined;
   };
@@ -807,7 +807,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     try {
       await db.run('DELETE FROM comments WHERE visible = 0 AND resource_id = ?', showEpisodeId);
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed deleteHiddenComments', dbError);
     }
   };
 
@@ -819,7 +819,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       // Return empty array
       return [];
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed deleteAllShows', dbError);
     }
     return undefined;
   };
@@ -832,7 +832,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       // Return empty array
       return [];
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed deleteAllEpisodes', dbError);
     }
     return undefined;
   };
@@ -844,7 +844,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
       `);
       // return results.map((c) => massageComment(c));
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed getAllInProgressShows', dbError);
     }
     return undefined;
   };
@@ -864,7 +864,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
         GROUP BY shows.id
       `);
     } catch (dbError) {
-      console.error(dbError);
+      console.error('failed getAllAiredEpisodesCountByShow', dbError);
     }
     return undefined;
   };

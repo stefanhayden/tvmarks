@@ -444,18 +444,21 @@ export async function refreshShowData(req) {
 
     // episodes to update
     const currentEpisodesToUpdate = await db.getRecentEpisodesByShowId(show.id);
+    const firstEpToUpdate = currentEpisodesToUpdate[0];
     const seasonNumbers = [...new Set(currentEpisodesToUpdate.map((e) => e.season))];
     seasonNumbers.push(seasonNumbers.slice(-1)[0] + 1); //check for new seasons
     // filter out any seasons we don't find (like our check for new seasons)
     const seasonIds = seasonNumbers.map((number) => showSeasons.find((s) => s.number === number)?.id).filter((f) => !!f);
 
-    const eps = (await Promise.all(seasonIds.map(async (seasonId) => await tvMaze.seasonEpisodes(seasonId)))).flat();
+    const eps = (await Promise.all(seasonIds.map(async (seasonId) => await tvMaze.seasonEpisodes(seasonId))))
+      .flat()
+      // seems silly but lets filter out eps that are before first eps returned from `getRecentEpisodesByShowId`
+      .filter((f) => (f.season === firstEpToUpdate.season && f.number > firstEpToUpdate.number) || f.season > firstEpToUpdate.season);
 
     const epPromises = eps.map(async (episode) => {
-      const found = currentEpisodesToUpdate.find((e) => {
-        console.log(show.name, e.id, episode.id);
-        return e.id === episode.id;
-      });
+      const found = currentEpisodesToUpdate.find((e) => e.id === episode.id);
+
+      // console.log(show.name, { found: !!found }, { id: episode.id, name: episode.name, number: episode.number, season: episode.season });
 
       const ep = episode;
       const data = {
