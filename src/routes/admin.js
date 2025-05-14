@@ -393,7 +393,6 @@ export async function refreshWatchNext(req) {
 }
 
 export async function refreshShowEpisodesData(req, showId) {
-  console.log('refreshShowEpisodesData');
   const db = req.app.get('tvshowDb');
   // update data
   const updatedEpisodes = await tvMaze.episodes(showId, true);
@@ -441,13 +440,23 @@ export async function refreshShowData(req) {
   const showPromises = shows.map(async (show) => {
     // update data
     const updatedShow = await tvMaze.show(show.id);
-    const updatedEpisodes = await tvMaze.episodes(show.id, true);
+    const showSeasons = await tvMaze.seasons(show.id);
 
     // episodes to update
-    const currentEpisodesToUpdate = await db.getEpisodesByShowId(show.id);
+    const currentEpisodesToUpdate = await db.getRecentEpisodesByShowId(show.id);
+    const seasonNumbers = [...new Set(currentEpisodesToUpdate.map((e) => e.season))];
+    seasonNumbers.push(seasonNumbers.slice(-1)[0] + 1); //check for new seasons
+    // filter out any seasons we don't find (like our check for new seasons)
+    const seasonIds = seasonNumbers.map((number) => showSeasons.find((s) => s.number === number)?.id).filter((f) => !!f);
 
-    const epPromises = updatedEpisodes.map(async (episode) => {
-      const found = currentEpisodesToUpdate.find((e) => e.id === episode.id);
+    const eps = (await Promise.all(seasonIds.map(async (seasonId) => await tvMaze.seasonEpisodes(seasonId)))).flat();
+
+    const epPromises = eps.map(async (episode) => {
+      const found = currentEpisodesToUpdate.find((e) => {
+        console.log(show.name, e.id, episode.id);
+        return e.id === episode.id;
+      });
+
       const ep = episode;
       const data = {
         id: ep.id,
@@ -481,6 +490,7 @@ export async function refreshShowData(req) {
     if (updatedShow.image && updatedShow.image.medium) {
       const fileExt = updatedShow.image.medium.split('.').reverse()[0];
       const showImagePath = `shows/${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
+      console.log(`download image for ${updatedShow.name}`);
       await downloadImage(updatedShow.image.medium, showImagePath);
       image = `/${showImagePath}`;
     }
@@ -489,6 +499,7 @@ export async function refreshShowData(req) {
     const aired_episodes_count = currentEpisodes.filter((ep) => ep.number !== null && new Date(ep.airdate) < new Date()).length;
     const next_episode_towatch_airdate = currentEpisodes.find((ep) => ep.watched_status !== 'WATCHED')?.airdate || null;
 
+    console.log(`update show data for ${updatedShow.name}`);
     await db.updateShow(updatedShow.id, {
       id: updatedShow.id,
       tvrage_id: updatedShow.externals.tvrage,
