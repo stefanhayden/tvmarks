@@ -436,16 +436,18 @@ export async function refreshShowData(req) {
     return false;
   }
 
-  const shows = (await db.getAllInProgressShows());
+  const shows = await db.getAllInProgressShows();
   const showPromises = shows.map(async (show) => {
     // update data
     const updatedShow = await tvMaze.show(show.id);
-    const showSeasons = await tvMaze.seasons(show.id)
+    const showSeasons = await tvMaze.seasons(show.id);
 
     // episodes to update
     const currentEpisodesToUpdate = await db.getRecentEpisodesByShowId(show.id);
     const seasonNumbers = [...new Set(currentEpisodesToUpdate.map((e) => e.season))];
-    const seasonIds = seasonNumbers.map(number => showSeasons.find(s => s.number === number).id)
+    seasonNumbers.push(seasonNumbers.slice(-1)[0] + 1); //check for new seasons
+    // filter out any seasons we don't find (like our check for new seasons)
+    const seasonIds = seasonNumbers.map((number) => showSeasons.find((s) => s.number === number)?.id).filter((f) => !!f);
 
     const eps = (await Promise.all(seasonIds.map(async (seasonId) => await tvMaze.seasonEpisodes(seasonId)))).flat();
 
@@ -454,7 +456,7 @@ export async function refreshShowData(req) {
         console.log(show.name, e.id, episode.id);
         return e.id === episode.id;
       });
-      
+
       const ep = episode;
       const data = {
         id: ep.id,
@@ -477,7 +479,7 @@ export async function refreshShowData(req) {
         return await db.createEpisode(data);
       }
     });
-    
+
     await Promise.all(epPromises);
 
     // updated episodes
