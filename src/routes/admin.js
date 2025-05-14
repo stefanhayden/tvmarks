@@ -486,14 +486,15 @@ export async function refreshShowData(req) {
     const currentEpisodesWithNulls = await db.getEpisodesByShowId(show.id);
     const currentEpisodes = currentEpisodesWithNulls.filter((ep) => ep.number !== null);
 
-    let image;
-    if (updatedShow.image && updatedShow.image.medium) {
-      const fileExt = updatedShow.image.medium.split('.').reverse()[0];
-      const showImagePath = `shows/${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
-      console.log(`download image for ${updatedShow.name}`);
-      await downloadImage(updatedShow.image.medium, showImagePath);
-      image = `/${showImagePath}`;
-    }
+    // try not updating iages for speed
+    // let image;
+    // if (updatedShow.image && updatedShow.image.medium) {
+    //   const fileExt = updatedShow.image.medium.split('.').reverse()[0];
+    //   const showImagePath = `shows/${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
+    //   console.log(`download image for ${updatedShow.name}`);
+    //   await downloadImage(updatedShow.image.medium, showImagePath);
+    //   image = `/${showImagePath}`;
+    // }
 
     const episodes_count = currentEpisodes.filter((ep) => ep.number !== null).length;
     const aired_episodes_count = currentEpisodes.filter((ep) => ep.number !== null && new Date(ep.airdate) < new Date()).length;
@@ -520,7 +521,7 @@ export async function refreshShowData(req) {
       network_country: updatedShow.network?.country.name,
       network_country_code: updatedShow.network?.country.code,
       network_country_timezone: updatedShow.network?.country.timezone,
-      image: image,
+      // image: image,
       episodes_count,
       aired_episodes_count,
       next_episode_towatch_airdate,
