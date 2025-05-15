@@ -19,15 +19,17 @@ To set your app up:
   - If you've got a custom domain in front of your Glitch project, add a key to your .env called `PUBLIC_BASE_URL` with the value set to the hostname (the part after the https://) at which you want the project to be accessible.
   - Next we will configure the site communicate with the fediverse. Add another key to your .env called `DISPLAY_NAME` for the fediverse account
   - Then in your `.env` editor, create a key `DESCRIPTION` and add a text description. Next add an `AVATAR` key add a URL to a profile image.
-  - Finally add a `USERNAME` key to the `.env` editor to set your `@username` for your app's feiverse accout. It will be used in this context: `@watching@project-name.glitch.me`. 
+  - Finalize your fediverse setup by adding a `USERNAME` key to the `.env` editor to set your `@username` for your app's feiverse accout. It will be used in this context: `@watching@project-name.glitch.me`. 
+  - To make time more accurate add `TIMEZONE_OFFSET` with your UTC timezone offset. ex: -7 or +3
 - Otherwise:
   - Create a `.env` file in the root of the project.
   - Add the line `PUBLIC_BASE_URL=<hostname>` to your .env where \<hostname\> is the hostname of your instance.
   - Add the line `ADMIN_KEY=<key>` to your .env where \<key\> is the password you'll enter when the browser prompts you, and another line for `SESSION_SECRET=<secret>` where \<secret\> is a random string used when hashing your session for use in a secure cookie.
   - Add the line `DISPLAY_NAME=<display_name>` to your .env where \<display_name\> is your app's fediverse display name.
   - Add the line `DESCRIPTION=<description>` to your .env where \<description\> is your app's fediverse user description
-  - Add the line `AVATAR=<avatar>` to your .env where \<avatar\> is your app's fediverse user image
+  - Add the line `AVATAR=<avatar>` to your .env where \<avatar\> is your app's fediverse user image.
   - Add the line `USERNAME=<name>` to your .env where \<name\> is your app's fediverse username.
+  - Add the line `TIMEZONE_OFFSET=<offset>` to your .env where \<offset\> is your UTC timezone offset. ex: -7 or +3
 - If you're using Glitch, you should be done! If you're running this yourself, run `npm run start` via whatever mechanism you choose to use to host this website.
 - Click on the **Admin** link in the footer, and enter the password (whatever you set ADMIN_KEY to in the .env).
 - You should be logged in, at which point you can configure various settings, import bookmarks, and use the "Add" links in the header and footer (as well as the bookmarklet, available in the Admin section) to save new bookmarks.
