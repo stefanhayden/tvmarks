@@ -269,10 +269,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     // We use a try catch block in case of db errors
     try {
       const results = await db.all(
-        `select *,
-        DateTime('now', '${timezoneMod}') as test_date,
-        DateTime(next_episode_towatch_airdate, '${timezoneMod}') as test_date2,
-        DateTime(next_episode_towatch_airdate, '${timezoneMod}') <= DateTime('now', '${timezoneMod}') as test_date3
+        `select *
         from shows
           WHERE
             abandoned != 1 AND
@@ -465,7 +462,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
   const getRecentEpisodesByShowId = async (showId) => {
     try {
       const result = await db.all(
-        `SELECT episodes.* from episodes WHERE airstamp > datetime(CURRENT_TIMESTAMP, '-1 year', '${timezoneMod}') AND episodes.show_id = ? ORDER BY season, number ASC`,
+        `SELECT episodes.* from episodes WHERE datetime(airstamp) > datetime(CURRENT_TIMESTAMP, '-1 year', '${timezoneMod}') AND episodes.show_id = ? ORDER BY season, number ASC`,
         showId,
       );
       return result;
