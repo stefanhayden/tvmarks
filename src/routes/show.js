@@ -5,12 +5,16 @@ import { isAuthenticated } from '../session-auth.js';
 import { broadcastMessage } from '../activitypub.js';
 import { refreshShowEpisodesData } from './admin.js';
 
+
+const timezone_offset_ms = Number(process.env.TIMEZONE_OFFSET || '+0') * 60 * 1000;
+
 const router = express.Router();
 export default router;
 
 router.get('/:showId', async (req, res) => {
   const params = {};
-  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  // const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const now = new Date();
 
   const tvshowDb = req.app.get('tvshowDb');
   const apDb = req.app.get('apDb');
@@ -35,7 +39,8 @@ router.get('/:showId', async (req, res) => {
     return {
       ...e,
       isWatched: e.watched_status === 'WATCHED',
-      not_aired: e.airstamp ? new Date(e.airstamp) > now : true,
+      // not_aired: e.airstamp ? new Date(e.airstamp) > now : true,
+      not_aired: daysUntill < 0,
       days_untill: daysUntill <= 0 ? Math.abs(daysUntill) : 'Unkown',
     };
   });
@@ -69,7 +74,9 @@ router.get('/:showId', async (req, res) => {
     let lastEpId = null;
     episodes.map((e) => {
       if (e.number !== null) {
-        if (!params.show.watchNextEpisode && !e.isWatched && new Date(e.airstamp) < now) {
+        const daysUntill = e.airstamp ? Math.round((now - new Date(e.airstamp)) / (24 * 60 * 60 * 1000)) : undefined;
+        // if (!params.show.watchNextEpisode && !e.isWatched && new Date(e.airstamp) < now) {
+        if (!params.show.watchNextEpisode && !e.isWatched && daysUntill === 0) {
           params.show.watchNextEpisode = e;
         }
         lastEpId = e.id;
@@ -88,7 +95,9 @@ router.get('/:showId', async (req, res) => {
 });
 
 const getEpisodeStatusUpdatedValues = (allEps) => {
-  const aired_episodes_count = allEps.filter((ep) => ep.airstamp !== null && new Date(ep.airstamp) < new Date())?.length || 0;
+  const aired_episodes_count = allEps.filter((ep) => {
+    return ep.airstamp !== null && new Date(ep.airstamp) < new Date()
+  })?.length || 0;
   const watched_episodes_count = allEps.filter((ep) => ep.watched_status === 'WATCHED')?.length || 0;
 
   // reversed to make it easy to find last watched episode
@@ -102,8 +111,8 @@ const getEpisodeStatusUpdatedValues = (allEps) => {
   const next_episode_towatch =
     allEpsReversed.find((ep, index) => last_watched_episode_index - 1 === index) ||
     allEpsReversed.find((ep, index) => ep.watched_status !== 'WATCHED');
-  const next_episode_towatch_airdate = next_episode_towatch?.airdate || null;
-
+  const next_episode_towatch_airdate = next_episode_towatch?.airstamp || null;
+  
   return {
     aired_episodes_count,
     watched_episodes_count,
@@ -218,7 +227,7 @@ router.post('/:showId/season/:seasonId/status', async (req, res) => {
 
   const allEpsWithNulls = await tvshowDb.getEpisodesByShowId(req.params.showId);
   const allEps = allEpsWithNulls.filter((ep) => ep.number !== null);
-
+  
   await tvshowDb.updateShow(req.params.showId, getEpisodeStatusUpdatedValues(allEps));
 
   res.redirect(301, `/show/${req.params.showId}#season${req.params.seasonId}`);

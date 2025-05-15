@@ -15,6 +15,9 @@ import { timeSince, account, domain } from './util.js';
 
 const ACCOUNT_MENTION_REGEX = new RegExp(`^@${account}@${domain} `);
 
+const timezone_offset = process.env.TIMEZONE_OFFSET || '+0';
+const timezoneMod = `${timezone_offset} hour`;
+
 export function initTvshowDb(dbFile = './.data/tvshows.db') {
   let db;
 
@@ -200,7 +203,6 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
   const getShows = async (limit = 10, offset = 0) => {
     // We use a try catch block in case of db errors
     try {
-      // const timezoneMod = '-5 hour';
       // const subQueryFilter = `episodes.show_id = shows.id AND episodes.number IS NOT NULL`;
       const results = await db.all(`select * from shows ORDER BY updated_at DESC LIMIT ? OFFSET ?`, limit, offset);
       return results;
@@ -214,7 +216,6 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
   const getAllShows = async () => {
     // We use a try catch block in case of db errors
     try {
-      // const timezoneMod = '-5 hour';
       // const subQueryFilter = `episodes.show_id = shows.id AND episodes.number IS NOT NULL`;
       const results = await db.all(`select * from shows`);
       return results;
@@ -267,7 +268,6 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
   const getShowsToWatch = async (limit = 24, offset = 0) => {
     // We use a try catch block in case of db errors
     try {
-      const timezoneMod = '-5 hour';
       const results = await db.all(
         `select *
         from shows
@@ -275,20 +275,20 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
             abandoned != 1 AND
             watched_episodes_count > 0 AND
             (
-              next_episode_towatch_airdate <= date('now') OR
+              DateTime(next_episode_towatch_airdate, '${timezoneMod}') <= DateTime('now', '${timezoneMod}') OR
               watched_episodes_count < aired_episodes_count
             ) AND
             (
               (
                 (status == 'Ended' OR status == 'To Be Determined') AND
-                last_watched_date > date('now', '-3 month')
+                last_watched_date > date('now', '-3 month', '${timezoneMod}')
               ) OR
               (
                 status == 'Running' AND
                 aired_episodes_count > watched_episodes_count AND
                 (
-                  next_episode_towatch_airdate > date('now', '-3 month') OR
-                  last_watched_date > date('now', '-3 month')
+                  next_episode_towatch_airdate > date('now', '-3 month', '${timezoneMod}') OR
+                  last_watched_date > date('now', '-3 month', '${timezoneMod}')
                 )
               )
             )
@@ -311,11 +311,14 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     try {
       const timezoneMod = '-5 hour';
       const results = await db.all(
-        `SELECT *
+        `SELECT *,
+        DateTime('now', '${timezoneMod}') as test_date,
+        DateTime(next_episode_towatch_airdate, '${timezoneMod}') as test_date2,
+        DateTime(next_episode_towatch_airdate, '${timezoneMod}') <= DateTime('now', '${timezoneMod}') as test_date3
           from shows
         WHERE 
           (
-            (next_episode_towatch_airdate > date('now') AND aired_episodes_count == watched_episodes_count)
+            (DateTime(next_episode_towatch_airdate, '${timezoneMod}') > DateTime('now', '${timezoneMod}') AND aired_episodes_count == watched_episodes_count)
             OR
             aired_episodes_count <= watched_episodes_count
           )
@@ -337,21 +340,20 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
   const getShowsAbandoned = async (limit = 24, offset = 0) => {
     // We use a try catch block in case of db errors
     try {
-      const timezoneMod = '-5 hour';
       const results = await db.all(
         `select * from shows
           WHERE
             watched_episodes_count > 0 AND
-            next_episode_towatch_airdate <= date('now') AND
+            next_episode_towatch_airdate <= date('now', '${timezoneMod}') AND
           (
             (
-              status == 'Ended' AND last_watched_date < date('now', '-3 month')
+              status == 'Ended' AND last_watched_date < date('now', '-3 month', '${timezoneMod}')
             )
             OR
             (
               status == 'Running' AND
-              next_episode_towatch_airdate < date('now', '-3 month') AND
-              last_watched_date < date('now', '-3 month')
+              next_episode_towatch_airdate < date('now', '-3 month', '${timezoneMod}') AND
+              last_watched_date < date('now', '-3 month', '${timezoneMod}')
             )
             OR abandoned == 1
           )
@@ -459,7 +461,10 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
   const getRecentEpisodesByShowId = async (showId) => {
     try {
-      const result = await db.all(`SELECT episodes.* from episodes WHERE airstamp > datetime(CURRENT_TIMESTAMP, '-1 year') AND episodes.show_id = ? ORDER BY season, number ASC`, showId);
+      const result = await db.all(
+        `SELECT episodes.* from episodes WHERE datetime(airstamp) > datetime(CURRENT_TIMESTAMP, '-1 year', '${timezoneMod}') AND episodes.show_id = ? ORDER BY season, number ASC`,
+        showId,
+      );
       return result;
     } catch (dbError) {
       console.error('failed getRecentEpisodesByShowId', dbError);
@@ -470,7 +475,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
   const updateEpisodeWatchStatus = async (id, status) => {
     try {
       await db.run(
-        `UPDATE episodes SET watched_status = ?, watched_at = ${status === 'WATCHED' ? `DateTime('now')` : null} WHERE id = ?`,
+        `UPDATE episodes SET watched_status = ?, watched_at = ${status === 'WATCHED' ? `DateTime('now', '${timezoneMod}')` : null} WHERE id = ?`,
         status,
         id,
       );
@@ -568,10 +573,10 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
   const updateAllAiredCounts = async (updates) => {
     if (updates.length === 0) return;
+
     await db.run(`
       UPDATE  shows
-      SET     aired_episodes_count = CASE id
-          ${updates.map((u) => `WHEN ${u.id} THEN '${u.aired_episodes_count}' \n`).join(' ')}
+      SET     aired_episodes_count = CASE id ${updates.map((u) => `WHEN ${u.id} THEN '${u.aired_episodes_count}' \n`).join(' ')}
         END
       WHERE   id IN (${updates.map((u) => `'${u.id}'`).join(', ')})
     `);
@@ -860,7 +865,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
           AND episodes.number IS NOT NULL 
           AND episodes.airstamp IS NOT NULL 
           AND episodes.airstamp != '' 
-          AND episodes.airstamp <= DateTime('now')
+          AND DateTime(episodes.airstamp) <= DateTime('now')
         GROUP BY shows.id
       `);
     } catch (dbError) {
