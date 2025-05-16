@@ -275,7 +275,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
             abandoned != 1 AND
             watched_episodes_count > 0 AND
             (
-              DateTime(next_episode_towatch_airdate, '${timezoneMod}') <= DateTime('now', '${timezoneMod}') OR
+              DateTime(next_episode_towatch_airdate) <= DateTime('now', '${timezoneMod}') OR
               watched_episodes_count < aired_episodes_count
             ) AND
             (
@@ -287,7 +287,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
                 status == 'Running' AND
                 aired_episodes_count > watched_episodes_count AND
                 (
-                  next_episode_towatch_airdate > date('now', '-3 month', '${timezoneMod}') OR
+                  DateTime(next_episode_towatch_airdate) > date('now', '-3 month', '${timezoneMod}') OR
                   last_watched_date > date('now', '-3 month', '${timezoneMod}')
                 )
               )
@@ -311,14 +311,11 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     try {
       const timezoneMod = '-5 hour';
       const results = await db.all(
-        `SELECT *,
-        DateTime('now', '${timezoneMod}') as test_date,
-        DateTime(next_episode_towatch_airdate, '${timezoneMod}') as test_date2,
-        DateTime(next_episode_towatch_airdate, '${timezoneMod}') <= DateTime('now', '${timezoneMod}') as test_date3
+        `SELECT *
           from shows
         WHERE 
           (
-            (DateTime(next_episode_towatch_airdate, '${timezoneMod}') > DateTime('now', '${timezoneMod}') AND aired_episodes_count == watched_episodes_count)
+            (DateTime(next_episode_towatch_airdate) > DateTime('now', '${timezoneMod}') AND aired_episodes_count == watched_episodes_count)
             OR
             aired_episodes_count <= watched_episodes_count
           )
@@ -344,7 +341,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
         `select * from shows
           WHERE
             watched_episodes_count > 0 AND
-            next_episode_towatch_airdate <= date('now', '${timezoneMod}') AND
+            DateTime(next_episode_towatch_airdate) <= date('now', '${timezoneMod}') AND
           (
             (
               status == 'Ended' AND last_watched_date < date('now', '-3 month', '${timezoneMod}')
@@ -352,7 +349,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
             OR
             (
               status == 'Running' AND
-              next_episode_towatch_airdate < date('now', '-3 month', '${timezoneMod}') AND
+              DateTime(next_episode_towatch_airdate) < date('now', '-3 month', '${timezoneMod}') AND
               last_watched_date < date('now', '-3 month', '${timezoneMod}')
             )
             OR abandoned == 1
