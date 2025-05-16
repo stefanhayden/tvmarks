@@ -71,15 +71,11 @@ router.get('/:showId', async (req, res) => {
   }
 
   if (show.last_watched_episode_id) {
-    let lastEpId = null;
     episodes.map((e) => {
       if (e.number !== null) {
-        const daysUntill = e.airstamp ? Math.round((now - new Date(e.airstamp)) / (24 * 60 * 60 * 1000)) : undefined;
-        // if (!params.show.watchNextEpisode && !e.isWatched && new Date(e.airstamp) < now) {
-        if (!params.show.watchNextEpisode && !e.isWatched && daysUntill === 0) {
+        if (!params.show.watchNextEpisode && !e.isWatched && new Date(e.airstamp) < now) {
           params.show.watchNextEpisode = e;
         }
-        lastEpId = e.id;
       }
     });
   }
