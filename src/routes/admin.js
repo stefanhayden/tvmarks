@@ -437,8 +437,7 @@ export async function refreshShowData(req) {
   // }
 
   const shows = ((await db.getAllInProgressShows()) || []).slice(0, 5);
-  console.log('IN PROGRESS SHOW')
-  console.log(shows)
+  console.log('refresh shows: ', shows.map(s => s.name))
   const showPromises = shows.map(async (show) => {
     // update data
     const updatedShow = await tvMaze.show(show.id);
@@ -536,17 +535,18 @@ export async function refreshShowData(req) {
   await Promise.all(showPromises);
 
   await db.setRecentlyUpdated();
-  return true;
+  return shows;
 }
 
 router.get('/update_show_data', isAuthenticated, async (req, res) => {
+  let shows = [];
   try {
-    await refreshShowData(req, res);
+    shows = await refreshShowData(req, res);
   } catch (err) {
     console.log(err);
     return res.status(500).send('Internal Server Error');
   }
-  return res.redirect('/admin/update');
+  return req.query.raw ? res.json({ success: true, showsUpdated: shows.length }) : res.redirect('/admin/update');
 });
 
 router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
