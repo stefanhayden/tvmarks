@@ -74,4 +74,24 @@
     </footer>
     {{{_sections.script}}}
   </body>
+  {{#if loggedIn}}
+    <script>
+      try {
+        // keep trying to update all shows
+        async function updateShowData() {
+          const response = await fetch(`${location.origin}/admin/update_show_data?raw=true`)
+          const json = await response.json();
+          if (json.showsUpdated > 0) {
+            // try again in 1 minute
+            setTimeout(updateShowData, 1000 * 60)
+          } else {
+            // try again in 2 hours
+            setTimeout(updateShowData, 1000 * 60 * 60 * 2)
+          }
+        }
+        updateShowData();
+
+      } catch (e) {}
+    </script>
+  {{/if}}
 </html>

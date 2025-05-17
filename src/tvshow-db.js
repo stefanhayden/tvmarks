@@ -252,7 +252,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
         `SELECT * from shows
         WHERE aired_episodes_count == watched_episodes_count
         AND status == 'Ended'
-        ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
+        ORDER BY last_watched_date, updated_at DESC LIMIT ? OFFSET ?`,
         limit,
         offset,
       );
@@ -292,7 +292,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
                 )
               )
             )
-          ORDER BY updated_at DESC LIMIT ? OFFSET ?;
+          ORDER BY last_watched_date, updated_at DESC LIMIT ? OFFSET ?;
         `,
         limit,
         offset,
@@ -321,7 +321,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
           )
           AND watched_episodes_count != 0
           AND status != 'Ended'
-        ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
+        ORDER BY last_watched_date, updated_at DESC LIMIT ? OFFSET ?`,
         limit,
         offset,
       );
@@ -354,7 +354,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
             )
             OR abandoned == 1
           )
-          ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
+          ORDER BY last_watched_date, updated_at DESC LIMIT ? OFFSET ?`,
         limit,
         offset,
       );
