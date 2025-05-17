@@ -419,25 +419,27 @@ export async function refreshShowEpisodesData(req, showId) {
     };
     if (found) {
       console.log('ep found', data);
-      return await db.updateEpisode(ep.id, data);
-    } else {
-      return await db.createEpisode(data);
+      return db.updateEpisode(ep.id, data);
     }
+    return db.createEpisode(data);
   });
 
-  return await Promise.all(epPromises);
+  return Promise.all(epPromises);
 }
 
 export async function refreshShowData(req) {
   const db = req.app.get('tvshowDb');
-  const isRecentlyUpdated = await db.isRecentlyUpdated();
+  // const isRecentlyUpdated = await db.isRecentlyUpdated();
 
   // if ((isRecentlyUpdated && !req.query.force) || !req.query.force) {
   //   return false;
   // }
 
   const shows = ((await db.getAllInProgressShows()) || []).slice(0, 5);
-  console.log('refresh shows: ', shows.map(s => s.name))
+  console.log(
+    'refresh shows: ',
+    shows.map((s) => s.name),
+  );
   const showPromises = shows.map(async (show) => {
     // update data
     const updatedShow = await tvMaze.show(show.id);
@@ -447,11 +449,11 @@ export async function refreshShowData(req) {
     const currentEpisodesToUpdate = await db.getRecentEpisodesByShowId(show.id);
     const firstEpToUpdate = currentEpisodesToUpdate[0];
     const seasonNumbers = [...new Set(currentEpisodesToUpdate.map((e) => e.season))];
-    seasonNumbers.push(seasonNumbers.slice(-1)[0] + 1); //check for new seasons
+    seasonNumbers.push(seasonNumbers.slice(-1)[0] + 1); // check for new seasons
     // filter out any seasons we don't find (like our check for new seasons)
     const seasonIds = seasonNumbers.map((number) => showSeasons.find((s) => s.number === number)?.id).filter((f) => !!f);
 
-    const eps = (await Promise.all(seasonIds.map(async (seasonId) => await tvMaze.seasonEpisodes(seasonId))))
+    const eps = (await Promise.all(seasonIds.map(async (seasonId) => tvMaze.seasonEpisodes(seasonId))))
       .flat()
       // seems silly but lets filter out eps that are before first eps returned from `getRecentEpisodesByShowId`
       .filter((f) => (f.season === firstEpToUpdate.season && f.number > firstEpToUpdate.number) || f.season > firstEpToUpdate.season);
@@ -478,10 +480,9 @@ export async function refreshShowData(req) {
         summary: ep.summary,
       };
       if (found) {
-        return await db.updateEpisode(ep.id, data);
-      } else {
-        return await db.createEpisode(data);
+        return db.updateEpisode(ep.id, data);
       }
+      return db.createEpisode(data);
     });
 
     await Promise.all(epPromises);

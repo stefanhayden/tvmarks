@@ -14,7 +14,7 @@ router.post('/:id/toggle', isAuthenticated, async (req, res) => {
 router.post('/:id/delete', isAuthenticated, async (req, res) => {
   const tvshowDb = req.app.get('tvshowDb');
 
-  const a = await tvshowDb.deleteCommentById(req.params.id);
+  await tvshowDb.deleteCommentById(req.params.id);
 
   return res.redirect(req.get('Referrer'));
 });

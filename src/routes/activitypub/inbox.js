@@ -233,7 +233,7 @@ export const inboxRoute = async (req, res) => {
     return handleFollowedPost(req, res);
   }
   return res.sendStatus(400);
-}
+};
 
 router.post('/', inboxRoute);
 
