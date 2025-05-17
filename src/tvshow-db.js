@@ -56,7 +56,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     // with a code change that sees JS-generated timestamps at the time of
     // SQLite INSERTs, we can just append the UTC indicator to the string when parsing it.
     return {
-      timestamp: timeSince(new DateTime(`${object.created_at}Z`).getTime()),
+      timestamp: timeSince(new Date(`${object.created_at}Z`).getTime()),
       ...object,
     };
   }
@@ -213,19 +213,6 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     return undefined;
   };
 
-  const getAllShows = async () => {
-    // We use a try catch block in case of db errors
-    try {
-      // const subQueryFilter = `episodes.show_id = shows.id AND episodes.number IS NOT NULL`;
-      const results = await db.all(`select * from shows`);
-      return results;
-    } catch (dbError) {
-      // Database connection error
-      console.error('failed getAllShows', dbError);
-    }
-    return undefined;
-  };
-
   const getShowsNotStarted = async (limit = 24, offset = 0) => {
     // We use a try catch block in case of db errors
     try {
@@ -309,7 +296,6 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
   const getShowsUpToDate = async (limit = 24, offset = 0) => {
     // We use a try catch block in case of db errors
     try {
-      const timezoneMod = '-5 hour';
       const results = await db.all(
         `SELECT *
           from shows
@@ -590,6 +576,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     } catch (dbError) {
       console.error('failed updateShowNote', dbError);
     }
+    return undefined;
   };
 
   const updateShowImage = async (id, body) => {
@@ -601,7 +588,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
       return await db.get('SELECT * from shows WHERE id = ?', id);
     } catch (dbError) {
-      console.error('failed updateShowImage', mdbError);
+      console.error('failed updateShowImage', dbError);
     }
     return undefined;
   };
@@ -682,7 +669,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
       return result;
     } catch (dbError) {
-      console.error('failed to update', id, body, dbError);
+      console.error('failed to update', body, dbError);
     }
     return undefined;
   };
@@ -767,6 +754,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     } catch (dbError) {
       console.error('failed deleteComment', dbError);
     }
+    return undefined;
   };
 
   const deleteCommentById = async (id) => {
@@ -775,6 +763,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     } catch (dbError) {
       console.error('failed deleteCommentById', dbError);
     }
+    return undefined;
   };
 
   const toggleCommentVisibility = async (commentId) => {

@@ -2,13 +2,13 @@ import { initTvshowDb } from './tvshow-db.js';
 
 const dateFormat = (v) => v.split('T').join(' ').split('.')[0];
 
-const now = dateFormat(new Date().toISOString());
+// const now = dateFormat(new Date().toISOString());
 const past6Months = dateFormat(new Date(new Date().setMonth(new Date().getMonth() - 6)).toISOString());
-const past4Months = dateFormat(new Date(new Date().setMonth(new Date().getMonth() - 4)).toISOString());
-const past3Months = dateFormat(new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString());
+// const past4Months = dateFormat(new Date(new Date().setMonth(new Date().getMonth() - 4)).toISOString());
+// const past3Months = dateFormat(new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString());
 const past3Days = dateFormat(new Date(new Date().setDate(new Date().getDate() - 3)).toISOString());
-const nextWeek = dateFormat(new Date(new Date().setDate(new Date().getDate() + 7)).toISOString());
-const next2Week = dateFormat(new Date(new Date().setDate(new Date().getDate() + 14)).toISOString());
+// const nextWeek = dateFormat(new Date(new Date().setDate(new Date().getDate() + 7)).toISOString());
+// const next2Week = dateFormat(new Date(new Date().setDate(new Date().getDate() + 14)).toISOString());
 
 describe('tvshow-db', () => {
   let db;

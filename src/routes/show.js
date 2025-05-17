@@ -5,8 +5,7 @@ import { isAuthenticated } from '../session-auth.js';
 import { broadcastMessage } from '../activitypub.js';
 import { refreshShowEpisodesData } from './admin.js';
 
-
-const timezone_offset_ms = Number(process.env.TIMEZONE_OFFSET || '+0') * 60 * 1000;
+// const timezone_offset_ms = Number(process.env.TIMEZONE_OFFSET || '+0') * 60 * 1000;
 
 const router = express.Router();
 export default router;
@@ -71,7 +70,7 @@ router.get('/:showId', async (req, res) => {
   }
 
   if (show.last_watched_episode_id) {
-    episodes.map((e) => {
+    episodes.forEach((e) => {
       if (e.number !== null) {
         if (!params.show.watchNextEpisode && !e.isWatched && new Date(e.airstamp) < now) {
           params.show.watchNextEpisode = e;
@@ -91,9 +90,10 @@ router.get('/:showId', async (req, res) => {
 });
 
 const getEpisodeStatusUpdatedValues = (allEps) => {
-  const aired_episodes_count = allEps.filter((ep) => {
-    return ep.airstamp !== null && new Date(ep.airstamp) < new Date()
-  })?.length || 0;
+  const aired_episodes_count =
+    allEps.filter((ep) => {
+      return ep.airstamp !== null && new Date(ep.airstamp) < new Date();
+    })?.length || 0;
   const watched_episodes_count = allEps.filter((ep) => ep.watched_status === 'WATCHED')?.length || 0;
 
   // reversed to make it easy to find last watched episode
@@ -102,13 +102,12 @@ const getEpisodeStatusUpdatedValues = (allEps) => {
   const last_watched_episode_index = allEpsReversed.findIndex((ep) => ep.watched_status === 'WATCHED');
   const last_watched_episode = allEpsReversed[last_watched_episode_index];
   const last_watched_date = last_watched_episode?.watched_at;
-  const last_watched_episode_id = last_watched_episode?.id | null;
+  const last_watched_episode_id = last_watched_episode?.id || null;
 
   const next_episode_towatch =
-    allEpsReversed.find((ep, index) => last_watched_episode_index - 1 === index) ||
-    allEpsReversed.find((ep, index) => ep.watched_status !== 'WATCHED');
+    allEpsReversed.find((ep, index) => last_watched_episode_index - 1 === index) || allEpsReversed.find((ep) => ep.watched_status !== 'WATCHED');
   const next_episode_towatch_airdate = next_episode_towatch?.airstamp || null;
-  
+
   return {
     aired_episodes_count,
     watched_episodes_count,
@@ -223,7 +222,7 @@ router.post('/:showId/season/:seasonId/status', async (req, res) => {
 
   const allEpsWithNulls = await tvshowDb.getEpisodesByShowId(req.params.showId);
   const allEps = allEpsWithNulls.filter((ep) => ep.number !== null);
-  
+
   await tvshowDb.updateShow(req.params.showId, getEpisodeStatusUpdatedValues(allEps));
 
   res.redirect(301, `/show/${req.params.showId}#season${req.params.seasonId}`);
@@ -266,7 +265,7 @@ router.get('/:showId/episode/:episodeId', async (req, res) => {
   params.allowed = permissions?.allowed;
   params.blocked = permissions?.blocked;
 
-  res.render('episode', params);
+  return res.render('episode', params);
 });
 
 router.post('/:showId/delete_hidden_comments', isAuthenticated, async (req, res) => {
