@@ -279,7 +279,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
                 )
               )
             )
-          ORDER BY last_watched_date, updated_at DESC LIMIT ? OFFSET ?;
+          ORDER BY last_watched_date DESC LIMIT ? OFFSET ?;
         `,
         limit,
         offset,
