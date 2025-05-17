@@ -10,7 +10,8 @@ router.get('/', async (req, res) => {
   let params = {};
 
   if (req.session.loggedIn) {
-    params.showDataRefreshed = await refreshShowData(req, res);
+    // params.showDataRefreshed = await refreshShowData(req, res);
+    await refreshShowData(req, res);
     await refreshWatchNext(req);
   }
 

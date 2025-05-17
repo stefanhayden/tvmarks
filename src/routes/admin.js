@@ -432,11 +432,13 @@ export async function refreshShowData(req) {
   const db = req.app.get('tvshowDb');
   const isRecentlyUpdated = await db.isRecentlyUpdated();
 
-  if ((isRecentlyUpdated && !req.query.force) || !req.query.force) {
-    return false;
-  }
+  // if ((isRecentlyUpdated && !req.query.force) || !req.query.force) {
+  //   return false;
+  // }
 
-  const shows = await db.getAllInProgressShows();
+  const shows = ((await db.getAllInProgressShows()) || []).slice(0, 5);
+  console.log('IN PROGRESS SHOW')
+  console.log(shows)
   const showPromises = shows.map(async (show) => {
     // update data
     const updatedShow = await tvMaze.show(show.id);

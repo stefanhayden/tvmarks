@@ -581,7 +581,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
   const updateShowNote = async (id, body) => {
     try {
-      await db.run(`UPDATE shows SET note=$note, updated_at=DateTime('now') WHERE id = $id`, {
+      await db.run(`UPDATE shows SET note=$note WHERE id = $id`, {
         $id: id,
         $note: body.note,
       });
@@ -594,7 +594,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
 
   const updateShowImage = async (id, body) => {
     try {
-      await db.run(`UPDATE shows SET image=$image, updated_at=DateTime('now') WHERE id = $id`, {
+      await db.run(`UPDATE shows SET image=$image WHERE id = $id`, {
         $id: id,
         $image: body.image,
       });
@@ -842,9 +842,11 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
   const getAllInProgressShows = async () => {
     try {
       return await db.all(`
-        SELECT * FROM shows WHERE status != 'Ended'
+        SELECT * FROM shows 
+        WHERE status != 'Ended'
+        AND DateTime(updated_at) <= DateTime('now', '-1 day')
+        ORDER BY updated_at DESC
       `);
-      // return results.map((c) => massageComment(c));
     } catch (dbError) {
       console.error('failed getAllInProgressShows', dbError);
     }
