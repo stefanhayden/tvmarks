@@ -845,7 +845,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
         SELECT * FROM shows 
         WHERE status != 'Ended'
         AND DateTime(updated_at) <= DateTime('now', '-1 day')
-        ORDER BY updated_at DESC
+        ORDER BY last_watched_date, updated_at DESC
       `);
     } catch (dbError) {
       console.error('failed getAllInProgressShows', dbError);
