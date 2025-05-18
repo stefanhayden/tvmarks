@@ -520,7 +520,6 @@ export async function refreshShowData(req) {
 
   await Promise.all(showPromises);
 
-  // await db.setRecentlyUpdated();
   return shows;
 }
 

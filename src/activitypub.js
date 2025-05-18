@@ -20,7 +20,7 @@ export async function signAndSend(message, name, domain, db, targetDomain, inbox
     console.log(`Sent message to an inbox at ${targetDomain}!`);
     console.log('Response Status Code:', response.status);
     console.log('Response body:', data);
-    return data;
+    return response;
   } catch (error) {
     console.log('Error:', error.message);
     console.log('Stacktrace: ', error.stack);
