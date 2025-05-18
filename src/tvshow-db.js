@@ -175,14 +175,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
           );
           // stops duplicate commnents from being created
           await db.run('CREATE UNIQUE INDEX comments_url ON comments(url)');
-
-          // track when last time we pulled in show data from 3rd party
-          await db.run(
-            `CREATE TABLE update_history (
-              last_checked DATETIME DEFAULT CURRENT_TIMESTAMP
-            );`,
-          );
-          await db.run(`INSERT INTO update_history (last_checked) VALUES (CURRENT_DATE);`);
+          
           console.log('Update shows created');
         } else {
           console.log('Yes DB exists.. lets continue to app...');
@@ -307,7 +300,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
           )
           AND watched_episodes_count != 0
           AND status != 'Ended'
-        ORDER BY last_watched_date, updated_at DESC LIMIT ? OFFSET ?`,
+        ORDER BY last_watched_date DESC LIMIT ? OFFSET ?`,
         limit,
         offset,
       );
@@ -340,7 +333,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
             )
             OR abandoned == 1
           )
-          ORDER BY last_watched_date, updated_at DESC LIMIT ? OFFSET ?`,
+          ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
         limit,
         offset,
       );
@@ -366,38 +359,6 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     } catch (dbError) {
       // Database connection error
       console.error('failed getTvshowsForCSVExport', dbError);
-    }
-    return undefined;
-  };
-
-  const getUpdateHistory = async () => {
-    try {
-      const result = await db.get(`SELECT last_checked from update_history`);
-      console.log(result);
-      return result.last_checked;
-    } catch (dbError) {
-      console.error('failed getUpdateHistory', dbError);
-    }
-    return undefined;
-  };
-
-  const isRecentlyUpdated = async () => {
-    try {
-      const result = await db.get(`SELECT last_checked from update_history WHERE last_checked > datetime(CURRENT_TIMESTAMP, '-1 day')`);
-      console.log('db isRecentlyUpdated', result);
-      return !!result;
-    } catch (dbError) {
-      console.error('failed isRecentlyUpdated', dbError);
-    }
-    return undefined;
-  };
-
-  const setRecentlyUpdated = async () => {
-    try {
-      const result = await db.get(`UPDATE update_history SET last_checked = CURRENT_TIMESTAMP`);
-      return result;
-    } catch (dbError) {
-      console.error('failed setRecentlyUpdated', dbError);
     }
     return undefined;
   };
@@ -878,9 +839,6 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
     getShowsToWatch,
     getShowsAbandoned,
     getTvshowsForCSVExport,
-    getUpdateHistory,
-    setRecentlyUpdated,
-    isRecentlyUpdated,
     getEpisodes,
     getEpisode,
     getEpisodesByShowId,

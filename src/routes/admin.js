@@ -36,14 +36,6 @@ router.get('/update', isAuthenticated, async (req, res) => {
   params.adminLinks = ADMIN_LINKS;
   params.currentPath = req.originalUrl;
 
-  const tvshowDb = req.app.get('tvshowDb');
-
-  const updateHistory = await tvshowDb.getUpdateHistory();
-  const isRecentlyUpdated = await tvshowDb.isRecentlyUpdated();
-
-  params.updateHistory = updateHistory;
-  params.isRecentlyUpdated = isRecentlyUpdated;
-
   return res.render('admin/update', params);
 });
 
@@ -429,11 +421,6 @@ export async function refreshShowEpisodesData(req, showId) {
 
 export async function refreshShowData(req) {
   const db = req.app.get('tvshowDb');
-  // const isRecentlyUpdated = await db.isRecentlyUpdated();
-
-  // if ((isRecentlyUpdated && !req.query.force) || !req.query.force) {
-  //   return false;
-  // }
 
   const shows = ((await db.getAllInProgressShows()) || []).slice(0, 5);
   console.log(
@@ -460,8 +447,6 @@ export async function refreshShowData(req) {
 
     const epPromises = eps.map(async (episode) => {
       const found = currentEpisodesToUpdate.find((e) => e.id === episode.id);
-
-      // console.log(show.name, { found: !!found }, { id: episode.id, name: episode.name, number: episode.number, season: episode.season });
 
       const ep = episode;
       const data = {
@@ -535,7 +520,6 @@ export async function refreshShowData(req) {
 
   await Promise.all(showPromises);
 
-  await db.setRecentlyUpdated();
   return shows;
 }
 
@@ -629,25 +613,6 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
       });
     });
 
-    // await db.createEpisodes(
-    //   episodes.map((ep) => ({
-    //     id: ep.id,
-    //     show_id: req.params.showId,
-    //     url: ep.url,
-    //     name: ep.name,
-    //     season: ep.season,
-    //     number: ep.number,
-    //     type: ep.type,
-    //     airdate: ep.airdate,
-    //     airtime: ep.airtime,
-    //     airstamp: ep.airstamp,
-    //     runtime: ep.runtime,
-    //     image: ep.image?.medium,
-    //     summary: ep.summary,
-    //     watched_at: null,
-    //   })),
-    // );
-
     await Promise.all(epPromises);
 
     const addedShow = await db.getShow(req.params.showId);
@@ -658,7 +623,7 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
       path: `show/${addedShow.id}`,
       url: addedShow.url,
       description: req.body.description,
-      title: `Started Watching: <a href="https://${domain}/show/${addedShow.id}" rel="nofollow noopener noreferrer">${escapeHTML(
+      title: `Started following: <a href="https://${domain}/show/${addedShow.id}" rel="nofollow noopener noreferrer">${escapeHTML(
         addedShow.name,
       )}</a>`,
     };

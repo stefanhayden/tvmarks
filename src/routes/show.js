@@ -5,14 +5,11 @@ import { isAuthenticated } from '../session-auth.js';
 import { broadcastMessage } from '../activitypub.js';
 import { refreshShowEpisodesData } from './admin.js';
 
-// const timezone_offset_ms = Number(process.env.TIMEZONE_OFFSET || '+0') * 60 * 1000;
-
 const router = express.Router();
 export default router;
 
 router.get('/:showId', async (req, res) => {
   const params = {};
-  // const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
   const now = new Date();
 
   const tvshowDb = req.app.get('tvshowDb');
@@ -257,7 +254,6 @@ router.get('/:showId/episode/:episodeId', async (req, res) => {
     ? await tvshowDb.getAllComments(`show-${req.params.showId}-episode-${req.params.episodeId}`)
     : await tvshowDb.getVisibleComments(`show-${req.params.showId}-episode-${req.params.episodeId}`);
 
-  // const comments = await tvshowDb.getAllComments(`show-${req.params.showId}-episode-${req.params.episodeId}`);
   params.comments = comments;
   params.comment_count = comments.length || 0;
 

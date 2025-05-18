@@ -1,22 +1,22 @@
 
-<p>
+<!-- <p>
   Tv show data last updated on: {{updateHistory}}
-</p>
+</p> -->
 
-<p>
+<!-- <p>
   {{#if isRecentlyUpdated}}
     Show data was recently updated
   {{else}}
     Show data was not recently updated
   {{/if}}
+</p> -->
+
+<p>
+  Everytime you visit a page active shows might be updated with new data if it has been 1 day since it was last updated.
 </p>
 
 <p>
-  Everytime you visit the homepage active shows might be updated with new data if it has been 3 days since it was last updated.
-</p>
-
-<p>
-  If you would like to force show data to be updated you can click this button.
+  If you would like to force shows data to be updated you can click this button to up date the next 5 shows that should get updates.
 </p>
 <form action="/admin/update_show_data" onsubmit="this.querySelector('button').disabled = true">
   <input type="hidden" name="force" value="true" />
