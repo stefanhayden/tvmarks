@@ -19,9 +19,15 @@ async function sendAcceptMessage(thebody, name, domain, req, res, targetDomain) 
     object: thebody,
   };
 
-  const inbox = await getInboxFromActorProfile(message.object.actor);
+  try {
+    const inbox = await getInboxFromActorProfile(message.object.actor);
 
-  signAndSend(message, name, domain, db, targetDomain, inbox);
+    signAndSend(message, name, domain, db, targetDomain, inbox);
+    
+  } catch(e) {
+    console.log(e.message);
+    return res.status(500).send("Couldn't process sendAcceptMessage");
+  }
 }
 
 async function handleFollowRequest(req, res) {
