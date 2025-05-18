@@ -1,4 +1,4 @@
-import express from 'express';
+// import express from 'express';
 import crypto from 'crypto';
 import * as linkify from 'linkifyjs';
 import { actorMatchesUsername, parseJSON } from '../../util.js';
@@ -6,7 +6,7 @@ import { signAndSend, getInboxFromActorProfile } from '../../activitypub.js';
 
 import { signedGetJSON } from '../../signature.js';
 
-const router = express.Router();
+// const router = express.Router();
 
 async function sendAcceptMessage(thebody, name, domain, req, res, targetDomain) {
   const db = req.app.get('apDb');
@@ -241,6 +241,6 @@ export const inboxRoute = async (req, res) => {
   return res.sendStatus(400);
 };
 
-router.post('/', inboxRoute);
+// router.post('/', inboxRoute);
 
-export default router;
+// export default router;

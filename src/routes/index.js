@@ -2,7 +2,7 @@ import admin from './admin.js';
 import auth from './auth.js';
 import comment from './comment.js';
 import core from './core.js';
-import inbox from './activitypub/inbox.js';
+// import inbox from './activitypub/inbox.js';
 import message from './activitypub/message.js';
 import user from './activitypub/user.js';
 import webfinger from './activitypub/webfinger.js';
@@ -14,7 +14,7 @@ export default {
   auth,
   comment,
   core,
-  inbox,
+  // inbox,
   message,
   user,
   webfinger,

@@ -29,7 +29,6 @@ function actorJson(pubkey) {
       mediaType: `image/${path.extname(actorInfo.avatar).slice(1)}`,
       url: actorInfo.avatar,
     },
-    // inbox: `https://${domain}/api/inbox`,
     inbox: `https://${domain}/u/${account}/inbox`,
     outbox: `https://${domain}/u/${account}/outbox`,
     followers: `https://${domain}/u/${account}/followers`,
