@@ -175,7 +175,7 @@ export function initTvshowDb(dbFile = './.data/tvshows.db') {
           );
           // stops duplicate commnents from being created
           await db.run('CREATE UNIQUE INDEX comments_url ON comments(url)');
-          
+
           console.log('Update shows created');
         } else {
           console.log('Yes DB exists.. lets continue to app...');

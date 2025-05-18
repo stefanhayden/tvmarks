@@ -22,9 +22,8 @@ async function sendAcceptMessage(thebody, name, domain, req, res, targetDomain) 
   try {
     const inbox = await getInboxFromActorProfile(message.object.actor);
 
-    signAndSend(message, name, domain, db, targetDomain, inbox);
-    
-  } catch(e) {
+    return signAndSend(message, name, domain, db, targetDomain, inbox);
+  } catch (e) {
     console.log(e.message);
     return res.status(500).send("Couldn't process sendAcceptMessage");
   }
