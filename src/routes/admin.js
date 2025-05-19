@@ -304,7 +304,7 @@ router.get('/', isAuthenticated, async (req, res) => {
   }
 });
 
-export async function fetchMissingImage(req, showId) {
+export async function fetchMissingImage(req, res, showId) {
   const db = req.app.get('tvshowDb');
   const show = await db.getShow(showId);
 
@@ -330,7 +330,7 @@ router.post('/fetchMissingImage/:showId', isAuthenticated, async (req, res) => {
       throw new Error('no show id provided');
     }
 
-    await fetchMissingImage(req, req.params.showId);
+    await fetchMissingImage(req, res, req.params.showId);
   } catch (err) {
     console.log(err);
     return res.status(500).send('Internal Server Error');
