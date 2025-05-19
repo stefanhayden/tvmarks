@@ -315,7 +315,7 @@ export async function fetchMissingImage(req, showId) {
     const showImagePath = `shows/${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
     await downloadImage(updatedShow.image.medium, showImagePath);
 
-    await db.updateShowImage(updatedShow.id, {
+    return db.updateShowImage(updatedShow.id, {
       image: `/${showImagePath}`,
     });
   } catch (err) {
