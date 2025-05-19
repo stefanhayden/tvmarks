@@ -310,13 +310,18 @@ export async function fetchMissingImage(req, showId) {
 
   const updatedShow = await tvMaze.show(show.id);
 
-  const fileExt = updatedShow.image.medium.split('.').reverse()[0];
-  const showImagePath = `shows/${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
-  await downloadImage(updatedShow.image.medium, showImagePath);
+  try {
+    const fileExt = updatedShow.image.medium.split('.').reverse()[0];
+    const showImagePath = `shows/${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
+    await downloadImage(updatedShow.image.medium, showImagePath);
 
-  await db.updateShowImage(updatedShow.id, {
-    image: `/${showImagePath}`,
-  });
+    await db.updateShowImage(updatedShow.id, {
+      image: `/${showImagePath}`,
+    });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).send('Internal Server Error');
+  }
 }
 
 router.post('/fetchMissingImage/:showId', isAuthenticated, async (req, res) => {
@@ -440,7 +445,16 @@ export async function refreshShowData(req) {
     // filter out any seasons we don't find (like our check for new seasons)
     const seasonIds = seasonNumbers.map((number) => showSeasons.find((s) => s.number === number)?.id).filter((f) => !!f);
 
-    const eps = (await Promise.all(seasonIds.map(async (seasonId) => tvMaze.seasonEpisodes(seasonId))))
+    const eps = (
+      await Promise.all(
+        seasonIds.map(async (seasonId) =>
+          tvMaze.seasonEpisodes(seasonId).catch((e) => {
+            console.log(`failed getting season from tzmaze: ${seasonId}`, e);
+            return [];
+          }),
+        ),
+      )
+    )
       .flat()
       // seems silly but lets filter out eps that are before first eps returned from `getRecentEpisodesByShowId`
       .filter((f) => (f.season === firstEpToUpdate.season && f.number > firstEpToUpdate.number) || f.season > firstEpToUpdate.season);

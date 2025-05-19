@@ -69,6 +69,7 @@ router.get('/:showId', async (req, res) => {
   if (show.last_watched_episode_id) {
     episodes.forEach((e) => {
       if (e.number !== null) {
+        console.log('test', params.show.watchNextEpisode, e.airstamp,new Date(e.airstamp), now)
         if (!params.show.watchNextEpisode && !e.isWatched && new Date(e.airstamp) < now) {
           params.show.watchNextEpisode = e;
         }
