@@ -22,13 +22,13 @@ router.get('/:showId', async (req, res) => {
   }
 
   params.show = show;
-  
+
   if (show.image) {
     params.openGraph = {
-      image: `https://${req.app.get('domain')}/${show.image}`
-    }
+      image: `https://${req.app.get('domain')}/${show.image}`,
+    };
   }
-  
+
   const comments = req.session.loggedIn
     ? await tvshowDb.getAllComments(`show-${req.params.showId}`)
     : await tvshowDb.getVisibleComments(`show-${req.params.showId}`);
@@ -243,11 +243,11 @@ router.get('/:showId/episode/:episodeId', async (req, res) => {
   if (!show) {
     return res.redirect(`/`);
   }
-  
+
   if (show.image) {
     params.openGraph = {
-      image: `https://${req.app.get('domain')}/${show.image}`
-    }
+      image: `https://${req.app.get('domain')}/${show.image}`,
+    };
   }
 
   const episode = await tvshowDb.getEpisode(req.params.episodeId).then((e) => {
