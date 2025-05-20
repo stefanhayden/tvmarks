@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8">
     <link rel="icon" href="https://glitch.com/favicon.ico">
+    <link href='/manifest' rel='manifest'>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     {{#if (mastodonAccount)}}
       <link rel="me" href="{{ mastodonAccount }}">
@@ -12,8 +13,13 @@
     <link rel="apple-touch-icon" sizes="180x180" href="https://cdn.glitch.global/5aacd173-98f2-4f1f-83c1-d07815d82bf3/tvmarksLogoFavicon.png?v=1742129836124">
     <link rel="shortcut icon" href="https://cdn.glitch.global/5aacd173-98f2-4f1f-83c1-d07815d82bf3/tvmarksLogoFavicon.ico?v=1742129989230">
     <link rel="stylesheet" href="/style.css">
+    
+    {{#if openGraph}}
+      <meta property="og:image" content="{{{openGraph.image}}}" />
+    {{/if}}
   </head>
   <body>
+    
     {{#if showDataRefreshed}}
       <div style="padding:10px; background: lightgreen;">
         Show data from tvmaze was triggered to load in to local database since it was not updated in more then 3 days.
