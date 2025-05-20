@@ -116,6 +116,7 @@ router.get('/network', isAuthenticated, async (req, res) => {
 
 router.get('/manifest', async (req, res) => {
   const siteName = req.app.get('site_name');
+  const domain = req.app.get('domain')
 
   return res.json({
     id: '/home',
@@ -123,8 +124,14 @@ router.get('/manifest', async (req, res) => {
     short_name: siteName,
     icons: [
       {
-        src: 'https://cdn.glitch.global/5aacd173-98f2-4f1f-83c1-d07815d82bf3/tvmarksLogo.png?v=1742129685337',
+        src: `https://${domain}/tvmarksLogo.png?v=1742129685337`,
         sizes: '204x166',
+        type: 'image/png',
+        purpose: 'any maskable',
+      },
+      {
+        src: `https://${domain}/tvmarksAppLogo128.png?v=1742129685337`,
+        sizes: '128x128',
         type: 'image/png',
         purpose: 'any maskable',
       },
@@ -134,29 +141,14 @@ router.get('/manifest', async (req, res) => {
     display: 'standalone',
     start_url: '/',
     scope: '/',
-    share_target: {
-      url_template: 'share?title={title}\u0026text={text}\u0026url={url}',
-      action: 'share',
-      method: 'GET',
-      enctype: 'application/x-www-form-urlencoded',
-      params: {
-        title: 'title',
-        text: 'text',
-        url: 'url',
-      },
-    },
     shortcuts: [
       {
-        name: 'Compose new post',
-        url: '/publish',
+        name: 'Add new show',
+        url: '/admin',
       },
       {
-        name: 'Notifications',
-        url: '/notifications',
-      },
-      {
-        name: 'Explore',
-        url: '/explore',
+        name: 'My Network',
+        url: '/network',
       },
     ],
   });
