@@ -116,7 +116,7 @@ router.get('/network', isAuthenticated, async (req, res) => {
 
 router.get('/manifest', async (req, res) => {
   const siteName = req.app.get('site_name');
-  const domain = req.app.get('domain')
+  const domain = req.app.get('domain');
 
   return res.json({
     id: '/home',
