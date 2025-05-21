@@ -424,16 +424,15 @@ export async function refreshShowEpisodesData(req, showId) {
   });
 
   await Promise.all(epPromises);
-  
-  
+
   const currentEpisodesWithNulls = await db.getEpisodesByShowId(showId);
   const currentEpisodes = currentEpisodesWithNulls.filter((ep) => ep.number !== null);
   const episodes_count = currentEpisodes.filter((ep) => ep.number !== null).length;
   const aired_episodes_count = currentEpisodes.filter((ep) => {
-    const airstamp = new Date( (new Date(ep.airstamp)).setHours((new Date()).getHours() + timezone_offset) ) 
-    return ep.number !== null && airstamp <= new Date()
+    const airstamp = new Date(new Date(ep.airstamp).setHours(new Date().getHours() + timezone_offset));
+    return ep.number !== null && airstamp <= new Date();
   }).length;
-  
+
   return db.updateShow(showId, {
     episodes_count,
     aired_episodes_count,
@@ -518,10 +517,10 @@ export async function refreshShowData(req) {
 
     const episodes_count = currentEpisodes.filter((ep) => ep.number !== null).length;
     const aired_episodes_count = currentEpisodes.filter((ep) => {
-      const airstamp = new Date( (new Date(ep.airstamp)).setHours((new Date()).getHours() + timezone_offset) ) 
-      return ep.number !== null && airstamp <= new Date()
+      const airstamp = new Date(new Date(ep.airstamp).setHours(new Date().getHours() + timezone_offset));
+      return ep.number !== null && airstamp <= new Date();
     }).length;
-    
+
     // const aired_episodes_count = currentEpisodes.filter((ep) => ep.number !== null && new Date(ep.airstamp) < new Date()).length;
     const next_episode_towatch_airdate = currentEpisodes.find((ep) => ep.watched_status !== 'WATCHED')?.airdate || null;
 
