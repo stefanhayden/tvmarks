@@ -1,11 +1,12 @@
 import * as dotenv from 'dotenv';
+import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
 import { create } from 'express-handlebars';
 import escapeHTML from 'escape-html';
 import helpers from 'handlebars-helpers';
 
-import { domain, account, simpleLogger, actorInfo, replaceEmptyText } from './src/util.js';
+import { domain, account, simpleLogger, actorInfo, replaceEmptyText, dataDir } from './src/util.js';
 import session, { isAuthenticated } from './src/session-auth.js';
 import * as apDb from './src/activity-pub-db.js';
 import { initTvshowDb } from './src/tvshow-db.js';
@@ -13,6 +14,8 @@ import { initTvshowDb } from './src/tvshow-db.js';
 import routes from './src/routes/index.js';
 
 dotenv.config();
+
+fs.symlink( 'public/show', dataDir, 'dir');
 
 const PORT = process.env.PORT || 3000;
 
