@@ -11,14 +11,14 @@ import { open } from 'sqlite';
 // unclear why eslint can't resolve this package
 // eslint-disable-next-line import/no-unresolved, node/no-missing-import
 import { stripHtml } from 'string-strip-html';
-import { timeSince, account, domain } from './util.js';
+import { timeSince, account, domain, dataDir } from './util.js';
 
 const ACCOUNT_MENTION_REGEX = new RegExp(`^@${account}@${domain} `);
 
 const timezone_offset = process.env.TIMEZONE_OFFSET || '+0';
 const timezoneMod = `${timezone_offset} hour`;
 
-export function initTvshowDb(dbFile = './.data/tvshows.db') {
+export function initTvshowDb(dbFile = `${dataDir}/tvshows.db`) {
   let db;
 
   // for now, strip the HTML when we retrieve it from the DB, just so that we keep as much data as possible

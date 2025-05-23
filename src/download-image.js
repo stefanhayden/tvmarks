@@ -1,11 +1,12 @@
 import https from 'https';
 import fs from 'fs';
+import { dataDir } from './util'
 
 export function downloadImage(imageUrl, imagePath) {
   const path = `public/${imagePath}`;
 
-  if (!fs.existsSync('.data/show_images')) {
-    fs.mkdirSync('.data/show_images');
+  if (!fs.existsSync(`${dataDir}/show_images`)) {
+    fs.mkdirSync(`${dataDir}/show_images`);
   }
 
   const file = fs.createWriteStream(path);

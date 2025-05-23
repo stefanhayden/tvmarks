@@ -7,7 +7,7 @@ export default () =>
   session({
     store: new SQLiteStore({
       db: 'sessions.db',
-      dir: '.data/',
+      dir: `${dataDir}/`,
     }),
     secret: process.env.SESSION_SECRET || 'bad_session_secret',
     resave: false,
