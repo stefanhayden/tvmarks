@@ -15,22 +15,9 @@ import routes from './src/routes/index.js';
 
 dotenv.config();
 
-fs.unlinkSync('public/shows', (err) => {
-        if (err) console.log(err);
-        else {
-            console.log("\nDeleted file: public/shows");
-        }
-    });
+fs.unlinkSync('public/shows');
 
-fs.symlinkSync( 'public/shows', `${dataDir}/show_images`, 'dir', (err) => {
-  if (err)
-    console.log(err);
-  else {
-    console.log("\nSymlink created\n");
-    console.log("Contents of the symlink created:");
-    console.log(fs.readFileSync('symlinkToFile', 'utf8'));
-  }
-});
+fs.symlinkSync( 'public/shows', `${dataDir}/show_images`, 'dir');
 
 const PORT = process.env.PORT || 3000;
 
