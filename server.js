@@ -15,6 +15,13 @@ import routes from './src/routes/index.js';
 
 dotenv.config();
 
+fs.unlink('public/shows', (err) => {
+        if (err) console.log(err);
+        else {
+            console.log("\nDeleted file: public/shows");
+        }
+    });
+
 fs.symlink( 'public/shows', `${dataDir}/show_images`, (err) => {
   if (err)
     console.log(err);
