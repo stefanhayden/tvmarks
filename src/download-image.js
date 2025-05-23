@@ -1,6 +1,6 @@
 import https from 'https';
 import fs from 'fs';
-import { dataDir } from './util'
+import { dataDir } from './util.js';
 
 export function downloadImage(imageUrl, imagePath) {
   const path = `public/${imagePath}`;
