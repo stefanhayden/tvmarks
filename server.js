@@ -15,7 +15,7 @@ import routes from './src/routes/index.js';
 
 dotenv.config();
 
-fs.symlink( 'public/show', dataDir, 'dir');
+fs.symlink( 'public/show', dataDir, () => {});
 
 const PORT = process.env.PORT || 3000;
 
