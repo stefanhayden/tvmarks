@@ -22,7 +22,7 @@ fs.unlink('public/shows', (err) => {
         }
     });
 
-fs.symlink( 'public/shows', `${dataDir}/show_images`, (err) => {
+fs.symlink( 'public/shows', `${dataDir}/show_images`, 'dir', (err) => {
   if (err)
     console.log(err);
   else {
