@@ -15,7 +15,15 @@ import routes from './src/routes/index.js';
 
 dotenv.config();
 
-fs.symlink( 'public/shows', `${dataDir}/show_images`, () => {});
+fs.symlink( 'public/shows', `${dataDir}/show_images`, (err) => {
+  if (err)
+    console.log(err);
+  else {
+    console.log("\nSymlink created\n");
+    console.log("Contents of the symlink created:");
+    console.log(fs.readFileSync('symlinkToFile', 'utf8'));
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 
