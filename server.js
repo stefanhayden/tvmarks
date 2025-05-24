@@ -15,17 +15,16 @@ import routes from './src/routes/index.js';
 
 dotenv.config();
 
-console.log('UNLINK public/shows')
-try {
-  fs.unlinkSync('./public/shows');
-} catch(e) {}
+const symlinkPath = `${dataDir}/show_images`;
+const publicPath = './public/shows';
 
-console.log('does file exist?', fs.existsSync('./public/shows'))
+const currentSymlink = fs.readlinkSync(publicPath);
 
-console.log('LINK public/shows to', `${dataDir}/show_images`)
-fs.symlinkSync( `${dataDir}/show_images`, './public/shows',  'dir');
+if (currentSymlink !== symlinkPath) {
+  fs.unlinkSync(publicPath);
+  fs.symlinkSync( symlinkPath, publicPath,  'dir');
 
-const PORT = process.env.PORT || 3000;
+}
 
 const app = express();
 app.use(express.static('public'));
