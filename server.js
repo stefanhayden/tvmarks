@@ -18,7 +18,7 @@ dotenv.config();
 console.log('UNLINK public/shows')
 fs.unlinkSync('./public/shows');
 
-console.log('does file exist?', fs.existsSync(path))
+console.log('does file exist?', fs.existsSync('./public/shows'))
 
 console.log('LINK public/shows to', `${dataDir}/show_images`)
 fs.symlinkSync( './public/shows', `${dataDir}/show_images`, 'dir');
