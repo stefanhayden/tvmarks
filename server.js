@@ -16,10 +16,12 @@ import routes from './src/routes/index.js';
 dotenv.config();
 
 console.log('UNLINK public/shows')
-fs.unlinkSync('public/shows');
+fs.unlinkSync('./public/shows');
+
+console.log('does file exist?', fs.existsSync(path))
 
 console.log('LINK public/shows to', `${dataDir}/show_images`)
-fs.symlinkSync( 'public/shows', `${dataDir}/show_images`, 'dir');
+fs.symlinkSync( './public/shows', `${dataDir}/show_images`, 'dir');
 
 const PORT = process.env.PORT || 3000;
 
