@@ -118,28 +118,11 @@ standardize code changes as much as possible and with as little friction for you
 as we can add. If you have concerns or suggestions about specific settings, you
 are welcome to open a GitHub Issue to discuss.
 
-### Using Glitch
-
-Glitch is an online community for creative coding. Its free hosting allows for
-the "remixing" of projects, including directly from GitHub repos, and is
-therefore useful for standing up ActivityPub servers that are instantly
-available at unique hostnames on the internet. You can go to this URL:
-
-https://glitch.new/github.com/stefanhayden/tvmarks
-
-to spin up a new project that uses the current `main` branch of the Tvmarks
-repo. You'll be in a web-based IDE that auto-builds the project as you make
-changes. If you're not logged in to Glitch, the project will be archived after
-five days. You can create an account or log in to associate the project with
-the account. You can read more about Glitch's hosting offerings on its
-[documentation](https://help.glitch.com).
-
 
 ### Changing port
 
 You can set the env var `PORT` to any valid number to make Tvmarks bind to
-that port. By default, Tvmarks uses port 3000. (Don't do this if you're
-developing on Glitch!)
+that port. By default, Tvmarks uses port 3000.
 
 ### Logging persistence
 
@@ -148,7 +131,7 @@ to your .env file. This will cause all incoming requests to append to
 `request_log.txt` in your project root directory.
 
 > [!WARNING]  
-> If you are running on a container with limited storage (e.g. Glitch), you
+> If you are running on a container with limited storage, you
 > should not leave this enabled, or you'll eventually run out of space as
 > ActivityPub messages get logged. This is intended for debugging.
 
@@ -157,8 +140,8 @@ to your .env file. This will cause all incoming requests to append to
 Tvmarks aims to be interoperable with other Fediverse apps where it makes
 sense to do so; one of the most common and obvious applications of that concept
 is in working with Mastodon. If you plan on manually QAing changes to Tvmarks
-you may want to set up a pair of testing surfaces, one being a persistent Glitch
-app running Tvmarks, the other an account on a public Mastodon instance. You
+you may want to set up a pair of testing surfaces, one being a persistent app 
+running Tvmarks, the other an account on a public Mastodon instance. You
 may want this account to be locked and separate from any existing presence you
 have on Mastodon and associated Fediverse microblogging networks. Many Mastodon
 instances offer free accounts; you can take a look at
