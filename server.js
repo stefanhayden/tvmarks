@@ -1,5 +1,4 @@
 import * as dotenv from 'dotenv';
-import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
 import { create } from 'express-handlebars';
@@ -18,18 +17,11 @@ dotenv.config();
 const symlinkPath = `${dataDir}/show_images`;
 const publicPath = './public/shows';
 
-const currentSymlink = fs.readlinkSync(publicPath);
-
-if (currentSymlink !== symlinkPath) {
-  fs.unlinkSync(publicPath);
-  fs.symlinkSync( symlinkPath, publicPath,  'dir');
-
-}
-
 const PORT = process.env.PORT || 3000;
 
 const app = express();
 app.use(express.static('public'));
+app.use('/shows', express.static(symlinkPath));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.json({ type: ['application/json', 'application/ld+json', 'application/activity+json'] }));
