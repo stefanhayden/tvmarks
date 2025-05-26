@@ -3,7 +3,7 @@ import fs from 'fs';
 import { dataDir } from './util.js';
 
 export function downloadImage(imageUrl, imagePath) {
-  const path = `public/${imagePath}`;
+  const path = `${dataDir}/show_images/${imagePath}`;
 
   if (!fs.existsSync(`${dataDir}/show_images`)) {
     fs.mkdirSync(`${dataDir}/show_images`);
