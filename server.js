@@ -15,7 +15,6 @@ import routes from './src/routes/index.js';
 dotenv.config();
 
 const symlinkPath = `${dataDir}/show_images`;
-const publicPath = './public/shows';
 
 const PORT = process.env.PORT || 3000;
 
