@@ -314,11 +314,11 @@ export async function fetchMissingImage(req, res, showId) {
 
   try {
     const fileExt = updatedShow.image.medium.split('.').reverse()[0];
-    const showImagePath = `shows/${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
+    const showImagePath = `${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
     await downloadImage(updatedShow.image.medium, showImagePath);
 
     return db.updateShowImage(updatedShow.id, {
-      image: `/${showImagePath}`,
+      image: `/shows/${showImagePath}`,
     });
   } catch (err) {
     console.log(err);
@@ -358,11 +358,11 @@ export async function fetchMissingImages(req, maxImages = 50) {
     const updatedShow = await tvMaze.show(show.id);
 
     const fileExt = updatedShow.image.medium.split('.').reverse()[0];
-    const showImagePath = `shows/${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
+    const showImagePath = `${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
     await downloadImage(updatedShow.image.medium, showImagePath);
 
     await db.updateShowImage(updatedShow.id, {
-      image: `/${showImagePath}`,
+      image: `/shows/${showImagePath}`,
     });
     fetchedImages += 1;
   });
@@ -595,7 +595,7 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
     const next_episode_towatch_airdate = episodes.find((ep) => ep.season === 1 && ep.number === 1)?.airdate || null;
 
     const fileExt = show.image?.medium.split('.').reverse()[0];
-    const showImagePath = `shows/${show.id}_${show.url.split('/').reverse()[0]}.${fileExt}`;
+    const showImagePath = `${show.id}_${show.url.split('/').reverse()[0]}.${fileExt}`;
     if (show.image) {
       await downloadImage(show.image.medium, showImagePath);
     }
@@ -620,7 +620,7 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
       network_country: show.network?.country.name,
       network_country_code: show.network?.country.code,
       network_country_timezone: show.network?.country.timezone,
-      image: show.image ? `/${showImagePath}` : null,
+      image: show.image ? `/shows/${showImagePath}` : null,
       episodes_count,
       aired_episodes_count,
       watched_episodes_count,
@@ -679,7 +679,7 @@ router.post('/show/delete/:showId', isAuthenticated, async (req, res) => {
       if (show.image) {
         const directory = 'public';
         fs.unlink(path.join(directory, show.image), (err) => {
-          if (err) throw err;
+          if (err) console.log('no image to delete', err);
         });
       }
       db.deleteShow(req.params.showId);
