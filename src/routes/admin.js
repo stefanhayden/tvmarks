@@ -685,7 +685,12 @@ router.post('/show/delete/:showId', isAuthenticated, async (req, res) => {
       db.deleteShow(req.params.showId);
       db.deleteEpisodesByShow(req.params.showId);
 
-      broadcastMessage(show, 'delete', apDb, account, domain);
+    const data = {
+      id: `show-${show.id}`,
+      path: `show/${show.id}`,
+      url: show.url,
+    };
+    broadcastMessage(data, 'delete', apDb, account, domain);
     }
 
     return res.redirect(301, `/admin`);
