@@ -4,6 +4,7 @@
 
 Tvmarks is a tv tracking site that you own yourself and can connect the Fediverse, interacting with other Tvmarks sites as well as Mastodon/FireFish/any text-based ActivityPub platform.
 
+![tvmarks-screenshot](https://github.com/user-attachments/assets/1bf17675-f2f6-4ae7-ba26-8b815ee81412)
 
 The site allows the owner to add shows and track which episodes you have watched, but only if a valid login is provided.
 Check the setup below to understand how to do that!
