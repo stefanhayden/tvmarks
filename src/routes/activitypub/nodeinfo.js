@@ -71,7 +71,7 @@ router.get('/', async (req, res) => {
         name: instanceType,
         version: instanceVersion,
         repository: 'https://github.com/stefanhayden/tvmarks',
-        homepage: 'https://tvmarks.glitch.me',
+        homepage: 'https://github.com/stefanhayden/tvmarks',
       },
       protocols: ['activitypub'],
       services: {
