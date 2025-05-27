@@ -14,7 +14,7 @@ export const data = {
 
 let actorFileData = {};
 
-if (process.env.USERNAME) {
+if (process.env.USERNAME && process.env.PUBLIC_BASE_URL) {
   const { AVATAR, USERNAME, DISPLAY_NAME, DESCRIPTION } = process.env;
   actorFileData.disabled = false;
   actorFileData.avatar = AVATAR || 'https://cdn.glitch.global/5aacd173-98f2-4f1f-83c1-d07815d82bf3/tvmarksLogo.png?v=1742129685337';
@@ -32,9 +32,6 @@ export const account = actorInfo.username || 'tvmarks';
 export const domain = (() => {
   if (process.env.PUBLIC_BASE_URL) {
     return process.env.PUBLIC_BASE_URL;
-  }
-  if (process.env.PROJECT_DOMAIN) {
-    return `${process.env.PROJECT_DOMAIN}.glitch.me`;
   }
 
   console.log("didn't find a PUBLIC_BASE_URL or PROJECT_DOMAIN in env, assuming localhost");

@@ -15,7 +15,8 @@ To set your app up:
 
   - Create a `.env` file in the root of the project.
   - Add the line `PUBLIC_BASE_URL=<hostname>` to your .env where \<hostname\> is the hostname of your instance.
-  - Add the line `ADMIN_KEY=<key>` to your .env where \<key\> is the password you'll enter when the browser prompts you, and another line for `SESSION_SECRET=<secret>` where \<secret\> is a random string used when hashing your session for use in a secure cookie.
+  - Add the line `ADMIN_KEY=<key>` to your .env where \<key\> is the password you'll enter when the browser prompts you
+  - Add the line `SESSION_SECRET=<secret>` where \<secret\> is a random string used when hashing your session for use in a secure cookie.
   - Add the line `DISPLAY_NAME=<display_name>` to your .env where \<display_name\> is your app's fediverse display name.
   - Add the line `DESCRIPTION=<description>` to your .env where \<description\> is your app's fediverse user description
   - Add the line `AVATAR=<avatar>` to your .env where \<avatar\> is your app's fediverse user image.
