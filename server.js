@@ -77,7 +77,7 @@ const hbs = create({
       return app.get('site_name');
     },
     siteVersion() {
-      return process.env.npm_package_version ? `v${process.env.npm_package_version}` : '1.0.1';
+      return process.env.npm_package_version ? `v${process.env.npm_package_version}` : 'v1.0.1';
     },
     account() {
       return app.get('account');
