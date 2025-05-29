@@ -57,7 +57,7 @@ router.get('/:showId', async (req, res) => {
       title: `Season ${seasonId}`,
       showId: show.id,
       seasonId,
-      isWatched: eps.every((val) => val.isWatched),
+      isWatched: eps.every((val) => val.isWatched) && eps.length > 0,
       episodes: eps,
     });
   }

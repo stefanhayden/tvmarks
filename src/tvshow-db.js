@@ -212,7 +212,7 @@ export function initTvshowDb(dbFile = `${dataDir}/tvshows.db`) {
       const results = await db.all(
         `SELECT * from shows
         WHERE watched_episodes_count == 0
-        ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
+        ORDER BY created_at DESC LIMIT ? OFFSET ?`,
         limit,
         offset,
       );

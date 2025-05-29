@@ -9,11 +9,13 @@ import { domain, account, simpleLogger, actorInfo, replaceEmptyText, dataDir } f
 import session, { isAuthenticated } from './src/session-auth.js';
 import * as apDb from './src/activity-pub-db.js';
 import { initTvshowDb } from './src/tvshow-db.js';
+import packageJson from './package.json' with { type: 'json' };
 
 import routes from './src/routes/index.js';
 
 dotenv.config();
 
+const { version } = packageJson;
 const symlinkPath = `${dataDir}/show_images`;
 
 const PORT = process.env.PORT || 3000;
@@ -77,7 +79,7 @@ const hbs = create({
       return app.get('site_name');
     },
     siteVersion() {
-      return process.env.npm_package_version ? `v${process.env.npm_package_version}` : 'v1.0.1';
+      return `v${version}`;
     },
     account() {
       return app.get('account');
