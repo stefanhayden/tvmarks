@@ -156,7 +156,6 @@ export async function findMessage(object) {
 }
 
 async function firstTimeSetup(actorName) {
-  // eslint-disable-next-line no-bitwise
   const newDb = new sqlite3.Database(dbFile, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
     if (err) {
       throw new Error(`unable to open or create database: ${err}`);

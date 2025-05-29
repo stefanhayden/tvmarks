@@ -8,8 +8,6 @@
 import fs from 'fs';
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
-// unclear why eslint can't resolve this package
-// eslint-disable-next-line import/no-unresolved, node/no-missing-import
 import { stripHtml } from 'string-strip-html';
 import { timeSince, account, domain, dataDir } from './util.js';
 
@@ -81,7 +79,6 @@ export function initTvshowDb(dbFile = `${dataDir}/tvshows.db`) {
         console.log('Does DB exist???');
         if (!exists) {
           console.log('Nope, lets create it!');
-          // eslint-disable-next-line no-bitwise
           const newDb = new sqlite3.Database(dbFile, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
             if (err) {
               throw new Error(`unable to open or create database: ${err}`);

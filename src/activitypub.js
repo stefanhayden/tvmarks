@@ -75,7 +75,7 @@ export function createNoteObject(data, account, domain) {
       name: `#${showHashTag}`,
     });
   } catch (e) {
-    console.error('failed to turn tvshow in to hashtag');
+    console.error('failed to turn tvshow in to hashtag', e);
   }
 
   return noteMessage;
@@ -200,7 +200,7 @@ export async function lookupActorInfo(actorUsername) {
 
     return selfLink.href;
   } catch (e) {
-    console.log("couldn't look up canonical actor info");
+    console.log("couldn't look up canonical actor info", e);
     return null;
   }
 }
@@ -252,7 +252,6 @@ export async function broadcastMessage(data, action, db, account, domain) {
 
     console.log(`sending this message to all followers: ${JSON.stringify(message)}`);
     console.log('followers', followers);
-    // eslint-disable-next-line no-restricted-syntax
     for (const follower of followers) {
       const inbox = `${follower}/inbox`;
       const myURL = new URL(follower);

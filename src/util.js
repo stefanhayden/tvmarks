@@ -43,7 +43,7 @@ try {
   const pkgFile = await readFile('package.json');
   instanceData = JSON.parse(pkgFile);
 } catch (e) {
-  console.log('unable to read package info');
+  console.log('unable to read package info', e);
 }
 
 export const instanceType = instanceData.name || 'tvmarks';
@@ -89,6 +89,7 @@ export function parseJSON(text) {
   try {
     return JSON.parse(text);
   } catch (e) {
+    console.log('parseJSON', e);
     return null;
   }
 }

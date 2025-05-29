@@ -3,7 +3,6 @@ import fs from 'fs';
 import path from 'path';
 import tvMaze from 'node-tvmaze';
 import escapeHTML from 'escape-html';
-// eslint-disable-next-line import/no-unresolved, node/no-missing-import
 import { stringify as csvStringify } from 'csv-stringify/sync'; // https://github.com/adaltas/node-csv/issues/323
 import { domain, actorInfo, parseJSON, account } from '../util.js';
 import { isAuthenticated } from '../session-auth.js';
@@ -58,14 +57,14 @@ router.get('/followers', isAuthenticated, async (req, res) => {
     const followers = await apDb.getFollowers();
     params.followers = JSON.parse(followers || '[]');
   } catch (e) {
-    console.log('Error fetching followers for admin page');
+    console.log('Error fetching followers for admin page', e);
   }
 
   try {
     const blocks = await apDb.getBlocks();
     params.blocks = JSON.parse(blocks || '[]');
   } catch (e) {
-    console.log('Error fetching blocks for admin page');
+    console.log('Error fetching blocks for admin page', e);
   }
 
   params.allowed = permissions?.allowed || '';
@@ -89,7 +88,7 @@ router.get('/following', isAuthenticated, async (req, res) => {
     const following = await apDb.getFollowing();
     params.following = JSON.parse(following || '[]');
   } catch (e) {
-    console.log('Error fetching followers for admin page');
+    console.log('Error fetching followers for admin page', e);
   }
 
   return res.render('admin/following', params);
