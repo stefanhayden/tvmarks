@@ -130,6 +130,7 @@ app.use('/u', cors(), routes.user);
 app.use('/m', cors(), routes.message);
 app.use('/', routes.core);
 app.use('/show', routes.show);
+app.use('/stats', routes.stats);
 app.use('/.well-known/nodeinfo', routes.nodeinfo);
 app.use('/nodeinfo/2.0', routes.nodeinfo);
 app.use('/nodeinfo/2.1', routes.nodeinfo);

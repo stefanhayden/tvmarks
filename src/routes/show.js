@@ -36,17 +36,17 @@ router.get('/:showId', async (req, res) => {
   params.comments = comments;
   params.comment_count = comments.length || 0;
 
-  const episodes = (await tvshowDb.getEpisodesByShowId(req.params.showId)).map((e) => {
-    const daysUntill = e.airstamp ? Math.round((now - new Date(e.airstamp)) / (24 * 60 * 60 * 1000)) : undefined;
+const episodes = (await tvshowDb.getEpisodesByShowId(req.params.showId)).map((e) => {
+  const daysUntill = e.airstamp ? Math.round((now - new Date(e.airstamp)) / (24 * 60 * 60 * 1000)) : undefined;
 
-    return {
-      ...e,
-      isWatched: e.watched_status === 'WATCHED',
-      // not_aired: e.airstamp ? new Date(e.airstamp) > now : true,
-      not_aired: daysUntill < 0,
-      days_untill: daysUntill <= 0 ? Math.abs(daysUntill) : 'Unkown',
-    };
-  });
+  return {
+    ...e,
+    isWatched: e.watched_status === 'WATCHED',
+    // not_aired: e.airstamp ? new Date(e.airstamp) > now : true,
+    not_aired: daysUntill < 0,
+    days_untill: daysUntill <= 0 ? Math.abs(daysUntill) : 'Unkown',
+  };
+});
 
   // GROUP BY SEASON
   params.seasons = [];

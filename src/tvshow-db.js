@@ -185,6 +185,23 @@ export function initTvshowDb(dbFile = `${dataDir}/tvshows.db`) {
     });
   };
 
+  const getWatchStats = async () => {
+    const result = await db.get(`
+      SELECT
+        COUNT(CASE WHEN watched_status = 'WATCHED' then 1 ELSE NULL END) as "watched_episodes",
+        SUM(CASE WHEN watched_status = 'WATCHED' then runtime ELSE NULL END) as "watched_minutes",
+        COUNT(CASE WHEN watched_status = 'WATCHED' then NULL ELSE 1 END) as "not_watched_episodes",
+        SUM(CASE WHEN watched_status!= 'WATCHED' then NULL ELSE runtime END) as "minutes_to_watch"
+      FROM episodes
+    `);
+    return result;
+  };
+
+  const getEpisodeCount = async () => {
+    const result = await db.get('SELECT count(id) as totalEpisodes, sum(runtime) as totalMinutes FROM episodes');
+    return result;
+  };
+
   const getShowCount = async () => {
     const result = await db.get('SELECT count(id) as count FROM shows');
     return result?.count;
@@ -827,6 +844,7 @@ export function initTvshowDb(dbFile = `${dataDir}/tvshows.db`) {
     generateLinkedDisplayName,
     addBookmarkDomain,
     insertRelativeTimestamp,
+    getEpisodeCount,
     getShowCount,
     getShow,
     getShows,
@@ -865,5 +883,6 @@ export function initTvshowDb(dbFile = `${dataDir}/tvshows.db`) {
     getAllInProgressShows,
     getAllAiredEpisodesCountByShow,
     getNetworkPosts,
+    getWatchStats,
   };
 }

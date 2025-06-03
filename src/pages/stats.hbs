@@ -1,0 +1,22 @@
+{{#if error}}
+  <p class='error'>
+    {{error}}
+  </p>
+{{else}}
+  <h3>Total</h3>
+  <div>Shows: {{showCount}}</div>
+  <div>Total episodes: {{totalEpisodes}}</div>
+  <div>Total minutes: {{totalMinutes}}</div>
+  <br />
+  <br />
+
+  <h3>Watched</h3>
+  <div>episodes: {{watchedEpisodes}}</div>
+  <div>minutes: {{watchedMinutes}}</div>
+  <br />
+  <br />
+
+  <h3>To Watch</h3>
+  <div>episodes: {{notWatchedEpisodes}}</div>
+  <div>minutes: {{minutesToWatch}}</div>
+{{/if}}
