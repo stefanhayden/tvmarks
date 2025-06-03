@@ -1,6 +1,6 @@
 {
   "name": "tvmarks",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "A personal tv tracking store, powered by Express, sqlite and ActivityPub",
   "main": "server.js",
   "type": "module",
@@ -11,12 +11,12 @@
     "test": "node --experimental-vm-modules ./node_modules/.bin/jest"
   },
   "dependencies": {
-    "body-parser": "^1.20.2",
-    "chalk": "^5.2.0",
-    "connect-sqlite3": "^0.9.13",
+    "body-parser": "^2.2.0",
+    "chalk": "^5.4.1",
+    "connect-sqlite3": "^0.9.15",
     "cors": "^2.8.5",
-    "csv-stringify": "^6.4.2",
-    "dotenv": "^16.0.3",
+    "csv-stringify": "^6.5.2",
+    "dotenv": "^16.5.0",
     "es6-promisify": "^7.0.0",
     "escape-html": "^1.0.3",
     "express": "^4.18.2",
@@ -24,17 +24,16 @@
     "express-handlebars": "^6.0.7",
     "express-session": "^1.17.3",
     "handlebars-helpers": "^0.10.0",
-    "linkifyjs": "^4.1.1",
+    "linkifyjs": "^4.3.1",
     "node-fetch": "^3.3.2",
     "node-tvmaze": "^1.0.0",
-    "open-graph-scraper": "^5.2.3",
-    "sqlite": "^5.0.1",
-    "sqlite3": "^5.1.5",
-    "string-strip-html": "^13.4.2",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7",
+    "string-strip-html": "^13.4.12",
     "xml2js": "^0.6.2"
   },
   "engines": {
-    "node": ">=16.x"
+    "node": ">=20.x"
   },
   "repository": {
     "url": "https://github.com/stefanhayden/tvmarks"
