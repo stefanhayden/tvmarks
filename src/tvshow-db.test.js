@@ -38,6 +38,17 @@ describe('tvshow-db', () => {
       next_episode_towatch_airdate: null,
     });
 
+    // COMPLETED - more watched then aired (firefly)
+    await db.createShow({
+      id: 21,
+      status: 'Ended',
+      episodes_count: 2,
+      aired_episodes_count: 2,
+      watched_episodes_count: 3,
+      last_watched_date: past3Days.split(' ')[0],
+      next_episode_towatch_airdate: null,
+    });
+
     // UP TO DATE
     await db.createShow({
       id: 3,
@@ -144,8 +155,9 @@ describe('tvshow-db', () => {
   test('getShowsCompleted', async () => {
     const getShowsCompleted = await db.getShowsCompleted();
 
-    expect(getShowsCompleted?.length).toBe(1);
+    expect(getShowsCompleted?.length).toBe(2);
     expect(getShowsCompleted[0].id).toBe(2);
+    expect(getShowsCompleted[1].id).toBe(21);
   });
 
   test('getShowsUpToDate', async () => {

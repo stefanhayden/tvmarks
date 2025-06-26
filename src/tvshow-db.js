@@ -227,7 +227,7 @@ export function initTvshowDb(dbFile = `${dataDir}/tvshows.db`) {
     try {
       const results = await db.all(
         `SELECT * from shows
-        WHERE aired_episodes_count == watched_episodes_count
+        WHERE aired_episodes_count <= watched_episodes_count
         AND status == 'Ended'
         ORDER BY last_watched_date, updated_at DESC LIMIT ? OFFSET ?`,
         limit,
