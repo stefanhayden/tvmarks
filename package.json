@@ -1,6 +1,6 @@
 {
   "name": "tvmarks",
-  "version": "2.1.2",
+  "version": "2.1.3",
   "description": "A personal tv tracking store, powered by Express, sqlite and ActivityPub",
   "main": "server.js",
   "type": "module",

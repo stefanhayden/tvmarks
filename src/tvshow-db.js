@@ -229,7 +229,7 @@ export function initTvshowDb(dbFile = `${dataDir}/tvshows.db`) {
         `SELECT * from shows
         WHERE aired_episodes_count <= watched_episodes_count
         AND status == 'Ended'
-        ORDER BY last_watched_date, updated_at DESC LIMIT ? OFFSET ?`,
+        ORDER BY last_watched_date DESC LIMIT ? OFFSET ?`,
         limit,
         offset,
       );
