@@ -453,7 +453,6 @@ export async function refreshShowData(req) {
 
     // episodes to update
     const currentEpisodesToUpdate = await db.getRecentEpisodesByShowId(show.id);
-    const firstEpToUpdate = currentEpisodesToUpdate[0];
     const seasonNumbers = [...new Set(currentEpisodesToUpdate.map((e) => e.season))];
     seasonNumbers.push(seasonNumbers.slice(-1)[0] + 1); // check for new seasons
     // filter out any seasons we don't find (like our check for new seasons)
