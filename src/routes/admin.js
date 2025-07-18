@@ -470,8 +470,6 @@ export async function refreshShowData(req) {
       )
     )
       .flat()
-      // seems silly but lets filter out eps that are before first eps returned from `getRecentEpisodesByShowId`
-      .filter((f) => (f.season === firstEpToUpdate.season && f.number > firstEpToUpdate.number) || f.season > firstEpToUpdate.season);
 
     const epPromises = eps.map(async (episode) => {
       const found = currentEpisodesToUpdate.find((e) => e.id === episode.id);
@@ -564,7 +562,7 @@ router.get('/update_show_data', isAuthenticated, async (req, res) => {
     console.log(err);
     return res.status(500).send('Internal Server Error');
   }
-  return req.query.raw ? res.json({ success: true, showsUpdated: shows.length }) : res.redirect('/admin/update');
+  return req.query.raw ? res.json({ success: true, updatedCount: shows.length, shows: shows.map(show => show.name) }) : res.redirect('/admin/update');
 });
 
 router.post('/show/add/:showId', isAuthenticated, async (req, res) => {

@@ -3,6 +3,7 @@
     {{error}}
   </p>
 {{else}}
+
   <div class="bookmarks">
     {{> show_tvshow tvshow=show}}
   </div>
@@ -136,7 +137,7 @@
 
 
 
-  <div style="display:flex; gap: 10px; justify-content: right;">
+  <div style="display:flex; gap: 10px; justify-content: right; margin-bottom: 10px;">
     {{#if @root.loggedIn}} 
       <form method="post" action="/show/{{show.id}}/abandon"
             onsubmit="this.querySelector('button').disabled = 'disabled'">
@@ -156,7 +157,7 @@
       <form method="post" 
             action="/show/{{show.id}}/refresh"
             onsubmit="this.querySelector('button').disabled = 'disabled'">
-        <button>
+        <button title="last refreshed: {{show.updated_at}}">
           refresh show data
         </button>
       </form>
