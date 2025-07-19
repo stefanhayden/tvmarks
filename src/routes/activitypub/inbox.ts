@@ -5,6 +5,7 @@ import { actorMatchesUsername, parseJSON } from '../../util.js';
 import { signAndSend, getInboxFromActorProfile } from '../../activitypub.js';
 
 import { signedGetJSON } from '../../signature.js';
+import { Request, Response } from 'express';
 
 // const router = express.Router();
 
@@ -127,7 +128,7 @@ async function handleFollowAccepted(req, res) {
   }
 }
 
-async function handleComment(req, res, inReplyToGuid) {
+async function handleComment(req: Request<{}, {}, { actor: string; object: { id: string; content: string } }>, res: Response, inReplyToGuid) {
   const apDb = req.app.get('apDb');
 
   const id = await apDb.getIdFromMessageGuid(inReplyToGuid);
@@ -155,7 +156,7 @@ async function handleComment(req, res, inReplyToGuid) {
   }
 
   const response = await signedGetJSON(req.body.actor);
-  const data = await response.json();
+  const data = (await response.json()) as { preferredUsername: string };
 
   const actorDomain = new URL(req.body.actor)?.hostname;
   const actorUsername = data.preferredUsername;
@@ -182,7 +183,7 @@ async function handleFollowedPost(req, res) {
     // TODO: determine if the actor is in your current follow list!
 
     const response = await signedGetJSON(`${req.body.actor}.json`);
-    const data = await response.json();
+    const data = (await response.json()) as { preferredUsername: string };
 
     const actorDomain = new URL(req.body.actor)?.hostname;
     const actorUsername = data.preferredUsername;

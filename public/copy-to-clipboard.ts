@@ -3,7 +3,7 @@ window.addEventListener('load', () => {
     return;
   }
 
-  document.querySelectorAll('[data-copy]').forEach((el) => {
+  document.querySelectorAll<HTMLElement>('[data-copy]').forEach((el) => {
     el.addEventListener('click', () => {
       try {
         navigator.clipboard.writeText(el.dataset.copy);
@@ -13,7 +13,7 @@ window.addEventListener('load', () => {
           return;
         }
 
-        const statusEl = document.querySelector(el.dataset.copyStatus);
+        const statusEl = document.querySelector<HTMLElement>(el.dataset.copyStatus);
 
         if (!statusEl) {
           return;
