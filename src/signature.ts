@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import fetch from 'node-fetch';
+import fetch, { RequestInit } from 'node-fetch';
 
 import { account, domain } from './util.js';
 import { getPrivateKey } from './activity-pub-db.js';
@@ -48,7 +48,12 @@ function getSignatureParams(body, method, url) {
   const date = new Date();
   const dateParam = date.toUTCString();
 
-  const params = {
+  const params: {
+    '(request-target)': string;
+    host: string;
+    date: string;
+    digest?: string;
+  } = {
     '(request-target)': requestTarget,
     host: hostParam,
     date: dateParam,
@@ -89,9 +94,8 @@ function getSignatureHeader(signature, signatureKeys) {
  *
  * @returns {Promise<Response>}
  */
-export async function signedFetch(url, init = {}) {
-  console.log('getPrivateKey', `${account}@${domain}`);
-  const privkey = await getPrivateKey(`${account}@${domain}`);
+export async function signedFetch(url, init: RequestInit = {}) {
+  const privkey = await getPrivateKey();
   if (!privkey) {
     throw new Error(`No private key found for ${account}.`);
   }
@@ -131,7 +135,7 @@ export async function signedFetch(url, init = {}) {
  *
  * @returns {Promise<Response>}
  */
-function _signedFetchJSON(url, method = 'GET', init = {}) {
+function _signedFetchJSON(url, method = 'GET', init: RequestInit = {}) {
   const { body, headers = {}, ...rest } = init;
   const contentTypeHeader = body ? { 'Content-Type': 'application/activity+json' } : {};
 
@@ -155,7 +159,7 @@ function _signedFetchJSON(url, method = 'GET', init = {}) {
  *
  * @returns {Promise<Response>}
  */
-export function signedGetJSON(url, init = {}) {
+export function signedGetJSON(url: string, init: RequestInit = {}) {
   return _signedFetchJSON(url, 'GET', init);
 }
 
@@ -167,6 +171,6 @@ export function signedGetJSON(url, init = {}) {
  *
  * @returns {Promise<Response>}
  */
-export function signedPostJSON(url, init = {}) {
+export function signedPostJSON(url, init: RequestInit = {}) {
   return _signedFetchJSON(url, 'POST', init);
 }

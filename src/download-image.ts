@@ -19,7 +19,7 @@ export function downloadImage(imageUrl, imagePath) {
         file.on('finish', () => {
           file.close();
           console.log(`Image downloaded as ${path}`);
-          resolve();
+          resolve(true);
         });
       })
       .on('error', (err) => {

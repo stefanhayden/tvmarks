@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import tvMaze from 'node-tvmaze';
@@ -22,7 +22,12 @@ const DATA_PATH = '/app/.data';
 
 const imageDirectory = 'public/shows';
 
-const ADMIN_LINKS = [
+type adminLinkType = {
+  href: string;
+  label: string;
+};
+
+const ADMIN_LINKS: adminLinkType[] = [
   { href: '/admin', label: 'Add new show' },
   { href: '/admin/followers', label: 'Permissions & followers' },
   { href: '/admin/following', label: 'Federated follows' },
@@ -33,7 +38,11 @@ const ADMIN_LINKS = [
 const router = express.Router();
 
 router.get('/update', isAuthenticated, async (req, res) => {
-  const params = req.query.raw ? {} : { title: 'Update Show data' };
+  const params = (req.query.raw ? {} : { title: 'Update Show data' }) as {
+    title?: string;
+    adminLinks: adminLinkType[];
+    currentPath: string;
+  };
   params.adminLinks = ADMIN_LINKS;
   params.currentPath = req.originalUrl;
 
@@ -41,7 +50,16 @@ router.get('/update', isAuthenticated, async (req, res) => {
 });
 
 router.get('/followers', isAuthenticated, async (req, res) => {
-  const params = req.query.raw ? {} : { title: 'Permissions & followers' };
+  const params: {
+    title?: string;
+    adminLinks?: adminLinkType[];
+    currentPath?: string;
+    followers?: unknown[];
+    blocks?: unknown[];
+    allowed?: unknown;
+    blocked?: unknown;
+  } = req.query.raw ? {} : { title: 'Permissions & followers' };
+
   params.adminLinks = ADMIN_LINKS;
   params.currentPath = req.originalUrl;
 
@@ -74,7 +92,12 @@ router.get('/followers', isAuthenticated, async (req, res) => {
 });
 
 router.get('/following', isAuthenticated, async (req, res) => {
-  const params = req.query.raw ? {} : { title: 'Federated follows' };
+  const params: {
+    title?: string;
+    adminLinks?: adminLinkType[];
+    currentPath?: string;
+    following?: unknown[];
+  } = req.query.raw ? {} : { title: 'Federated follows' };
   params.adminLinks = ADMIN_LINKS;
   params.currentPath = req.originalUrl;
 
@@ -95,7 +118,11 @@ router.get('/following', isAuthenticated, async (req, res) => {
 });
 
 router.get('/data', isAuthenticated, async (req, res) => {
-  const params = req.query.raw ? {} : { title: 'Data export' };
+  const params: {
+    title?: string;
+    adminLinks?: adminLinkType[];
+    currentPath?: string;
+  } = req.query.raw ? {} : { title: 'Data export' };
   params.adminLinks = ADMIN_LINKS;
   params.currentPath = req.originalUrl;
 
@@ -288,7 +315,14 @@ router.post('/reset', isAuthenticated, async (req, res) => {
 
 router.get('/', isAuthenticated, async (req, res) => {
   try {
-    const params = { title: 'Add new show' };
+    const params: {
+      title: string;
+      searchTv?: unknown[];
+      error?: string;
+      adminLinks?: adminLinkType[];
+      currentPath?: string;
+      query?: unknown;
+    } = { title: 'Add new show' };
     if (req.query.query) {
       params.searchTv = await tvMaze.search(req.query.query);
       if (params.searchTv.length === 0) {
@@ -453,7 +487,7 @@ export async function refreshShowData(req) {
 
     // episodes to update
     const currentEpisodesToUpdate = await db.getRecentEpisodesByShowId(show.id);
-    const seasonNumbers = [...new Set(currentEpisodesToUpdate.map((e) => e.season))];
+    const seasonNumbers: number[] = [...new Set<number>(currentEpisodesToUpdate.map((e) => e.season))];
     seasonNumbers.push(seasonNumbers.slice(-1)[0] + 1); // check for new seasons
     // filter out any seasons we don't find (like our check for new seasons)
     const seasonIds = seasonNumbers.map((number) => showSeasons.find((s) => s.number === number)?.id).filter((f) => !!f);
@@ -467,8 +501,7 @@ export async function refreshShowData(req) {
           }),
         ),
       )
-    )
-      .flat()
+    ).flat();
 
     const epPromises = eps.map(async (episode) => {
       const found = currentEpisodesToUpdate.find((e) => e.id === episode.id);
@@ -556,12 +589,14 @@ export async function refreshShowData(req) {
 router.get('/update_show_data', isAuthenticated, async (req, res) => {
   let shows = [];
   try {
-    shows = await refreshShowData(req, res);
+    shows = await refreshShowData(req);
   } catch (err) {
     console.log(err);
     return res.status(500).send('Internal Server Error');
   }
-  return req.query.raw ? res.json({ success: true, updatedCount: shows.length, shows: shows.map(show => show.name) }) : res.redirect('/admin/update');
+  return req.query.raw
+    ? res.json({ success: true, updatedCount: shows.length, shows: shows.map((show) => show.name) })
+    : res.redirect('/admin/update');
 });
 
 router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
