@@ -15,7 +15,7 @@ export default () =>
     secret: process.env.SESSION_SECRET || 'bad_session_secret',
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 },
+    cookie: { maxAge: 12 * 30 * 24 * 60 * 60 * 1000 },
   });
 
 export function isAuthenticated(req, res, next) {

@@ -1,5 +1,6 @@
 import express from 'express';
 import { synthesizeActivity } from '../../activitypub.js';
+import * as apDb from '../../activity-pub-db.js';
 
 const router = express.Router();
 
@@ -16,10 +17,8 @@ router.get('/:guid', async (req, res) => {
     return res.status(400).send('Bad request.');
   }
 
-  const db = req.app.get('apDb');
-
   if (!req.headers.accept?.includes('json')) {
-    const id = await db.getIdFromMessageGuid(guid);
+    const id = await apDb.getIdFromMessageGuid(guid);
     const parts = id.split('-');
     const showId = parts[1];
     const episodeId = parts[3];
@@ -29,7 +28,7 @@ router.get('/:guid', async (req, res) => {
     return res.redirect(`/show/${showId}`);
   }
 
-  const result = await db.getMessage(guid);
+  const result = await apDb.getMessage(guid);
 
   if (result === undefined) {
     return res.status(404).send(`No message found for ${guid}.`);

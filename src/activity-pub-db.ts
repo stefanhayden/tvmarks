@@ -216,7 +216,8 @@ async function firstTimeSetup(actorName) {
   });
 }
 
-function setup() {
+export function init() {
+  console.log('start activity-pub db setup');
   // activitypub not set up yet, skip until we have the data we need
   if (actorInfo.disabled) {
     return;
@@ -248,5 +249,3 @@ function setup() {
     }
   });
 }
-
-setup();

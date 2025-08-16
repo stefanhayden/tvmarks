@@ -1,4 +1,5 @@
 import express, { Request } from 'express';
+import * as apDb from '../../activity-pub-db.js';
 
 const router = express.Router();
 
@@ -9,8 +10,7 @@ router.get('/', async (req: Request<{}, {}, {}, { resource: string }>, res) => {
   }
 
   const name = resource.replace('acct:', '');
-  const db = req.app.get('apDb');
-  const webfinger = await db.getWebfinger();
+  const webfinger = await apDb.getWebfinger();
   if (webfinger === undefined) {
     return res.status(404).send(`No webfinger record found for ${name}.`);
   }

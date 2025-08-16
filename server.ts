@@ -14,6 +14,7 @@ import packageJson from './package.json';
 import routes from './src/routes/index.js';
 
 dotenv.config();
+apDb.init();
 
 const { version } = packageJson;
 const symlinkPath = `${dataDir}/show_images`;
@@ -36,7 +37,6 @@ app.use((req, res, next) => {
 });
 
 app.set('site_name', actorInfo.disabled === false ? actorInfo.displayName : 'Tvmarks');
-app.set('apDb', apDb);
 const tvdb = initTvshowDb();
 tvdb.init();
 app.set('tvshowDb', tvdb);

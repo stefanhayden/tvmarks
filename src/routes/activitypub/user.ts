@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import { synthesizeActivity } from '../../activitypub.js';
 import { inboxRoute } from './inbox.js';
+import * as apDb from '../../activity-pub-db.js';
 
 const router = express.Router();
 
@@ -16,12 +17,11 @@ router.get('/:name', async (req, res) => {
     return res.redirect('/');
   }
 
-  const db = req.app.get('apDb');
   const domain = req.app.get('domain');
   const username = name;
   name = `${name}@${domain}`;
 
-  const actor = await db.getActor();
+  const actor = await apDb.getActor();
 
   if (actor === undefined) {
     return res.status(404).send(`No actor record found for ${name}.`);
@@ -44,10 +44,10 @@ router.get('/:name/followers', async (req, res) => {
   if (!name) {
     return res.status(400).send('Bad request.');
   }
-  const db = req.app.get('apDb');
+
   const domain = req.app.get('domain');
 
-  let followers = await db.getFollowers();
+  let followers = await apDb.getFollowers();
 
   if (followers === undefined) {
     followers = [];
@@ -77,10 +77,10 @@ router.get('/:name/following', async (req, res) => {
   if (!name) {
     return res.status(400).send('Bad request.');
   }
-  const db = req.app.get('apDb');
+
   const domain = req.app.get('domain');
 
-  const followingText = (await db.getFollowing()) || '[]';
+  const followingText = (await apDb.getFollowing()) || '[]';
   const following = JSON.parse(followingText);
 
   const followingCollection = {
@@ -123,7 +123,6 @@ type OutboxCollection = {
 router.get('/:name/outbox', async (req: Request<{}, {}, {}, { page: string }>, res: Response) => {
   const domain = req.app.get('domain');
   const account = req.app.get('account');
-  const apDb = req.app.get('apDb');
 
   function pageLink(p) {
     return `https://${domain}/u/${account}/outbox?page=${p}`;

@@ -6,11 +6,11 @@ import { signAndSend, getInboxFromActorProfile } from '../../activitypub.js';
 
 import { signedGetJSON } from '../../signature.js';
 import { Request, Response } from 'express';
+import * as apDb from '../../activity-pub-db.js';
 
 // const router = express.Router();
 
 async function sendAcceptMessage(thebody, name, domain, req, res, targetDomain) {
-  const db = req.app.get('apDb');
   const guid = crypto.randomBytes(16).toString('hex');
   const message = {
     '@context': 'https://www.w3.org/ns/activitystreams',
@@ -23,7 +23,7 @@ async function sendAcceptMessage(thebody, name, domain, req, res, targetDomain) 
   try {
     const inbox = await getInboxFromActorProfile(message.object.actor);
 
-    return signAndSend(message, name, domain, db, targetDomain, inbox);
+    return signAndSend(message, name, domain, apDb, targetDomain, inbox);
   } catch (e) {
     console.log(e.message);
     return res.status(500).send("Couldn't process sendAcceptMessage");
@@ -32,7 +32,6 @@ async function sendAcceptMessage(thebody, name, domain, req, res, targetDomain) 
 
 async function handleFollowRequest(req, res) {
   const domain = req.app.get('domain');
-  const apDb = req.app.get('apDb');
 
   const myURL = new URL(req.body.actor);
   const targetDomain = myURL.hostname;
@@ -68,7 +67,6 @@ async function handleFollowRequest(req, res) {
 
 async function handleUnfollow(req, res) {
   const domain = req.app.get('domain');
-  const apDb = req.app.get('apDb');
 
   const myURL = new URL(req.body.actor);
   const targetDomain = myURL.hostname;
@@ -101,8 +99,6 @@ async function handleUnfollow(req, res) {
 }
 
 async function handleFollowAccepted(req, res) {
-  const apDb = req.app.get('apDb');
-
   const oldFollowingText = (await apDb.getFollowing()) || '[]';
 
   let follows = parseJSON(oldFollowingText);
@@ -129,8 +125,6 @@ async function handleFollowAccepted(req, res) {
 }
 
 async function handleComment(req: Request<{}, {}, { actor: string; object: { id: string; content: string } }>, res: Response, inReplyToGuid) {
-  const apDb = req.app.get('apDb');
-
   const id = await apDb.getIdFromMessageGuid(inReplyToGuid);
 
   if (typeof id !== 'string') {

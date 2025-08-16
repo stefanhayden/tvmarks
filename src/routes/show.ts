@@ -4,6 +4,7 @@ import { account, domain } from '../util.js';
 import { isAuthenticated } from '../session-auth.js';
 import { broadcastMessage } from '../activitypub.js';
 import { refreshShowEpisodesData } from './admin.js';
+import * as apDb from '../activity-pub-db.js';
 
 const router = express.Router();
 export default router;
@@ -32,7 +33,6 @@ router.get('/:showId', async (req, res) => {
   const now = new Date();
 
   const tvshowDb = req.app.get('tvshowDb');
-  const apDb = req.app.get('apDb');
 
   const show = await tvshowDb.getShow(req.params.showId);
 
@@ -143,7 +143,6 @@ const getEpisodeStatusUpdatedValues = (allEps) => {
 };
 
 router.post('/:showId/episode/:episodeId/status', async (req, res) => {
-  const apDb = req.app.get('apDb');
   const tvshowDb = req.app.get('tvshowDb');
   const status = req.body.status === 'WATCHED' ? 'WATCHED' : null;
 
@@ -184,7 +183,6 @@ router.post('/:showId/episode/:episodeId/status', async (req, res) => {
 });
 
 router.post('/:showId/episode/:episodeId/update', async (req, res) => {
-  const apDb = req.app.get('apDb');
   const tvshowDb = req.app.get('tvshowDb');
   const { note } = req.body;
   const updatedEp = await tvshowDb.updateEpisodeNote(req.params.episodeId, note);
@@ -264,7 +262,6 @@ router.get('/:showId/episode/:episodeId', async (req, res) => {
   } = {};
 
   const tvshowDb = req.app.get('tvshowDb');
-  const apDb = req.app.get('apDb');
 
   const show = await tvshowDb.getShow(req.params.showId);
 
