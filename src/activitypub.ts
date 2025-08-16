@@ -178,7 +178,7 @@ export async function createUnfollowMessage(account, domain, target, db) {
 
 export async function getInboxFromActorProfile(profileUrl) {
   const response = await signedGetJSON(`${profileUrl}`);
-  const data: { inbox?: string } = await response.json();
+  const data = await response.json() as { inbox?: string };
 
   if (data?.inbox) {
     return data.inbox;
