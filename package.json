@@ -6,7 +6,7 @@
   "scripts": {
     "start": "npm run build && node ./dist/server.js",
     "watch": "nodemon --ignore public/ --ignore dist/ --exec (npm run build | true) npm run start",
-    "lint": "eslint . --ext .ts* --ignore-pattern dist/",
+    "lint": ".",
     "test": "node --experimental-vm-modules ./node_modules/.bin/jest",
     "build": "npx tsc"
   },
