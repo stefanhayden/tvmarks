@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import tvMaze from 'node-tvmaze';

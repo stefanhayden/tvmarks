@@ -6,7 +6,7 @@
   "scripts": {
     "start": "npm run build && node ./dist/server.js",
     "watch": "nodemon --ignore public/ --ignore dist/ --exec (npm run build | true) npm run start",
-    "lint": ".",
+    "lint": "eslint .",
     "test": "vitest",
     "build": "npx tsc"
   },
@@ -55,7 +55,7 @@
   ],
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
-    "@eslint/js": "^9.27.0",
+    "@eslint/js": "^9.33.0",
     "@types/connect-sqlite3": "^0.9.5",
     "@types/cors": "^2.8.19",
     "@types/escape-html": "^1.0.4",
@@ -64,7 +64,7 @@
     "@types/handlebars-helpers": "^0.5.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.14",
-    "eslint": "^9.27.0",
+    "eslint": "^9.33.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-jest": "^28.11.0",
     "eslint-plugin-node": "^11.1.0",
@@ -73,6 +73,7 @@
     "jsdom": "^26.1.0",
     "nodemon": "^3.1.10",
     "prettier": "^3.5.3",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.39.1"
   }
 }
