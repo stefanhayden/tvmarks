@@ -1,7 +1,7 @@
 import fs from 'fs';
-import { readFile } from 'fs/promises';
 import chalk from 'chalk';
 import * as dotenv from 'dotenv';
+import packageJson from '../package.json';
 
 dotenv.config();
 
@@ -12,22 +12,32 @@ export const data = {
   setupMessage: "🚧 Whoops! Looks like the database isn't setup yet! 🚧",
 };
 
-let actorFileData = {};
+let actorFileData:
+  | {
+      disabled: false;
+      avatar: string;
+      username: string;
+      displayName: string;
+      description: string;
+    }
+  | { disabled: true } = { disabled: true };
 
 if (process.env.USERNAME && process.env.PUBLIC_BASE_URL) {
   const { AVATAR, USERNAME, DISPLAY_NAME, DESCRIPTION } = process.env;
-  actorFileData.disabled = false;
-  actorFileData.avatar = AVATAR || 'https://cdn.glitch.global/5aacd173-98f2-4f1f-83c1-d07815d82bf3/tvmarksLogo.png?v=1742129685337';
   const username = USERNAME.slice(0, 1) === '@' ? USERNAME.slice(1) : USERNAME;
-  actorFileData.username = username;
-  actorFileData.displayName = DISPLAY_NAME || 'My Tvmarks';
-  actorFileData.description = DESCRIPTION || 'An ActivityPub tv tracking and sharing site built with Tvmarks';
+  actorFileData = {
+    disabled: false,
+    avatar: AVATAR || 'https://cdn.glitch.global/5aacd173-98f2-4f1f-83c1-d07815d82bf3/tvmarksLogo.png?v=1742129685337',
+    username,
+    displayName: DISPLAY_NAME || 'My Tvmarks',
+    description: DESCRIPTION || 'An ActivityPub tv tracking and sharing site built with Tvmarks',
+  };
 } else {
   actorFileData = { disabled: true };
 }
 
 export const actorInfo = actorFileData;
-export const account = actorInfo.username || 'tvmarks';
+export const account = actorInfo.disabled === false ? actorInfo.username : 'tvmarks';
 
 export const domain = (() => {
   if (process.env.PUBLIC_BASE_URL) {
@@ -38,29 +48,21 @@ export const domain = (() => {
   return 'localhost';
 })();
 
-let instanceData = {};
-try {
-  const pkgFile = await readFile('package.json');
-  instanceData = JSON.parse(pkgFile);
-} catch (e) {
-  console.log('unable to read package info', e);
-}
-
-export const instanceType = instanceData.name || 'tvmarks';
-export const instanceVersion = instanceData.version || 'undefined';
+export const instanceType = packageJson.name || 'tvmarks';
+export const instanceVersion = packageJson.version || 'undefined';
 
 export function timeSince(ms) {
   const timestamp = new Date(ms);
   const now = new Date(new Date().toUTCString());
-  const secondsPast = (now - timestamp) / 1000;
+  const secondsPast = (now.getTime() - timestamp.getTime()) / 1000;
   if (secondsPast < 60) {
-    return `${parseInt(secondsPast, 10)}s ago`;
+    return `${secondsPast}s ago`;
   }
   if (secondsPast < 3600) {
-    return `${parseInt(secondsPast / 60, 10)}m ago`;
+    return `${secondsPast / 60}m ago`;
   }
   if (secondsPast <= 86400) {
-    return `${parseInt(secondsPast / 3600, 10)}h ago`;
+    return `${secondsPast / 3600}h ago`;
   }
   if (secondsPast > 86400) {
     const day = timestamp.getDate();

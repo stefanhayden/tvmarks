@@ -403,7 +403,7 @@ export function initTvshowDb(dbFile = `${dataDir}/tvshows.db`) {
   const getRecentEpisodesByShowId = async (showId) => {
     try {
       const result = await db.all(
-        `SELECT episodes.* from episodes WHERE datetime(airstamp) > datetime(CURRENT_TIMESTAMP, '-1 year', '${timezoneMod}') AND episodes.show_id = ? ORDER BY season, number ASC`,
+        `SELECT episodes.* from episodes WHERE datetime(airstamp) > datetime(CURRENT_TIMESTAMP, '-3 year', '${timezoneMod}') AND episodes.show_id = ? ORDER BY season, number ASC`,
         showId,
       );
       return result;

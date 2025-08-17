@@ -15,6 +15,7 @@ import {
   broadcastMessage,
 } from '../activitypub.js';
 import { downloadImage } from '../download-image.js';
+import * as apDb from '../activity-pub-db.js';
 
 const timezone_offset = Number(process.env.TIMEZONE_OFFSET || '+0');
 
@@ -22,7 +23,12 @@ const DATA_PATH = '/app/.data';
 
 const imageDirectory = 'public/shows';
 
-const ADMIN_LINKS = [
+type adminLinkType = {
+  href: string;
+  label: string;
+};
+
+const ADMIN_LINKS: adminLinkType[] = [
   { href: '/admin', label: 'Add new show' },
   { href: '/admin/followers', label: 'Permissions & followers' },
   { href: '/admin/following', label: 'Federated follows' },
@@ -33,7 +39,11 @@ const ADMIN_LINKS = [
 const router = express.Router();
 
 router.get('/update', isAuthenticated, async (req, res) => {
-  const params = req.query.raw ? {} : { title: 'Update Show data' };
+  const params = (req.query.raw ? {} : { title: 'Update Show data' }) as {
+    title?: string;
+    adminLinks: adminLinkType[];
+    currentPath: string;
+  };
   params.adminLinks = ADMIN_LINKS;
   params.currentPath = req.originalUrl;
 
@@ -41,11 +51,18 @@ router.get('/update', isAuthenticated, async (req, res) => {
 });
 
 router.get('/followers', isAuthenticated, async (req, res) => {
-  const params = req.query.raw ? {} : { title: 'Permissions & followers' };
+  const params: {
+    title?: string;
+    adminLinks?: adminLinkType[];
+    currentPath?: string;
+    followers?: unknown[];
+    blocks?: unknown[];
+    allowed?: unknown;
+    blocked?: unknown;
+  } = req.query.raw ? {} : { title: 'Permissions & followers' };
+
   params.adminLinks = ADMIN_LINKS;
   params.currentPath = req.originalUrl;
-
-  const apDb = req.app.get('apDb');
 
   if (actorInfo.disabled) {
     return res.render('nonfederated', params);
@@ -74,11 +91,14 @@ router.get('/followers', isAuthenticated, async (req, res) => {
 });
 
 router.get('/following', isAuthenticated, async (req, res) => {
-  const params = req.query.raw ? {} : { title: 'Federated follows' };
+  const params: {
+    title?: string;
+    adminLinks?: adminLinkType[];
+    currentPath?: string;
+    following?: unknown[];
+  } = req.query.raw ? {} : { title: 'Federated follows' };
   params.adminLinks = ADMIN_LINKS;
   params.currentPath = req.originalUrl;
-
-  const apDb = req.app.get('apDb');
 
   if (actorInfo.disabled) {
     return res.render('nonfederated', params);
@@ -95,7 +115,11 @@ router.get('/following', isAuthenticated, async (req, res) => {
 });
 
 router.get('/data', isAuthenticated, async (req, res) => {
-  const params = req.query.raw ? {} : { title: 'Data export' };
+  const params: {
+    title?: string;
+    adminLinks?: adminLinkType[];
+    currentPath?: string;
+  } = req.query.raw ? {} : { title: 'Data export' };
   params.adminLinks = ADMIN_LINKS;
   params.currentPath = req.originalUrl;
 
@@ -132,9 +156,7 @@ router.get('/activitypub.db', isAuthenticated, async (req, res) => {
 });
 
 router.post('/followers/block', isAuthenticated, async (req, res) => {
-  const db = req.app.get('apDb');
-
-  const oldFollowersText = (await db.getFollowers()) || '[]';
+  const oldFollowersText = (await apDb.getFollowers()) || '[]';
 
   // update followers
   const followers = parseJSON(oldFollowersText);
@@ -149,12 +171,12 @@ router.post('/followers/block', isAuthenticated, async (req, res) => {
   const newFollowersText = JSON.stringify(followers);
 
   try {
-    await db.setFollowers(newFollowersText);
+    await apDb.setFollowers(newFollowersText);
   } catch (e) {
     console.log('error storing followers after unfollow', e);
   }
 
-  const oldBlocksText = (await db.getBlocks()) || '[]';
+  const oldBlocksText = (await apDb.getBlocks()) || '[]';
 
   let blocks = parseJSON(oldBlocksText);
 
@@ -170,7 +192,7 @@ router.post('/followers/block', isAuthenticated, async (req, res) => {
   try {
     // update into DB
 
-    await db.setBlocks(newBlocksText);
+    await apDb.setBlocks(newBlocksText);
 
     console.log('updated blocks!');
   } catch (e) {
@@ -181,9 +203,7 @@ router.post('/followers/block', isAuthenticated, async (req, res) => {
 });
 
 router.post('/followers/unblock', isAuthenticated, async (req, res) => {
-  const db = req.app.get('apDb');
-
-  const oldBlocksText = (await db.getBlocks()) || '[]';
+  const oldBlocksText = (await apDb.getBlocks()) || '[]';
 
   const blocks = parseJSON(oldBlocksText);
   if (blocks) {
@@ -197,7 +217,7 @@ router.post('/followers/unblock', isAuthenticated, async (req, res) => {
   const newBlocksText = JSON.stringify(blocks);
 
   try {
-    await db.setBlocks(newBlocksText);
+    await apDb.setBlocks(newBlocksText);
   } catch (e) {
     console.log('error storing blocks after unblock action', e);
   }
@@ -206,7 +226,6 @@ router.post('/followers/unblock', isAuthenticated, async (req, res) => {
 });
 
 router.post('/following/follow', isAuthenticated, async (req, res) => {
-  const db = req.app.get('apDb');
   const accountObj = req.app.get('account');
 
   const canonicalUrl = await lookupActorInfo(req.body.actor);
@@ -215,8 +234,8 @@ router.post('/following/follow', isAuthenticated, async (req, res) => {
     const inbox = await getInboxFromActorProfile(canonicalUrl);
 
     if (inbox) {
-      const followMessage = await createFollowMessage(accountObj, domain, canonicalUrl, db);
-      signAndSend(followMessage, accountObj, domain, db, req.body.actor.split('@').slice(-1), inbox);
+      const followMessage = await createFollowMessage(accountObj, domain, canonicalUrl, apDb);
+      signAndSend(followMessage, accountObj, domain, apDb, req.body.actor.split('@').slice(-1), inbox);
     }
 
     return res.redirect('/admin/following');
@@ -227,10 +246,9 @@ router.post('/following/follow', isAuthenticated, async (req, res) => {
 });
 
 router.post('/following/unfollow', isAuthenticated, async (req, res) => {
-  const db = req.app.get('apDb');
   const accountObj = req.app.get('account');
 
-  const oldFollowsText = (await db.getFollowing()) || '[]';
+  const oldFollowsText = (await apDb.getFollowing()) || '[]';
 
   const follows = parseJSON(oldFollowsText);
   if (follows) {
@@ -242,14 +260,14 @@ router.post('/following/unfollow', isAuthenticated, async (req, res) => {
 
     const inbox = await getInboxFromActorProfile(req.body.actor);
 
-    const unfollowMessage = createUnfollowMessage(accountObj, domain, req.body.actor, db);
+    const unfollowMessage = createUnfollowMessage(accountObj, domain, req.body.actor, apDb);
 
-    signAndSend(unfollowMessage, accountObj, domain, db, new URL(req.body.actor).hostname, inbox);
+    signAndSend(unfollowMessage, accountObj, domain, apDb, new URL(req.body.actor).hostname, inbox);
 
     const newFollowsText = JSON.stringify(follows);
 
     try {
-      await db.setFollowing(newFollowsText);
+      await apDb.setFollowing(newFollowsText);
     } catch (e) {
       console.log('error storing follows after unfollow action', e);
     }
@@ -259,8 +277,6 @@ router.post('/following/unfollow', isAuthenticated, async (req, res) => {
 });
 
 router.post('/permissions', isAuthenticated, async (req, res) => {
-  const apDb = req.app.get('apDb');
-
   await apDb.setGlobalPermissions(req.body.allowed, req.body.blocked);
 
   res.redirect('/admin');
@@ -288,7 +304,14 @@ router.post('/reset', isAuthenticated, async (req, res) => {
 
 router.get('/', isAuthenticated, async (req, res) => {
   try {
-    const params = { title: 'Add new show' };
+    const params: {
+      title: string;
+      searchTv?: unknown[];
+      error?: string;
+      adminLinks?: adminLinkType[];
+      currentPath?: string;
+      query?: unknown;
+    } = { title: 'Add new show' };
     if (req.query.query) {
       params.searchTv = await tvMaze.search(req.query.query);
       if (params.searchTv.length === 0) {
@@ -453,8 +476,11 @@ export async function refreshShowData(req) {
 
     // episodes to update
     const currentEpisodesToUpdate = await db.getRecentEpisodesByShowId(show.id);
-    const seasonNumbers = [...new Set(currentEpisodesToUpdate.map((e) => e.season))];
-    seasonNumbers.push(seasonNumbers.slice(-1)[0] + 1); // check for new seasons
+    const seasonNumbers: number[] = [...new Set<number>(currentEpisodesToUpdate.map((e) => e.season))];
+    if (seasonNumbers.length > 0) {
+      seasonNumbers.push(seasonNumbers.slice(-1)[0] + 1); // check for new seasons
+    }
+
     // filter out any seasons we don't find (like our check for new seasons)
     const seasonIds = seasonNumbers.map((number) => showSeasons.find((s) => s.number === number)?.id).filter((f) => !!f);
 
@@ -467,8 +493,7 @@ export async function refreshShowData(req) {
           }),
         ),
       )
-    )
-      .flat()
+    ).flat();
 
     const epPromises = eps.map(async (episode) => {
       const found = currentEpisodesToUpdate.find((e) => e.id === episode.id);
@@ -556,16 +581,17 @@ export async function refreshShowData(req) {
 router.get('/update_show_data', isAuthenticated, async (req, res) => {
   let shows = [];
   try {
-    shows = await refreshShowData(req, res);
+    shows = await refreshShowData(req);
   } catch (err) {
     console.log(err);
     return res.status(500).send('Internal Server Error');
   }
-  return req.query.raw ? res.json({ success: true, updatedCount: shows.length, shows: shows.map(show => show.name) }) : res.redirect('/admin/update');
+  return req.query.raw
+    ? res.json({ success: true, updatedCount: shows.length, shows: shows.map((show) => show.name) })
+    : res.redirect('/admin/update');
 });
 
 router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
-  const apDb = req.app.get('apDb');
   const db = req.app.get('tvshowDb');
   try {
     if (!req.params.showId) {
@@ -667,7 +693,6 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
 });
 
 router.post('/show/delete/:showId', isAuthenticated, async (req, res) => {
-  const apDb = req.app.get('apDb');
   const db = req.app.get('tvshowDb');
   try {
     if (req.params.showId) {

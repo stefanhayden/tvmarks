@@ -22,12 +22,12 @@ function actorJson(pubkey) {
     id: `https://${domain}/u/${account}`,
     type: 'Person',
     preferredUsername: `${account}`,
-    name: actorInfo.displayName,
-    summary: actorInfo.description,
+    name: actorInfo.disabled === false ? actorInfo.displayName : undefined,
+    summary: actorInfo.disabled === false ? actorInfo.description : undefined,
     icon: {
       type: 'Image',
-      mediaType: `image/${path.extname(actorInfo.avatar).slice(1)}`,
-      url: actorInfo.avatar,
+      mediaType: `image/${path.extname(actorInfo.disabled === false ? actorInfo.avatar : '').slice(1)}`,
+      url: actorInfo.disabled === false ? actorInfo.avatar : undefined,
     },
     inbox: `https://${domain}/u/${account}/inbox`,
     outbox: `https://${domain}/u/${account}/outbox`,
@@ -207,7 +207,7 @@ async function firstTimeSetup(actorName) {
             privateKey,
             JSON.stringify(webfingerRecord),
           );
-          return resolve();
+          return resolve(true);
         } catch (e) {
           return reject(e);
         }
@@ -216,7 +216,8 @@ async function firstTimeSetup(actorName) {
   });
 }
 
-function setup() {
+export function init() {
+  console.log('start activity-pub db setup');
   // activitypub not set up yet, skip until we have the data we need
   if (actorInfo.disabled) {
     return;
@@ -248,5 +249,3 @@ function setup() {
     }
   });
 }
-
-setup();

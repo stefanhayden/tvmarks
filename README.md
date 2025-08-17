@@ -23,7 +23,7 @@ To set your app up:
   - Add the line `USERNAME=<name>` to your .env where \<name\> is your app's fediverse username. (ex `@USERNAME@PUBLIC_BASE_URL`)
   - Add the line `TIMEZONE_OFFSET=<offset>` to your .env where \<offset\> is your UTC timezone offset. ex: -7 or +3
   - The app with run on port 3000 but you can choose a different port with the `PORT=<pot>` .env value 
-- Run `npm run start` via whatever mechanism you choose to use to host this website.
+- Run `npm start` via whatever mechanism you choose to use to host this website.
 - Click on the **Admin** link in the footer, and enter the password (whatever you set ADMIN_KEY to in the .env).
 - You should be logged in, at which point you can configure various settings, import bookmarks, and use the "Add" links in the header and footer (as well as the bookmarklet, available in the Admin section) to save new bookmarks.
 

@@ -6,12 +6,12 @@ import { refreshShowData, refreshWatchNext } from './admin.js';
 const router = express.Router();
 export default router;
 
-router.get('/', async (req, res) => {
+router.get<{}, {}, {}, { raw?: boolean }, {}>('/', async (req, res) => {
   let params = {};
 
-  if (req.session.loggedIn) {
+  if ('loggedIn' in req.session && req.session.loggedIn) {
     // params.showDataRefreshed = await refreshShowData(req, res);
-    await refreshShowData(req, res);
+    await refreshShowData(req);
     await refreshWatchNext(req);
   }
 
@@ -55,7 +55,18 @@ router.get('/', async (req, res) => {
   return req.query.raw ? res.send(params) : res.render('index', params);
 });
 
-router.get('/shows/:type', async (req, res) => {
+type Pagination = {
+  url: string;
+  currentPage: number;
+  offset: number;
+  limit: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+  nextOffset: number;
+  previousOffset: number;
+};
+
+router.get<{ type: string }, {}, {}, { raw?: boolean; limit?: number; offset?: number }>('/shows/:type', async (req, res) => {
   const tvshowDb = req.app.get('tvshowDb');
   const { type } = req.params;
 
@@ -66,16 +77,16 @@ router.get('/shows/:type', async (req, res) => {
     type === 'watch-next'
       ? await tvshowDb.getShowsToWatch(limit, offset)
       : type === 'up-to-date'
-      ? await tvshowDb.getShowsUpToDate(limit, offset)
-      : type === 'not-started'
-      ? await tvshowDb.getShowsNotStarted(limit, offset)
-      : type === 'completed'
-      ? await tvshowDb.getShowsCompleted(limit, offset)
-      : type === 'abandoned'
-      ? await tvshowDb.getShowsAbandoned(limit, offset)
-      : [];
+        ? await tvshowDb.getShowsUpToDate(limit, offset)
+        : type === 'not-started'
+          ? await tvshowDb.getShowsNotStarted(limit, offset)
+          : type === 'completed'
+            ? await tvshowDb.getShowsCompleted(limit, offset)
+            : type === 'abandoned'
+              ? await tvshowDb.getShowsAbandoned(limit, offset)
+              : [];
 
-  const params = {
+  const params: { shows: any; offset: number; limit: number; error?: string; title?: string; pagination?: Pagination } = {
     shows,
     offset,
     limit,
@@ -84,7 +95,7 @@ router.get('/shows/:type', async (req, res) => {
   if (!shows) params.error = data.errorMessage;
 
   params.title = type.split('-').join(' ');
-  params.pagination = {
+  const pagination: Pagination = {
     url: `/shows/${type}`,
     currentPage,
     offset,
@@ -94,6 +105,7 @@ router.get('/shows/:type', async (req, res) => {
     nextOffset: Math.min(offset + limit),
     previousOffset: Math.max(offset - limit, 0),
   };
+  params.pagination = pagination;
 
   // Send the page options or raw JSON data if the client requested it
   return req.query.raw ? res.send(params) : res.render('shows-by-type', params);

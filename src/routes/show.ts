@@ -4,16 +4,35 @@ import { account, domain } from '../util.js';
 import { isAuthenticated } from '../session-auth.js';
 import { broadcastMessage } from '../activitypub.js';
 import { refreshShowEpisodesData } from './admin.js';
+import * as apDb from '../activity-pub-db.js';
 
 const router = express.Router();
 export default router;
 
+type Seasons = {
+  title: string;
+  showId: string | number;
+  seasonId: string | number;
+  isWatched: boolean;
+  episodes: unknown[];
+};
+
 router.get('/:showId', async (req, res) => {
-  const params = {};
+  const params: {
+    title?: string;
+    show?: any;
+    openGraph?: { image: string };
+    hideTitle?: boolean;
+    episode?: unknown;
+    comments?: unknown;
+    comment_count?: number;
+    allowed?: unknown;
+    blocked?: unknown;
+    seasons?: Seasons[];
+  } = {};
   const now = new Date();
 
   const tvshowDb = req.app.get('tvshowDb');
-  const apDb = req.app.get('apDb');
 
   const show = await tvshowDb.getShow(req.params.showId);
 
@@ -29,15 +48,16 @@ router.get('/:showId', async (req, res) => {
     };
   }
 
-  const comments = req.session.loggedIn
-    ? await tvshowDb.getAllComments(`show-${req.params.showId}`)
-    : await tvshowDb.getVisibleComments(`show-${req.params.showId}`);
+  const comments =
+    'loggedIn' in req.session && req.session.loggedIn
+      ? await tvshowDb.getAllComments(`show-${req.params.showId}`)
+      : await tvshowDb.getVisibleComments(`show-${req.params.showId}`);
 
   params.comments = comments;
   params.comment_count = comments.length || 0;
 
   const episodes = (await tvshowDb.getEpisodesByShowId(req.params.showId)).map((e) => {
-    const daysUntill = e.airstamp ? Math.round((now - new Date(e.airstamp)) / (24 * 60 * 60 * 1000)) : undefined;
+    const daysUntill = e.airstamp ? Math.round((now.getTime() - new Date(e.airstamp).getTime()) / (24 * 60 * 60 * 1000)) : undefined;
 
     return {
       ...e,
@@ -123,7 +143,6 @@ const getEpisodeStatusUpdatedValues = (allEps) => {
 };
 
 router.post('/:showId/episode/:episodeId/status', async (req, res) => {
-  const apDb = req.app.get('apDb');
   const tvshowDb = req.app.get('tvshowDb');
   const status = req.body.status === 'WATCHED' ? 'WATCHED' : null;
 
@@ -164,7 +183,6 @@ router.post('/:showId/episode/:episodeId/status', async (req, res) => {
 });
 
 router.post('/:showId/episode/:episodeId/update', async (req, res) => {
-  const apDb = req.app.get('apDb');
   const tvshowDb = req.app.get('tvshowDb');
   const { note } = req.body;
   const updatedEp = await tvshowDb.updateEpisodeNote(req.params.episodeId, note);
@@ -233,10 +251,17 @@ router.post('/:showId/season/:seasonId/status', async (req, res) => {
 });
 
 router.get('/:showId/episode/:episodeId', async (req, res) => {
-  const params = {};
+  const params: {
+    openGraph?: { image: string };
+    hideTitle?: boolean;
+    episode?: unknown;
+    comments?: unknown;
+    comment_count?: number;
+    allowed?: unknown;
+    blocked?: unknown;
+  } = {};
 
   const tvshowDb = req.app.get('tvshowDb');
-  const apDb = req.app.get('apDb');
 
   const show = await tvshowDb.getShow(req.params.showId);
 
@@ -251,7 +276,7 @@ router.get('/:showId/episode/:episodeId', async (req, res) => {
   }
 
   const episode = await tvshowDb.getEpisode(req.params.episodeId).then((e) => {
-    const daysUntill = Math.round((new Date() - new Date(e.airstamp)) / (24 * 60 * 60 * 1000));
+    const daysUntill = Math.round((new Date().getTime() - new Date(e.airstamp).getTime()) / (24 * 60 * 60 * 1000));
     return {
       ...e,
       isWatched: e.watched_status === 'WATCHED',
@@ -263,9 +288,10 @@ router.get('/:showId/episode/:episodeId', async (req, res) => {
   params.hideTitle = true;
   params.episode = episode;
 
-  const comments = req.session.loggedIn
-    ? await tvshowDb.getAllComments(`show-${req.params.showId}-episode-${req.params.episodeId}`)
-    : await tvshowDb.getVisibleComments(`show-${req.params.showId}-episode-${req.params.episodeId}`);
+  const comments =
+    'loggedIn' in req.session && req.session.loggedIn
+      ? await tvshowDb.getAllComments(`show-${req.params.showId}-episode-${req.params.episodeId}`)
+      : await tvshowDb.getVisibleComments(`show-${req.params.showId}-episode-${req.params.episodeId}`);
 
   params.comments = comments;
   params.comment_count = comments.length || 0;

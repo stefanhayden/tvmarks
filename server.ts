@@ -5,15 +5,16 @@ import { create } from 'express-handlebars';
 import escapeHTML from 'escape-html';
 import helpers from 'handlebars-helpers';
 
-import { domain, account, simpleLogger, actorInfo, replaceEmptyText, dataDir } from './src/util.js';
+import { domain, account, simpleLogger, actorInfo, replaceEmptyText, dataDir } from './src/util';
 import session, { isAuthenticated } from './src/session-auth.js';
 import * as apDb from './src/activity-pub-db.js';
 import { initTvshowDb } from './src/tvshow-db.js';
-import packageJson from './package.json' with { type: 'json' };
+import packageJson from './package.json';
 
 import routes from './src/routes/index.js';
 
 dotenv.config();
+apDb.init();
 
 const { version } = packageJson;
 const symlinkPath = `${dataDir}/show_images`;
@@ -29,12 +30,13 @@ app.use(express.json({ type: ['application/json', 'application/ld+json', 'applic
 app.use(session());
 
 app.use((req, res, next) => {
-  res.locals.loggedIn = req.session.loggedIn;
+  if ('loggedIn' in req.session) {
+    res.locals.loggedIn = req.session.loggedIn;
+  }
   return next();
 });
 
-app.set('site_name', actorInfo.displayName || 'Tvmarks');
-app.set('apDb', apDb);
+app.set('site_name', actorInfo.disabled === false ? actorInfo.displayName : 'Tvmarks');
 const tvdb = initTvshowDb();
 tvdb.init();
 app.set('tvshowDb', tvdb);
