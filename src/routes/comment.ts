@@ -1,20 +1,17 @@
 import express from 'express';
 import { isAuthenticated } from '../session-auth.js';
+import * as tvDb from '../tvshow-db.js';
 
 const router = express.Router();
 
 router.post('/:id/toggle', isAuthenticated, async (req, res) => {
-  const tvshowDb = req.app.get('tvshowDb');
-
-  await tvshowDb.toggleCommentVisibility(req.params.id);
+  await tvDb.toggleCommentVisibility(req.params.id);
 
   return res.redirect(req.get('Referrer'));
 });
 
 router.post('/:id/delete', isAuthenticated, async (req, res) => {
-  const tvshowDb = req.app.get('tvshowDb');
-
-  await tvshowDb.deleteCommentById(req.params.id);
+  await tvDb.deleteCommentById(req.params.id);
 
   return res.redirect(req.get('Referrer'));
 });

@@ -8,7 +8,7 @@ import helpers from 'handlebars-helpers';
 import { domain, account, simpleLogger, actorInfo, replaceEmptyText, dataDir } from './src/util';
 import session, { isAuthenticated } from './src/session-auth.js';
 import * as apDb from './src/activity-pub-db.js';
-import { initTvshowDb } from './src/tvshow-db.js';
+import * as tvDb from './src/tvshow-db.js';
 import packageJson from './package.json';
 
 import routes from './src/routes/index.js';
@@ -37,9 +37,8 @@ app.use((req, res, next) => {
 });
 
 app.set('site_name', actorInfo.disabled === false ? actorInfo.displayName : 'Tvmarks');
-const tvdb = initTvshowDb();
-tvdb.init();
-app.set('tvshowDb', tvdb);
+
+tvDb.init();
 app.set('account', account);
 app.set('domain', domain);
 app.disable('x-powered-by');
