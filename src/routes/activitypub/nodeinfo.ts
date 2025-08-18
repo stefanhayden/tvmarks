@@ -6,6 +6,7 @@
 
 import express from 'express';
 import { instanceType, instanceVersion } from '../../util.js';
+import * as tvDb from '../../tvshow-db.js';
 
 const router = express.Router();
 
@@ -29,8 +30,7 @@ router.get('/', async (req, res) => {
   }
 
   if (req.originalUrl === '/nodeinfo/2.0') {
-    const tvshowDb = req.app.get('tvshowDb');
-    const showCount = await tvshowDb.getShowCount();
+    const showCount = await tvDb.getShowCount();
 
     const nodeInfo = {
       version: 2.0,
@@ -62,8 +62,7 @@ router.get('/', async (req, res) => {
   }
 
   if (req.originalUrl === '/nodeinfo/2.1') {
-    const tvshowDb = req.app.get('tvshowDb');
-    const showCount = await tvshowDb.getShowCount();
+    const showCount = await tvDb.getShowCount();
 
     const nodeInfo = {
       version: 2.1,

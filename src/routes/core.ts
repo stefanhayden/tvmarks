@@ -2,6 +2,7 @@ import express from 'express';
 import { data, actorInfo } from '../util.js';
 import { isAuthenticated } from '../session-auth.js';
 import { refreshShowData, refreshWatchNext } from './admin.js';
+import * as tvDb from '../tvshow-db.js';
 
 const router = express.Router();
 export default router;
@@ -11,21 +12,19 @@ router.get<{}, {}, {}, { raw?: boolean }, {}>('/', async (req, res) => {
 
   if ('loggedIn' in req.session && req.session.loggedIn) {
     // params.showDataRefreshed = await refreshShowData(req, res);
-    await refreshShowData(req);
-    await refreshWatchNext(req);
+    await refreshShowData();
+    await refreshWatchNext();
   }
-
-  const tvshowDb = req.app.get('tvshowDb');
 
   const limit = 8;
   const limitShowsToWatch = 24;
 
   const [showsToWatch, showsAbandoned, showsUpToDate, showsCompleted, showsNotStarted] = await Promise.all([
-    tvshowDb.getShowsToWatch(limitShowsToWatch),
-    tvshowDb.getShowsAbandoned(limit),
-    tvshowDb.getShowsUpToDate(limit),
-    tvshowDb.getShowsCompleted(limit),
-    tvshowDb.getShowsNotStarted(limit),
+    tvDb.getShowsToWatch(limitShowsToWatch),
+    tvDb.getShowsAbandoned(limit),
+    tvDb.getShowsUpToDate(limit),
+    tvDb.getShowsCompleted(limit),
+    tvDb.getShowsNotStarted(limit),
   ]);
 
   const foundShows =
@@ -67,7 +66,6 @@ type Pagination = {
 };
 
 router.get<{ type: string }, {}, {}, { raw?: boolean; limit?: number; offset?: number }>('/shows/:type', async (req, res) => {
-  const tvshowDb = req.app.get('tvshowDb');
   const { type } = req.params;
 
   const limit = Math.max(req.query?.limit || 24, 1);
@@ -75,15 +73,15 @@ router.get<{ type: string }, {}, {}, { raw?: boolean; limit?: number; offset?: n
   const currentPage = (limit + offset) / limit;
   const shows =
     type === 'watch-next'
-      ? await tvshowDb.getShowsToWatch(limit, offset)
+      ? await tvDb.getShowsToWatch(limit, offset)
       : type === 'up-to-date'
-        ? await tvshowDb.getShowsUpToDate(limit, offset)
+        ? await tvDb.getShowsUpToDate(limit, offset)
         : type === 'not-started'
-          ? await tvshowDb.getShowsNotStarted(limit, offset)
+          ? await tvDb.getShowsNotStarted(limit, offset)
           : type === 'completed'
-            ? await tvshowDb.getShowsCompleted(limit, offset)
+            ? await tvDb.getShowsCompleted(limit, offset)
             : type === 'abandoned'
-              ? await tvshowDb.getShowsAbandoned(limit, offset)
+              ? await tvDb.getShowsAbandoned(limit, offset)
               : [];
 
   const params: { shows: any; offset: number; limit: number; error?: string; title?: string; pagination?: Pagination } = {
@@ -120,8 +118,7 @@ router.get('/about', async (req, res) => {
 });
 
 router.get('/network', isAuthenticated, async (req, res) => {
-  const tvshowDb = req.app.get('tvshowDb');
-  const posts = await tvshowDb.getNetworkPosts();
+  const posts = await tvDb.getNetworkPosts();
 
   return res.render('network', { title: 'Your network', posts });
 });

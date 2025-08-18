@@ -7,6 +7,7 @@ import { signAndSend, getInboxFromActorProfile } from '../../activitypub.js';
 import { signedGetJSON } from '../../signature.js';
 import { Request, Response } from 'express';
 import * as apDb from '../../activity-pub-db.js';
+import * as tvDb from '../../tvshow-db.js';
 
 // const router = express.Router();
 
@@ -163,9 +164,7 @@ async function handleComment(req: Request<{}, {}, { actor: string; object: { id:
     visible = 1;
   }
 
-  const tvshowsDb = req.app.get('tvshowDb');
-
-  tvshowsDb.createComment(id, actor, commentUrl, req.body.object.content, visible);
+  tvDb.createComment(id, actor, commentUrl, req.body.object.content, visible);
 
   return res.status(200);
 }
@@ -185,9 +184,7 @@ async function handleFollowedPost(req, res) {
 
     const commentUrl = req.body.object.id;
 
-    const tvshowDb = req.app.get('tvshowDb');
-
-    tvshowDb.createComment(undefined, actor, commentUrl, req.body.object.content, false);
+    tvDb.createComment(undefined, actor, commentUrl, req.body.object.content, 0);
   }
 
   return res.status(200);
@@ -196,12 +193,10 @@ async function handleFollowedPost(req, res) {
 async function handleDeleteRequest(req, res) {
   console.log(JSON.stringify(req.body));
 
-  const tvshowDb = req.app.get('tvshowDb');
-
   const commentId = req.body?.object?.id;
 
   if (commentId) {
-    await tvshowDb.deleteComment(commentId);
+    await tvDb.deleteComment(commentId);
   }
 
   return res.status(200);

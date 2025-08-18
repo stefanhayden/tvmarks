@@ -1,5 +1,5 @@
 import { expect, test, beforeAll, describe } from 'vitest';
-import { initTvshowDb } from './tvshow-db.js';
+import * as tvDb from './tvshow-db.js';
 
 const dateFormat = (v) => v.split('T').join(' ').split('.')[0];
 
@@ -12,14 +12,11 @@ const past3Days = dateFormat(new Date(new Date().setDate(new Date().getDate() - 
 // const next2Week = dateFormat(new Date(new Date().setDate(new Date().getDate() + 14)).toISOString());
 
 describe('tvshow-db', () => {
-  let db;
   beforeAll(async () => {
-    db = initTvshowDb(':memory:');
-
-    await db.init();
+    await tvDb.init(':memory:');
 
     // NOT STARTED
-    await db.createShow({
+    await tvDb.createShow({
       id: 1,
       episodes_count: 2,
       aired_episodes_count: 2,
@@ -29,7 +26,7 @@ describe('tvshow-db', () => {
     });
 
     // COMPLETED
-    await db.createShow({
+    await tvDb.createShow({
       id: 2,
       status: 'Ended',
       episodes_count: 2,
@@ -40,7 +37,7 @@ describe('tvshow-db', () => {
     });
 
     // COMPLETED - more watched then aired (firefly)
-    await db.createShow({
+    await tvDb.createShow({
       id: 21,
       status: 'Ended',
       episodes_count: 2,
@@ -51,7 +48,7 @@ describe('tvshow-db', () => {
     });
 
     // UP TO DATE
-    await db.createShow({
+    await tvDb.createShow({
       id: 3,
       status: 'Running',
       episodes_count: 3,
@@ -63,7 +60,7 @@ describe('tvshow-db', () => {
 
     // UP TO DATE
     // marked unaired shows as watched
-    await db.createShow({
+    await tvDb.createShow({
       id: 31,
       status: 'Running',
       episodes_count: 4,
@@ -74,7 +71,7 @@ describe('tvshow-db', () => {
     });
 
     // TO WATCH #1
-    await db.createShow({
+    await tvDb.createShow({
       id: 4,
       status: 'Running',
       episodes_count: 3,
@@ -85,7 +82,7 @@ describe('tvshow-db', () => {
     });
 
     // TO WATCH #2
-    await db.createShow({
+    await tvDb.createShow({
       id: 41,
       status: 'Ended',
       episodes_count: 3,
@@ -96,7 +93,7 @@ describe('tvshow-db', () => {
     });
 
     // TO WATCH #3
-    await db.createShow({
+    await tvDb.createShow({
       id: 42,
       status: 'To Be Determined',
       episodes_count: 3,
@@ -109,7 +106,7 @@ describe('tvshow-db', () => {
     // ABANDONED
     // watched 1 episode 2 months after aired and was up to date
     // didn't watch new episodes for 4 months
-    await db.createShow({
+    await tvDb.createShow({
       id: 5,
       status: 'Running',
       episodes_count: 5,
@@ -122,7 +119,7 @@ describe('tvshow-db', () => {
     // ABANDONED #2
     // watched 1 episode 2 months after aired
     // didn't watch new episodes for 4 months
-    await db.createShow({
+    await tvDb.createShow({
       id: 51,
       status: 'Ended',
       episodes_count: 5,
@@ -134,7 +131,7 @@ describe('tvshow-db', () => {
 
     // ABANDONED #3
     // marked as abandoned
-    await db.createShow({
+    await tvDb.createShow({
       id: 52,
       status: 'Ended',
       episodes_count: 5,
@@ -147,14 +144,14 @@ describe('tvshow-db', () => {
   });
 
   test('showsNotStarted', async () => {
-    const showsNotStarted = await db.getShowsNotStarted();
+    const showsNotStarted = await tvDb.getShowsNotStarted();
 
     expect(showsNotStarted?.length).toBe(1);
     expect(showsNotStarted[0].id).toBe(1);
   });
 
   test('getShowsCompleted', async () => {
-    const getShowsCompleted = await db.getShowsCompleted();
+    const getShowsCompleted = await tvDb.getShowsCompleted();
 
     expect(getShowsCompleted?.length).toBe(2);
     expect(getShowsCompleted[0].id).toBe(2);
@@ -162,7 +159,7 @@ describe('tvshow-db', () => {
   });
 
   test('getShowsUpToDate', async () => {
-    const getShowsUpToDate = await db.getShowsUpToDate();
+    const getShowsUpToDate = await tvDb.getShowsUpToDate();
 
     expect(getShowsUpToDate?.length).toBe(2);
     expect(getShowsUpToDate[0].id).toBe(3);
@@ -170,7 +167,7 @@ describe('tvshow-db', () => {
   });
 
   test('getShowsToWatch', async () => {
-    const getShowsToWatch = await db.getShowsToWatch();
+    const getShowsToWatch = await tvDb.getShowsToWatch();
 
     expect(getShowsToWatch?.length).toBe(3);
     expect(getShowsToWatch[0].id).toBe(4);
@@ -179,7 +176,7 @@ describe('tvshow-db', () => {
   });
 
   test('getShowsAbandoned', async () => {
-    const getShowsAbandoned = await db.getShowsAbandoned();
+    const getShowsAbandoned = await tvDb.getShowsAbandoned();
 
     expect(getShowsAbandoned?.length).toBe(3);
     expect(getShowsAbandoned[0].id).toBe(5);
