@@ -8,6 +8,7 @@
     "watch": "nodemon --ignore public/ --ignore dist/ --exec (npm run build | true) npm run start",
     "lint": "eslint .",
     "test": "vitest",
+    "typecheck": "tsc --noEmit",
     "build": "npx tsc"
   },
   "dependencies": {

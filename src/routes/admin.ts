@@ -573,7 +573,7 @@ export async function refreshShowData() {
 router.get('/update_show_data', isAuthenticated, async (req, res) => {
   let shows = [];
   try {
-    shows = await refreshShowData(req);
+    shows = await refreshShowData();
   } catch (err) {
     console.log(err);
     return res.status(500).send('Internal Server Error');
