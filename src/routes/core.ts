@@ -12,8 +12,8 @@ router.get<{}, {}, {}, { raw?: boolean }, {}>('/', async (req, res) => {
 
   if ('loggedIn' in req.session && req.session.loggedIn) {
     // params.showDataRefreshed = await refreshShowData(req, res);
-    await refreshShowData(req);
-    await refreshWatchNext(req);
+    await refreshShowData();
+    await refreshWatchNext();
   }
 
   const limit = 8;

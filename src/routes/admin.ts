@@ -398,7 +398,7 @@ router.get('/fetchMissingImages', isAuthenticated, async (req, res) => {
   return res.redirect('/admin/update');
 });
 
-export async function refreshWatchNext(req) {
+export async function refreshWatchNext() {
   const shows = await tvDb.getAllAiredEpisodesCountByShow();
 
   const showsToUpdate = shows
@@ -408,7 +408,7 @@ export async function refreshWatchNext(req) {
   await tvDb.updateAllAiredCounts(showsToUpdate);
 }
 
-export async function refreshShowEpisodesData(req, showId) {
+export async function refreshShowEpisodesData(_, showId) {
   // update data
   const updatedEpisodes = await tvMaze.episodes(showId, true);
 
@@ -455,7 +455,7 @@ export async function refreshShowEpisodesData(req, showId) {
   });
 }
 
-export async function refreshShowData(req) {
+export async function refreshShowData() {
   const shows = ((await tvDb.getAllInProgressShows()) || []).slice(0, 5);
   console.log(
     'refresh shows: ',
