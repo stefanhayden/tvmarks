@@ -431,6 +431,8 @@ export async function refreshShowEpisodesData(_, showId) {
       runtime: ep.runtime,
       image: ep.image?.medium,
       summary: ep.summary,
+      watched_status: null,
+      watched_at: undefined,
     };
     if (found) {
       console.log('ep found', data);
@@ -505,6 +507,8 @@ export async function refreshShowData() {
         runtime: ep.runtime,
         image: ep.image?.medium,
         summary: ep.summary,
+        watched_at: undefined,
+        watched_status: null,
       };
       if (found) {
         return tvDb.updateEpisode(ep.id, data);
@@ -639,12 +643,13 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
       watched_episodes_count,
       last_watched_date,
       next_episode_towatch_airdate,
+      abandoned: false,
     });
 
     const epPromises = episodes.map(async (ep) => {
       await tvDb.createEpisode({
         id: ep.id,
-        show_id: req.params.showId,
+        show_id: parseInt(req.params.showId),
         url: ep.url,
         name: ep.name,
         season: ep.season,
@@ -657,6 +662,7 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
         image: ep.image?.medium,
         summary: ep.summary,
         watched_at: null,
+        watched_status: undefined,
       });
     });
 

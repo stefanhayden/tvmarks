@@ -8,12 +8,37 @@
 import * as path from 'path';
 import fs from 'fs';
 import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+import { open, Database } from 'sqlite';
 import crypto from 'crypto';
 import { account, domain, actorInfo, dataDir } from './util.js';
 
+type Account = {
+  name: string;
+  privkey: string;
+  pubkey: string;
+  webfinger: string;
+  actor: string;
+  followers: string;
+  following: string;
+  messages: string;
+  blocks: string;
+};
+
+type Message = {
+  guid: string;
+  PRIMARY: string;
+  message: string;
+  id: string;
+};
+
+type Permission = {
+  id: string;
+  allowed: string;
+  blocked: string;
+};
+
 const dbFile = `${dataDir}/activitypub.db`;
-let db;
+let db: Database<sqlite3.Database, sqlite3.Statement> | undefined;
 
 function actorJson(pubkey) {
   return {
@@ -57,16 +82,16 @@ function webfingerJson() {
 }
 
 export async function getFollowers() {
-  const result = await db?.get('select followers from accounts limit 1');
+  const result = await db?.get<Pick<Account, 'followers'>>('select followers from accounts limit 1');
   return result?.followers || null;
 }
 
-export async function setFollowers(followersJson) {
+export async function setFollowers(followersJson: string) {
   return db?.run('update accounts set followers=?', followersJson);
 }
 
 export async function getFollowing() {
-  const result = await db?.get('select following from accounts limit 1');
+  const result = await db?.get<Pick<Account, 'following'>>('select following from accounts limit 1');
   return result?.following;
 }
 
@@ -75,64 +100,64 @@ export async function setFollowing(followingJson) {
 }
 
 export async function getBlocks() {
-  const result = await db?.get('select blocks from accounts limit 1');
+  const result = await db?.get<Pick<Account, 'blocks'>>('select blocks from accounts limit 1');
   return result?.blocks;
 }
 
-export async function setBlocks(blocksJson) {
+export async function setBlocks(blocksJson: string) {
   return db?.run('update accounts set blocks=?', blocksJson);
 }
 
 export async function getActor() {
-  const result = await db?.get('select actor from accounts limit 1');
+  const result = await db?.get<Pick<Account, 'actor'>>('select actor from accounts limit 1');
   return result?.actor;
 }
 
 export async function getWebfinger() {
-  const result = await db?.get('select webfinger from accounts limit 1');
+  const result = await db?.get<Pick<Account, 'webfinger'>>('select webfinger from accounts limit 1');
   return result?.webfinger;
 }
 
 export async function getPublicKey() {
-  const result = await db?.get('select pubkey from accounts limit 1');
+  const result = await db?.get<Pick<Account, 'pubkey'>>('select pubkey from accounts limit 1');
   return result?.pubkey;
 }
 
 export async function getPrivateKey() {
-  const result = await db?.get('select privkey from accounts limit 1');
+  const result = await db?.get<Pick<Account, 'privkey'>>('select privkey from accounts limit 1');
   return result?.privkey;
 }
 
 export async function getGuidForId(id) {
-  return (await db?.get('select guid from messages where id = ?', id))?.guid;
+  return (await db?.get<Pick<Message, 'guid'>>('select guid from messages where id = ?', id))?.guid;
 }
 
 export async function getIdFromMessageGuid(guid) {
-  return (await db?.get('select id from messages where guid = ?', guid))?.id;
+  return (await db?.get<Pick<Message, 'id'>>('select id from messages where guid = ?', guid))?.id;
 }
 
 export async function getMessage(guid) {
-  return db?.get('select message from messages where guid = ?', guid);
+  return db?.get<Pick<Message, 'message'>>('select message from messages where guid = ?', guid);
 }
 
 export async function getMessageCount() {
-  return (await db?.get('select count(message) as count from messages'))?.count;
+  return (await db?.get<{ count: number }>('select count(message) as count from messages'))?.count;
 }
 
 export async function getMessages(offset = 0, limit = 20) {
-  return db?.all('select message from messages order by id desc limit ? offset ?', limit, offset);
+  return db?.all<Pick<Message, 'message'>[]>('select message from messages order by id desc limit ? offset ?', limit, offset);
 }
 
 export async function findMessageGuid(id) {
-  return (await db?.get('select guid from messages where id = ?', id))?.guid;
+  return (await db?.get<Pick<Message, 'guid'>>('select guid from messages where id = ?', id))?.guid;
 }
 
-export async function deleteMessage(guid) {
+export async function deleteMessage(guid: string) {
   await db?.get('delete from messages where guid = ?', guid);
 }
 
 export async function getGlobalPermissions() {
-  return db?.get('select * from permissions where id = 0');
+  return db?.get<Permission>('select * from permissions where id = 0');
 }
 
 export async function setPermissions(id, allowed, blocked) {
@@ -144,7 +169,7 @@ export async function setGlobalPermissions(allowed, blocked) {
 }
 
 export async function getPermissions(id) {
-  return db?.get('select * from permissions where id = ?', id);
+  return db?.get<Permission>('select * from permissions where id = ?', id);
 }
 
 export async function insertMessage(guid, id, json) {
@@ -152,7 +177,7 @@ export async function insertMessage(guid, id, json) {
 }
 
 export async function findMessage(object) {
-  return db?.all('select * from messages where message like ?', `%${object}%`);
+  return db?.all<Message[]>('select * from messages where message like ?', `%${object}%`);
 }
 
 async function firstTimeSetup(actorName) {

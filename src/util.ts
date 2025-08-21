@@ -51,7 +51,7 @@ export const domain = (() => {
 export const instanceType = packageJson.name || 'tvmarks';
 export const instanceVersion = packageJson.version || 'undefined';
 
-export function timeSince(ms) {
+export function timeSince(ms: number) {
   const timestamp = new Date(ms);
   const now = new Date(new Date().toUTCString());
   const secondsPast = (now.getTime() - timestamp.getTime()) / 1000;
@@ -102,7 +102,7 @@ export function parseJSON(text) {
 // i.e https://instance.tld/user/username.
 // this function takes the two and tries to determine via some terrifying
 // and brittle regex work if they're the same.
-export function actorMatchesUsername(actor, username) {
+export function actorMatchesUsername(actor: string, username: string) {
   if (!username) {
     return false;
   }
@@ -122,7 +122,7 @@ export function actorMatchesUsername(actor, username) {
   return actorAccount === actorResult[3] && actorDomain === actorResult[1];
 }
 
-export function replaceEmptyText(currentValue, defaultValue) {
+export function replaceEmptyText(currentValue: string, defaultValue: string) {
   if (!currentValue || currentValue?.trim().replace(/\n/g, '') === '') {
     return defaultValue;
   }

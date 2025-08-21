@@ -7,16 +7,80 @@
 // Utilities we need
 import fs from 'fs';
 import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+import { open, Database } from 'sqlite';
 import { stripHtml } from 'string-strip-html';
 import { timeSince, account, domain, dataDir } from './util.js';
+
+export type Show = {
+  id: number;
+  tvrage_id: number;
+  thetvdb_id: number;
+  imdb_id: string;
+  url: string;
+  summary: string;
+  name: string;
+  type: string;
+  language: string;
+  status: 'Ended' | 'In Development' | 'Running' | 'To Be Determined';
+  runtime: number;
+  averageRuntime: number;
+  premiered: string;
+  ended: string;
+  officialSite: string;
+  network_name: string;
+  network_country: string;
+  network_country_code: string;
+  network_country_timezone: string;
+  image: string;
+  note: string;
+  episodes_count: number;
+  aired_episodes_count: number;
+  watched_episodes_count: number;
+  last_watched_date: string | null;
+  next_episode_towatch_airdate: string | null;
+  last_watched_episode_id: number | null;
+  abandoned: number | boolean; // 1 |  0 -- this is how the DB does true / false
+  created_at: string;
+  updated_at: string;
+};
+
+type Episode = {
+  id: number;
+  show_id: number;
+  url: string;
+  name: string;
+  season: number;
+  number: number;
+  type: string;
+  airdate: string;
+  airtime: string;
+  airstamp: string;
+  runtime: number;
+  image: string;
+  summary: string;
+  note: string;
+  created_at: string;
+  updated_at: string;
+  watched_at: string | null;
+  watched_status: string;
+};
+
+type Comment = {
+  id: number;
+  name: string;
+  url: string;
+  content: string;
+  created_at: string;
+  visible: 0 | 1;
+  resource_id: string;
+};
 
 const ACCOUNT_MENTION_REGEX = new RegExp(`^@${account}@${domain} `);
 
 const timezone_offset = process.env.TIMEZONE_OFFSET || '+0';
 const timezoneMod = `${timezone_offset} hour`;
 
-let db;
+let db: Database<sqlite3.Database, sqlite3.Statement> | undefined;
 
 // for now, strip the HTML when we retrieve it from the DB, just so that we keep as much data as possible
 // if we ultimately decide that we don't want to do something fancier with keeping bold, italics, etc but
@@ -185,7 +249,7 @@ export const init = async (dbFile = `${dataDir}/tvshows.db`) => {
 };
 
 export const getShowCount = async () => {
-  const result = await db.get('SELECT count(id) as count FROM shows');
+  const result = await db.get<{ count: number }>('SELECT count(id) as count FROM shows');
   return result?.count;
 };
 
@@ -193,7 +257,7 @@ export const getShows = async (limit = 10, offset = 0) => {
   // We use a try catch block in case of db errors
   try {
     // const subQueryFilter = `episodes.show_id = shows.id AND episodes.number IS NOT NULL`;
-    const results = await db.all(`select * from shows ORDER BY updated_at DESC LIMIT ? OFFSET ?`, limit, offset);
+    const results = await db.all<Show[]>(`select * from shows ORDER BY updated_at DESC LIMIT ? OFFSET ?`, limit, offset);
     return results;
   } catch (dbError) {
     // Database connection error
@@ -205,7 +269,7 @@ export const getShows = async (limit = 10, offset = 0) => {
 export const getShowsNotStarted = async (limit = 24, offset = 0) => {
   // We use a try catch block in case of db errors
   try {
-    const results = await db.all(
+    const results = await db.all<Show[]>(
       `SELECT * from shows
         WHERE watched_episodes_count == 0
         ORDER BY created_at DESC LIMIT ? OFFSET ?`,
@@ -224,7 +288,7 @@ export const getShowsNotStarted = async (limit = 24, offset = 0) => {
 export const getShowsCompleted = async (limit = 24, offset = 0) => {
   // We use a try catch block in case of db errors
   try {
-    const results = await db.all(
+    const results = await db.all<Show[]>(
       `SELECT * from shows
         WHERE aired_episodes_count <= watched_episodes_count
         AND status == 'Ended'
@@ -244,7 +308,7 @@ export const getShowsCompleted = async (limit = 24, offset = 0) => {
 export const getShowsToWatch = async (limit = 24, offset = 0) => {
   // We use a try catch block in case of db errors
   try {
-    const results = await db.all(
+    const results = await db.all<Show[]>(
       `select *
         from shows
           WHERE
@@ -285,7 +349,7 @@ export const getShowsToWatch = async (limit = 24, offset = 0) => {
 export const getShowsUpToDate = async (limit = 24, offset = 0) => {
   // We use a try catch block in case of db errors
   try {
-    const results = await db.all(
+    const results = await db.all<Show[]>(
       `SELECT *
           from shows
         WHERE 
@@ -312,7 +376,7 @@ export const getShowsUpToDate = async (limit = 24, offset = 0) => {
 export const getShowsAbandoned = async (limit = 24, offset = 0) => {
   // We use a try catch block in case of db errors
   try {
-    const results = await db.all(
+    const results = await db.all<Show[]>(
       `select * from shows
           WHERE
             watched_episodes_count > 0 AND
@@ -361,7 +425,7 @@ export const getTvshowsForCSVExport = async () => {
 
 export const getShow = async (id) => {
   try {
-    const result = await db.get(`SELECT * from shows WHERE id = ?`, id);
+    const result = await db.get<Show>(`SELECT * from shows WHERE id = ?`, id);
     return result;
   } catch (dbError) {
     console.error('failed getShow', dbError);
@@ -371,7 +435,7 @@ export const getShow = async (id) => {
 
 export const getEpisodes = async () => {
   try {
-    const result = await db.all('SELECT episodes.* from episodes');
+    const result = await db.all<Episode[]>('SELECT episodes.* from episodes');
     return result;
   } catch (dbError) {
     console.error('failed getEpisodes', dbError);
@@ -381,7 +445,7 @@ export const getEpisodes = async () => {
 
 export const getEpisode = async (id) => {
   try {
-    const result = await db.get('SELECT episodes.* from episodes WHERE episodes.id = ?', id);
+    const result = await db.get<Episode>('SELECT episodes.* from episodes WHERE episodes.id = ?', id);
     return result;
   } catch (dbError) {
     console.error('failed to getEpisode', id, dbError);
@@ -391,7 +455,7 @@ export const getEpisode = async (id) => {
 
 export const getEpisodesByShowId = async (showId) => {
   try {
-    const result = await db.all('SELECT episodes.* from episodes WHERE episodes.show_id = ? ORDER BY season, number ASC', showId);
+    const result = await db.all<Episode[]>('SELECT episodes.* from episodes WHERE episodes.show_id = ? ORDER BY season, number ASC', showId);
     return result;
   } catch (dbError) {
     console.error('failed getEpisodesByShowId', dbError);
@@ -401,7 +465,7 @@ export const getEpisodesByShowId = async (showId) => {
 
 export const getRecentEpisodesByShowId = async (showId) => {
   try {
-    const result = await db.all(
+    const result = await db.all<Episode[]>(
       `SELECT episodes.* from episodes WHERE datetime(airstamp) > datetime(CURRENT_TIMESTAMP, '-3 year', '${timezoneMod}') AND episodes.show_id = ? ORDER BY season, number ASC`,
       showId,
     );
@@ -412,7 +476,7 @@ export const getRecentEpisodesByShowId = async (showId) => {
   return undefined;
 };
 
-export const updateEpisodeWatchStatus = async (id, status) => {
+export const updateEpisodeWatchStatus = async (id: number | string, status: 'WATCHED' | null) => {
   try {
     await db.run(
       `UPDATE episodes SET watched_status = ?, watched_at = ${status === 'WATCHED' ? `DateTime('now', '${timezoneMod}')` : null} WHERE id = ?`,
@@ -420,25 +484,25 @@ export const updateEpisodeWatchStatus = async (id, status) => {
       id,
     );
 
-    return await db.get('SELECT * from episodes WHERE id = ?', id);
+    return await db.get<Episode>('SELECT * from episodes WHERE id = ?', id);
   } catch (dbError) {
     console.error('failed updateEpisodeWatchStatus', dbError);
   }
   return undefined;
 };
 
-export const updateEpisodeNote = async (id, note) => {
+export const updateEpisodeNote = async (id: string, note: string) => {
   try {
     await db.run(`UPDATE episodes SET note = ? WHERE id = ?`, note, id);
 
-    return await db.get('SELECT * from episodes WHERE id = ?', id);
+    return await db.get<Episode>('SELECT * from episodes WHERE id = ?', id);
   } catch (dbError) {
     console.error('failed updateEpisodeNote', dbError);
   }
   return undefined;
 };
 
-export const createShow = async (body) => {
+export const createShow = async (body: Omit<Show, 'last_watched_episode_id' | 'created_at' | 'updated_at'>) => {
   try {
     const keys = Object.keys(body);
 
@@ -485,7 +549,7 @@ export const createShow = async (body) => {
   return undefined;
 };
 
-export const updateShow = async (id, body) => {
+export const updateShow = async (id: string, body: Partial<Show>) => {
   try {
     const keys = Object.keys(body);
     const data = keys.reduce((acc, val) => {
@@ -504,14 +568,14 @@ export const updateShow = async (id, body) => {
       },
     );
 
-    return await db.get('SELECT * from shows WHERE id = ?', id);
+    return await db.get<Show>('SELECT * from shows WHERE id = ?', id);
   } catch (dbError) {
     console.error('failed updateShow', dbError);
   }
   return undefined;
 };
 
-export const updateAllAiredCounts = async (updates) => {
+export const updateAllAiredCounts = async (updates: Pick<Show, 'id' | 'aired_episodes_count'>[]) => {
   if (updates.length === 0) return;
 
   await db.run(`
@@ -522,7 +586,7 @@ export const updateAllAiredCounts = async (updates) => {
     `);
 };
 
-export const updateShowNote = async (id, body) => {
+export const updateShowNote = async (id: string, body: Pick<Show, 'note'>) => {
   try {
     await db.run(`UPDATE shows SET note=$note WHERE id = $id`, {
       $id: id,
@@ -536,21 +600,21 @@ export const updateShowNote = async (id, body) => {
   return undefined;
 };
 
-export const updateShowImage = async (id, body) => {
+export const updateShowImage = async (id: string, body: Pick<Show, 'image'>) => {
   try {
     await db.run(`UPDATE shows SET image=$image WHERE id = $id`, {
       $id: id,
       $image: body.image,
     });
 
-    return await db.get('SELECT * from shows WHERE id = ?', id);
+    return await db.get<Show>('SELECT * from shows WHERE id = ?', id);
   } catch (dbError) {
     console.error('failed updateShowImage', dbError);
   }
   return undefined;
 };
 
-export const deleteShow = async (id) => {
+export const deleteShow = async (id: string) => {
   try {
     await db.run('DELETE from shows WHERE id = ?', id);
   } catch (dbError) {
@@ -558,7 +622,7 @@ export const deleteShow = async (id) => {
   }
 };
 
-export const createEpisode = async (body) => {
+export const createEpisode = async (body: Omit<Episode, 'note' | 'created_at' | 'updated_at'>) => {
   try {
     const keys = Object.keys(body);
     const result = await db.run(
@@ -593,7 +657,7 @@ export const createEpisode = async (body) => {
   return undefined;
 };
 
-export const createEpisodes = async (body) => {
+export const createEpisodes = async (body: Episode[]) => {
   try {
     const keys = Object.keys(body[0]);
 
@@ -655,7 +719,7 @@ export const updateEpisode = async (id, body) => {
       },
     );
 
-    return await db.get('SELECT * from shows WHERE id = ?', id);
+    return await db.get<Show>('SELECT * from shows WHERE id = ?', id);
   } catch (dbError) {
     console.error('failed to update', id, body, dbError);
   }

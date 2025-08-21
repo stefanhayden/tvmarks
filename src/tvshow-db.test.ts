@@ -23,7 +23,7 @@ describe('tvshow-db', () => {
       watched_episodes_count: 0,
       last_watched_date: null,
       next_episode_towatch_airdate: past3Days.split(' ')[0],
-    });
+    } as tvDb.Show);
 
     // COMPLETED
     await tvDb.createShow({
@@ -34,7 +34,7 @@ describe('tvshow-db', () => {
       watched_episodes_count: 2,
       last_watched_date: past3Days.split(' ')[0],
       next_episode_towatch_airdate: null,
-    });
+    } as tvDb.Show);
 
     // COMPLETED - more watched then aired (firefly)
     await tvDb.createShow({
@@ -45,7 +45,7 @@ describe('tvshow-db', () => {
       watched_episodes_count: 3,
       last_watched_date: past3Days.split(' ')[0],
       next_episode_towatch_airdate: null,
-    });
+    } as tvDb.Show);
 
     // UP TO DATE
     await tvDb.createShow({
@@ -56,7 +56,7 @@ describe('tvshow-db', () => {
       watched_episodes_count: 2,
       last_watched_date: past3Days.split(' ')[0],
       next_episode_towatch_airdate: past3Days.split(' ')[0],
-    });
+    } as tvDb.Show);
 
     // UP TO DATE
     // marked unaired shows as watched
@@ -68,7 +68,7 @@ describe('tvshow-db', () => {
       watched_episodes_count: 2,
       last_watched_date: past3Days.split(' ')[0],
       next_episode_towatch_airdate: past3Days.split(' ')[0],
-    });
+    } as tvDb.Show);
 
     // TO WATCH #1
     await tvDb.createShow({
@@ -79,7 +79,7 @@ describe('tvshow-db', () => {
       watched_episodes_count: 1,
       last_watched_date: past3Days.split(' ')[0],
       next_episode_towatch_airdate: past3Days.split(' ')[0],
-    });
+    } as tvDb.Show);
 
     // TO WATCH #2
     await tvDb.createShow({
@@ -90,7 +90,7 @@ describe('tvshow-db', () => {
       watched_episodes_count: 1,
       last_watched_date: past3Days.split(' ')[0],
       next_episode_towatch_airdate: past3Days.split(' ')[0],
-    });
+    } as tvDb.Show);
 
     // TO WATCH #3
     await tvDb.createShow({
@@ -101,7 +101,7 @@ describe('tvshow-db', () => {
       watched_episodes_count: 1,
       last_watched_date: past3Days.split(' ')[0],
       next_episode_towatch_airdate: past3Days.split(' ')[0],
-    });
+    } as tvDb.Show);
 
     // ABANDONED
     // watched 1 episode 2 months after aired and was up to date
@@ -114,7 +114,7 @@ describe('tvshow-db', () => {
       watched_episodes_count: 1,
       last_watched_date: past6Months.split(' ')[0],
       next_episode_towatch_airdate: past6Months.split(' ')[0],
-    });
+    } as tvDb.Show);
 
     // ABANDONED #2
     // watched 1 episode 2 months after aired
@@ -127,7 +127,7 @@ describe('tvshow-db', () => {
       watched_episodes_count: 1,
       last_watched_date: past6Months.split(' ')[0],
       next_episode_towatch_airdate: past6Months.split(' ')[0],
-    });
+    } as tvDb.Show);
 
     // ABANDONED #3
     // marked as abandoned
@@ -140,7 +140,7 @@ describe('tvshow-db', () => {
       last_watched_date: past6Months.split(' ')[0],
       next_episode_towatch_airdate: past6Months.split(' ')[0],
       abandoned: 1,
-    });
+    } as tvDb.Show);
   });
 
   test('showsNotStarted', async () => {

@@ -47,12 +47,10 @@ router.get('/:name/followers', async (req, res) => {
 
   const domain = req.app.get('domain');
 
-  let followers = await apDb.getFollowers();
-
-  if (followers === undefined) {
-    followers = [];
-  } else {
-    followers = JSON.parse(followers);
+  const followersJson = await apDb.getFollowers();
+  let followers = [];
+  if (followersJson) {
+    followers = JSON.parse(followersJson);
   }
 
   const followersCollection = {

@@ -2,7 +2,7 @@ import https from 'https';
 import fs from 'fs';
 import { dataDir } from './util.js';
 
-export function downloadImage(imageUrl, imagePath) {
+export function downloadImage(imageUrl: string, imagePath: string) {
   const path = `${dataDir}/show_images/${imagePath}`;
 
   if (!fs.existsSync(`${dataDir}/show_images`)) {
