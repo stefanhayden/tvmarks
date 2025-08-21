@@ -797,7 +797,7 @@ export const toggleCommentVisibility = async (commentId) => {
 
 export const getAllComments = async (showEpisodeId) => {
   try {
-    const results = await db.all('SELECT * FROM comments WHERE resource_id = ?', showEpisodeId);
+    const results = await db.all<Comment[]>('SELECT * FROM comments WHERE resource_id = ?', showEpisodeId);
     return results.map((c) => massageComment(c));
   } catch (dbError) {
     console.error('failed getAllComments', dbError);
@@ -807,7 +807,7 @@ export const getAllComments = async (showEpisodeId) => {
 
 export const getVisibleComments = async (showEpisodeId) => {
   try {
-    const results = await db.all('SELECT * FROM comments WHERE visible = 1 AND resource_id = ?', showEpisodeId);
+    const results = await db.all<Comment[]>('SELECT * FROM comments WHERE visible = 1 AND resource_id = ?', showEpisodeId);
     return results.map((c) => massageComment(c));
   } catch (dbError) {
     console.error('failed getVisibleComments', dbError);
