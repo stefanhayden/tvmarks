@@ -13,8 +13,8 @@ services:
   - key: SESSION_SECRET
     sync: false
   region: oregon
-  buildCommand: npm install
-  startCommand: node server.js
+  buildCommand: npm install & npm build
+  startCommand: npm start
   domains:
   - tv.stefanhayden.com
   disk:
