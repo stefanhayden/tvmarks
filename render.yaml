@@ -12,7 +12,7 @@ services:
   - key: SESSION_SECRET
     generateValue: true
   region: oregon
-  buildCommand: npm install & npm run build
+  buildCommand: npm install && npm run build
   startCommand: npm start
   disk:
     name: disk
