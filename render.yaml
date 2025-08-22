@@ -1,0 +1,25 @@
+# Exported from Render on 2025-08-22T11:44:59Z
+services:
+- type: web
+  name: tvmarks
+  runtime: node
+  repo: https://github.com/stefanhayden/tvmarks
+  plan: starter
+  envVars:
+  - key: DATA_DIR
+    sync: false
+  - key: ADMIN_KEY
+    sync: false
+  - key: SESSION_SECRET
+    sync: false
+  region: oregon
+  buildCommand: npm install
+  startCommand: node server.js
+  domains:
+  - tv.stefanhayden.com
+  disk:
+    name: disk
+    mountPath: /var/data
+    sizeGB: 1
+  autoDeployTrigger: commit
+version: "1"
