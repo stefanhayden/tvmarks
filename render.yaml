@@ -15,8 +15,6 @@ services:
   region: oregon
   buildCommand: npm install & npm build
   startCommand: npm start
-  domains:
-  - tv.stefanhayden.com
   disk:
     name: disk
     mountPath: /var/data
