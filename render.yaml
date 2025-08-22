@@ -10,7 +10,7 @@ services:
   - key: ADMIN_KEY
     sync: false
   - key: SESSION_SECRET
-    sync: false
+    generateValue: true
   region: oregon
   buildCommand: npm install & npm build
   startCommand: npm start
