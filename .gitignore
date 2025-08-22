@@ -9,3 +9,4 @@ node_modules
 request_logs.txt
 .DS_Store
 dist
+.vercel
