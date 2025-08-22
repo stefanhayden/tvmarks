@@ -1,4 +1,3 @@
-# Exported from Render on 2025-08-22T11:44:59Z
 services:
 - type: web
   name: tvmarks
@@ -7,7 +6,7 @@ services:
   plan: starter
   envVars:
   - key: DATA_DIR
-    sync: false
+    value: /var/data
   - key: ADMIN_KEY
     sync: false
   - key: SESSION_SECRET
