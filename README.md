@@ -27,9 +27,10 @@ To set your app up:
 - Click on the **Admin** link in the footer, and enter the password (whatever you set ADMIN_KEY to in the .env).
 - You should be logged in, at which point you can configure various settings, import bookmarks, and use the "Add" links in the header and footer (as well as the bookmarklet, available in the Admin section) to save new bookmarks.
 
-Also
+Also try and deploy with:
 
-[Try and deploy with Railway](https://railway.com/template/NOV4_h)
+- [Render as blueprint](https://dashboard.render.com/select-repo?type=blueprint)
+- [Railway](https://railway.com/template/NOV4_h)
 
 ## Mastodon Verification
 

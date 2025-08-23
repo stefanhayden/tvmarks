@@ -1,3 +1,5 @@
+# Config to be used on render.com
+# https://dashboard.render.com/select-repo?type=blueprint
 services:
 - type: web
   name: tvmarks
