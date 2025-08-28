@@ -83,7 +83,7 @@
         async function updateShowData() {
           const response = await fetch(`${location.origin}/admin/update_show_data?raw=true`)
           const json = await response.json();
-          if (json.showsUpdated > 0) {
+          if (json.updatedCount > 0) {
             // try again in 1 minute
             setTimeout(updateShowData, 1000 * 60)
           } else {
@@ -93,7 +93,9 @@
         }
         updateShowData();
 
-      } catch (e) {}
+      } catch (e) {
+        console.log('Error', e)
+      }
     </script>
   {{/if}}
 </html>
