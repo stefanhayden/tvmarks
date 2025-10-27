@@ -4,7 +4,7 @@ import path from 'path';
 import tvMaze from 'node-tvmaze';
 import escapeHTML from 'escape-html';
 import { stringify as csvStringify } from 'csv-stringify/sync'; // https://github.com/adaltas/node-csv/issues/323
-import { domain, actorInfo, parseJSON, account } from '../util.js';
+import { domain, actorInfo, parseJSON, account, dataDir } from '../util.js';
 import { isAuthenticated } from '../session-auth.js';
 import {
   lookupActorInfo,
@@ -19,8 +19,6 @@ import * as apDb from '../activity-pub-db.js';
 import * as tvDb from '../tvshow-db.js';
 
 const timezone_offset = Number(process.env.TIMEZONE_OFFSET || '+0');
-
-const DATA_PATH = '/app/.data';
 
 const imageDirectory = 'public/shows';
 
@@ -128,12 +126,12 @@ router.get('/data', isAuthenticated, async (req, res) => {
 });
 
 router.get('/tvshows.db', isAuthenticated, async (req, res) => {
-  const filePath = `${DATA_PATH}/tvshows.db`;
+  const filePath = `${dataDir}/tvshows.db`;
 
   res.setHeader('Content-Type', 'application/vnd.sqlite3');
   res.setHeader('Content-Disposition', 'attachment; filename="tvshows.db"');
 
-  res.download(filePath);
+  res.download(filePath, 'tvshows.db', { dotfiles: 'allow' });
 });
 
 router.get('/tvshows.csv', isAuthenticated, async (req, res) => {
@@ -147,12 +145,12 @@ router.get('/tvshows.csv', isAuthenticated, async (req, res) => {
 });
 
 router.get('/activitypub.db', isAuthenticated, async (req, res) => {
-  const filePath = `${DATA_PATH}/activitypub.db`;
+  const filePath = `${dataDir}/activitypub.db`;
 
   res.setHeader('Content-Type', 'application/vnd.sqlite3');
   res.setHeader('Content-Disposition', 'attachment; filename="activitypub.db"');
 
-  res.download(filePath);
+  res.download(filePath, 'activitypub.db', { dotfiles: 'allow' });
 });
 
 router.post('/followers/block', isAuthenticated, async (req, res) => {
