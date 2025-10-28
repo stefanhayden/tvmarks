@@ -320,11 +320,11 @@ export const getShowsToWatch = async (limit = 24, offset = 0) => {
             ) AND
             (
               (
-                (status == 'Ended' OR status == 'To Be Determined') AND
+                (status == 'Ended') AND
                 last_watched_date > date('now', '-3 month', '${timezoneMod}')
               ) OR
               (
-                status == 'Running' AND
+                status != 'Ended' AND
                 aired_episodes_count > watched_episodes_count AND
                 (
                   DateTime(next_episode_towatch_airdate) > date('now', '-3 month', '${timezoneMod}') OR
