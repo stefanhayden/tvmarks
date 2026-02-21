@@ -17,6 +17,9 @@
     {{#if openGraph}}
       <meta property="og:image" content="{{{openGraph.image}}}" />
     {{/if}}
+    {{#if activityUrl}}
+      <link rel="alternate" type="application/activity+json" href="{{activityUrl}}" />
+    {{/if}}
   </head>
   <body>
     

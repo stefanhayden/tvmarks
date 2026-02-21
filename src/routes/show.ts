@@ -35,6 +35,7 @@ router.get('/:showId', async (req, res) => {
     allowed?: unknown;
     blocked?: unknown;
     seasons?: Seasons[];
+    activityUrl?: string;
   } = {};
   const now = new Date();
 
@@ -129,6 +130,9 @@ router.get('/:showId', async (req, res) => {
     res.set('Content-Type', 'application/activity+json');
     return res.json(noteObject);
   }
+
+  // Add ActivityPub discovery link for HTML consumers
+  params.activityUrl = `https://${req.app.get('domain')}/show/${show.id}?format=json`;
 
   // Send the page options or raw JSON data if the client requested it
   return req.query.raw ? res.send(params) : res.render('show', params);
@@ -277,6 +281,7 @@ router.get('/:showId/episode/:episodeId', async (req, res) => {
     comment_count?: number;
     allowed?: unknown;
     blocked?: unknown;
+    activityUrl?: string;
   } = {};
 
   const show = await tvDb.getShow(req.params.showId);
@@ -322,6 +327,9 @@ router.get('/:showId/episode/:episodeId', async (req, res) => {
     res.set('Content-Type', 'application/activity+json');
     return res.json(noteObject);
   }
+
+  // Add ActivityPub discovery link for HTML consumers
+  params.activityUrl = `https://${req.app.get('domain')}/show/${req.params.showId}/episode/${req.params.episodeId}?format=json`;
 
   return res.render('episode', params);
 });
