@@ -1,6 +1,6 @@
 import express from 'express';
-import { isAuthenticated } from '../session-auth.js';
-import * as tvDb from '../tvshow-db.js';
+import { isAuthenticated } from '../session-auth';
+import * as tvDb from '../tvshow-db';
 
 const router = express.Router();
 

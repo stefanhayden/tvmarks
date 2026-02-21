@@ -1,13 +1,13 @@
 // import express from 'express';
 import crypto from 'crypto';
 import * as linkify from 'linkifyjs';
-import { actorMatchesUsername, parseJSON } from '../../util.js';
-import { signAndSend, getInboxFromActorProfile } from '../../activitypub.js';
+import { actorMatchesUsername, parseJSON } from '../../util';
+import { signAndSend, getInboxFromActorProfile } from '../../activitypub';
 
-import { signedGetJSON } from '../../signature.js';
+import { signedGetJSON } from '../../signature';
 import { Request, Response } from 'express';
-import * as apDb from '../../activity-pub-db.js';
-import * as tvDb from '../../tvshow-db.js';
+import * as apDb from '../../activity-pub-db';
+import * as tvDb from '../../tvshow-db';
 
 // const router = express.Router();
 

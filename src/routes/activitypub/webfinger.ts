@@ -1,5 +1,5 @@
 import express, { Request } from 'express';
-import * as apDb from '../../activity-pub-db.js';
+import * as apDb from '../../activity-pub-db';
 
 const router = express.Router();
 

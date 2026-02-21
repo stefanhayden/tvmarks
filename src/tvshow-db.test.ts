@@ -1,5 +1,5 @@
 import { expect, test, beforeAll, describe } from 'vitest';
-import * as tvDb from './tvshow-db.js';
+import * as tvDb from './tvshow-db';
 
 const dateFormat = (v) => v.split('T').join(' ').split('.')[0];
 

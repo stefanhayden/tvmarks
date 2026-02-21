@@ -1,11 +1,11 @@
 import express from 'express';
 import escapeHTML from 'escape-html';
-import { account, domain } from '../util.js';
-import { isAuthenticated } from '../session-auth.js';
-import { broadcastMessage, createEpisodeNoteObject, createNoteObject } from '../activitypub.js';
-import { refreshShowEpisodesData } from './admin.js';
-import * as apDb from '../activity-pub-db.js';
-import * as tvDb from '../tvshow-db.js';
+import { account, domain } from '../util';
+import { isAuthenticated } from '../session-auth';
+import { broadcastMessage, createEpisodeNoteObject, createNoteObject } from '../activitypub';
+import { refreshShowEpisodesData } from './admin';
+import * as apDb from '../activity-pub-db';
+import * as tvDb from '../tvshow-db';
 
 const router = express.Router();
 export default router;

@@ -9,7 +9,7 @@ import fs from 'fs';
 import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import { stripHtml } from 'string-strip-html';
-import { timeSince, account, domain, dataDir } from './util.js';
+import { timeSince, account, domain, dataDir } from './util';
 
 export type Show = {
   id: number;

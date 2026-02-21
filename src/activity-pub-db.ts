@@ -10,7 +10,7 @@ import fs from 'fs';
 import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import crypto from 'crypto';
-import { account, domain, actorInfo, dataDir } from './util.js';
+import { account, domain, actorInfo, dataDir } from './util';
 
 type Account = {
   name: string;

@@ -5,8 +5,8 @@
 // NB openRegistrations will always be false for a single-instance server
 
 import express from 'express';
-import { instanceType, instanceVersion } from '../../util.js';
-import * as tvDb from '../../tvshow-db.js';
+import { instanceType, instanceVersion } from '../../util';
+import * as tvDb from '../../tvshow-db';
 
 const router = express.Router();
 

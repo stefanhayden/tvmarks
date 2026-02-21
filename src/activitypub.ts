@@ -2,8 +2,8 @@ import fetch from 'node-fetch';
 import crypto from 'crypto';
 import escapeHTML from 'escape-html';
 
-import { signedGetJSON, signedPostJSON } from './signature.js';
-import { actorInfo, actorMatchesUsername } from './util.js';
+import { signedGetJSON, signedPostJSON } from './signature';
+import { actorInfo, actorMatchesUsername } from './util';
 
 function getGuidFromPermalink(urlString) {
   return urlString.match(/(?:\/m\/)([a-zA-Z0-9+/]+)/)[1];

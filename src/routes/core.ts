@@ -1,8 +1,8 @@
 import express from 'express';
-import { data, actorInfo } from '../util.js';
-import { isAuthenticated } from '../session-auth.js';
-import { refreshShowData, refreshWatchNext } from './admin.js';
-import * as tvDb from '../tvshow-db.js';
+import { data, actorInfo } from '../util';
+import { isAuthenticated } from '../session-auth';
+import { refreshShowData, refreshWatchNext } from './admin';
+import * as tvDb from '../tvshow-db';
 
 const router = express.Router();
 export default router;

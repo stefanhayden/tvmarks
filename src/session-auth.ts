@@ -1,6 +1,6 @@
 import session, { Store } from 'express-session';
 import connectSqlite from 'connect-sqlite3';
-import { dataDir } from './util.js';
+import { dataDir } from './util';
 
 const SQLiteStore = connectSqlite(session);
 

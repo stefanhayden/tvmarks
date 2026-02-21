@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
-import { synthesizeActivity } from '../../activitypub.js';
-import { inboxRoute } from './inbox.js';
-import * as apDb from '../../activity-pub-db.js';
+import { synthesizeActivity } from '../../activitypub';
+import { inboxRoute } from './inbox';
+import * as apDb from '../../activity-pub-db';
 
 const router = express.Router();
 

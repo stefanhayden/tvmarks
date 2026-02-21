@@ -1,6 +1,6 @@
 import express from 'express';
-import { synthesizeActivity } from '../../activitypub.js';
-import * as apDb from '../../activity-pub-db.js';
+import { synthesizeActivity } from '../../activitypub';
+import * as apDb from '../../activity-pub-db';
 
 const router = express.Router();
 

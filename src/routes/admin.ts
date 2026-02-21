@@ -4,19 +4,12 @@ import path from 'path';
 import tvMaze from 'node-tvmaze';
 import escapeHTML from 'escape-html';
 import { stringify as csvStringify } from 'csv-stringify/sync'; // https://github.com/adaltas/node-csv/issues/323
-import { domain, actorInfo, parseJSON, account, dataDir } from '../util.js';
-import { isAuthenticated } from '../session-auth.js';
-import {
-  lookupActorInfo,
-  createFollowMessage,
-  createUnfollowMessage,
-  signAndSend,
-  getInboxFromActorProfile,
-  broadcastMessage,
-} from '../activitypub.js';
-import { downloadImage } from '../download-image.js';
-import * as apDb from '../activity-pub-db.js';
-import * as tvDb from '../tvshow-db.js';
+import { domain, actorInfo, parseJSON, account, dataDir } from '../util';
+import { isAuthenticated } from '../session-auth';
+import { lookupActorInfo, createFollowMessage, createUnfollowMessage, signAndSend, getInboxFromActorProfile, broadcastMessage } from '../activitypub';
+import { downloadImage } from '../download-image';
+import * as apDb from '../activity-pub-db';
+import * as tvDb from '../tvshow-db';
 
 const timezone_offset = Number(process.env.TIMEZONE_OFFSET || '+0');
 

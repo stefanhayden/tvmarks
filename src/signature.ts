@@ -1,8 +1,8 @@
 import crypto from 'crypto';
 import fetch, { RequestInit } from 'node-fetch';
 
-import { account, domain } from './util.js';
-import { getPrivateKey } from './activity-pub-db.js';
+import { account, domain } from './util';
+import { getPrivateKey } from './activity-pub-db';
 
 /**
  * Returns base-64 encoded SHA-256 digest of provided data
