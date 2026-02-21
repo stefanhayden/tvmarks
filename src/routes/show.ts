@@ -2,13 +2,18 @@ import express from 'express';
 import escapeHTML from 'escape-html';
 import { account, domain } from '../util.js';
 import { isAuthenticated } from '../session-auth.js';
-import { broadcastMessage } from '../activitypub.js';
+import { broadcastMessage, createEpisodeNoteObject, createNoteObject } from '../activitypub.js';
 import { refreshShowEpisodesData } from './admin.js';
 import * as apDb from '../activity-pub-db.js';
 import * as tvDb from '../tvshow-db.js';
 
 const router = express.Router();
 export default router;
+
+function isActivityPubRequested(req: express.Request): boolean {
+  const acceptHeader = req.get('Accept') || '';
+  return acceptHeader.includes('application/activity+json') || acceptHeader.includes('application/ld+json') || req.query.format === 'json';
+}
 
 type Seasons = {
   title: string;
@@ -108,6 +113,23 @@ router.get('/:showId', async (req, res) => {
 
   params.title = show.name;
 
+  // Check if requesting ActivityPub format
+  if (isActivityPubRequested(req)) {
+    const noteObject = createNoteObject(
+      {
+        title: show.name,
+        description: show.note || '',
+        path: `show/${show.id}`,
+        url: show.url || `https://${req.app.get('domain')}/show/${show.id}`,
+        name: show.name,
+      },
+      account,
+      domain,
+    );
+    res.set('Content-Type', 'application/activity+json');
+    return res.json(noteObject);
+  }
+
   // Send the page options or raw JSON data if the client requested it
   return req.query.raw ? res.send(params) : res.render('show', params);
 });
@@ -162,15 +184,17 @@ router.post('/:showId/episode/:episodeId/status', async (req, res) => {
         updatedEp.season
       }e${updatedEp.number}`,
     };
-    broadcastMessage(data, 'create', apDb, account, domain);
+    const quote = `https://${domain}/show/${updatedShow.id}/episode/${updatedEp.id}?format=json`;
+    broadcastMessage(data, 'create', apDb, account, domain, quote);
   } else {
+    const quote = `https://${domain}/show/${updatedShow.id}/episode/${updatedEp.id}?format=json`;
     // unwatched episode
     const data = {
       id: `show-${updatedShow.id}-episode-${updatedEp.id}`,
       path: `show/${updatedShow.id}`,
       url: updatedShow.url,
     };
-    broadcastMessage(data, 'delete', apDb, account, domain);
+    broadcastMessage(data, 'delete', apDb, account, domain, quote);
   }
 
   if (req.body.returnHash) {
@@ -291,6 +315,13 @@ router.get('/:showId/episode/:episodeId', async (req, res) => {
   const permissions = await apDb.getPermissions(`show-${req.params.showId}-episode-${req.params.episodeId}`);
   params.allowed = permissions?.allowed;
   params.blocked = permissions?.blocked;
+
+  // Check if requesting ActivityPub format
+  if (isActivityPubRequested(req)) {
+    const noteObject = createEpisodeNoteObject(episode, show, account, domain);
+    res.set('Content-Type', 'application/activity+json');
+    return res.json(noteObject);
+  }
 
   return res.render('episode', params);
 });
