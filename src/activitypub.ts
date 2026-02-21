@@ -28,7 +28,7 @@ export async function signAndSend(message, name, domain, db, targetDomain, inbox
   }
 }
 
-export function createNoteObject(data, account, domain) {
+export function createNoteObject(data, account, domain, quoteUrl = null) {
   const guidNote = crypto.randomBytes(16).toString('hex');
   const d = new Date();
 
@@ -43,7 +43,7 @@ export function createNoteObject(data, account, domain) {
 
   const content = `<p><strong>${data.title}</strong>${description}</p>`;
   const noteMessage = {
-    '@context': 'https://www.w3.org/ns/activitystreams',
+    '@context': ['https://www.w3.org/ns/activitystreams', { quoteUrl: 'as:quoteUrl' }],
     id: `https://${domain}/m/${guidNote}`,
     type: 'Note',
     published: d.toISOString(),
@@ -60,6 +60,7 @@ export function createNoteObject(data, account, domain) {
         name: '#tvmarks',
       },
     ],
+    ...(quoteUrl && { quoteUrl }),
   };
 
   try {
@@ -76,6 +77,58 @@ export function createNoteObject(data, account, domain) {
     });
   } catch (e) {
     console.error('failed to turn tvshow in to hashtag', e);
+  }
+
+  return noteMessage;
+}
+
+export function createEpisodeNoteObject(episode, show, account, domain) {
+  const d = new Date(episode.airstamp || new Date());
+  
+  let description = escapeHTML(episode.note || '');
+  if (description?.trim().length > 0) {
+    description = `<br/><br/>${description?.trim().replace('\n', '<br/>') || ''}`;
+  }
+
+  const episodeTitle = `${escapeHTML(show.name)}: Watched s${episode.season}e${episode.number}`;
+  const content = `<p><strong>${episodeTitle}</strong>${description}</p>`;
+  
+  const noteMessage = {
+    '@context': ['https://www.w3.org/ns/activitystreams', { quoteUrl: 'as:quoteUrl' }],
+    id: `https://${domain}/show/${show.id}/episode/${episode.id}`,
+    type: 'Note',
+    published: d.toISOString(),
+    attributedTo: `https://${domain}/u/${account}`,
+    content,
+    contentMap: {
+      EN: content,
+    },
+    inReplyTo: show.url,
+    to: [`https://${domain}/u/${account}/followers/`, 'https://www.w3.org/ns/activitystreams#Public'],
+    url: `https://${domain}/show/${show.id}/episode/${episode.id}`,
+    tag: [
+      {
+        type: 'Hashtag',
+        href: `https://${domain}/tagged/tvmarks`,
+        name: '#tvmarks',
+      },
+    ],
+  };
+
+  try {
+    const showHashTag = show.url
+      .split('/')
+      .reverse()[0]
+      .split('-')
+      .map((val) => String(val).charAt(0).toUpperCase() + String(val).slice(1))
+      .join('');
+    noteMessage.tag.push({
+      type: 'Hashtag',
+      href: `https://${domain}/tagged/${showHashTag}`,
+      name: `#${showHashTag}`,
+    });
+  } catch (e) {
+    console.error('failed to turn tvshow into hashtag', e);
   }
 
   return noteMessage;
@@ -205,7 +258,7 @@ export async function lookupActorInfo(actorUsername) {
   }
 }
 
-export async function broadcastMessage(data, action, db, account, domain) {
+export async function broadcastMessage(data, action, db, account, domain, quoteUrl = null) {
   if (actorInfo.disabled) {
     return; // no fediverse setup, so no purpose trying to send messages
   }
@@ -233,7 +286,7 @@ export async function broadcastMessage(data, action, db, account, domain) {
       return !matches?.some((x) => x);
     });
 
-    const noteObject = createNoteObject(data, account, domain);
+    const noteObject = createNoteObject(data, account, domain, quoteUrl);
     let message;
     switch (action) {
       case 'create':

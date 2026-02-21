@@ -48,6 +48,7 @@ router.get<{}, {}, {}, { raw?: boolean }, {}>('/', async (req, res) => {
     noSecret: !process.env.SESSION_SECRET,
     noAdminKey: !process.env.ADMIN_KEY,
     isReadyToLogin: !!process.env.SESSION_SECRET && !!process.env.ADMIN_KEY,
+    isLoggedIn: 'loggedIn' in req.session && req.session.loggedIn,
   };
 
   // Send the page options or raw JSON data if the client requested it

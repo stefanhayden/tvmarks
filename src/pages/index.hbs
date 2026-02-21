@@ -12,8 +12,14 @@
       Checkout <a href="https://tv.stefanhayden.com/">my own instance</a> to see it in action.
     </p>
     
+    
     {{#if isReadyToLogin}}
-      <p>If you have just set this site up then it's working! Login to search for show to add.</p>
+      <p>
+        If you have just set this site up then it's working!
+        {{#unless isLoggedIn}}
+          Login to search for show to add.
+        {{/unless}}
+      </p>
     {{/if}}
 
     {{#unless isReadyToLogin}}
