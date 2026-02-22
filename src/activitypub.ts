@@ -82,9 +82,9 @@ export function createNoteObject(data, account, domain, quoteUrl = null) {
   return noteMessage;
 }
 
-export function createEpisodeNoteObject(episode, show, account, domain) {
+export function createEpisodeNoteObject(episode, show, account, domain, quoteUrl = null) {
   const d = new Date(episode.airstamp || new Date());
-  
+
   let description = escapeHTML(episode.note || '');
   if (description?.trim().length > 0) {
     description = `<br/><br/>${description?.trim().replace('\n', '<br/>') || ''}`;
@@ -92,7 +92,7 @@ export function createEpisodeNoteObject(episode, show, account, domain) {
 
   const episodeTitle = `${escapeHTML(show.name)}: Watched s${episode.season}e${episode.number}`;
   const content = `<p><strong>${episodeTitle}</strong>${description}</p>`;
-  
+
   const noteMessage = {
     '@context': ['https://www.w3.org/ns/activitystreams', { quoteUrl: 'as:quoteUrl' }],
     id: `https://${domain}/show/${show.id}/episode/${episode.id}`,
@@ -113,6 +113,7 @@ export function createEpisodeNoteObject(episode, show, account, domain) {
         name: '#tvmarks',
       },
     ],
+    ...(quoteUrl && { quoteUrl }),
   };
 
   try {
@@ -151,11 +152,11 @@ function createMessage(noteObject, dataId, account, domain, db) {
   return message;
 }
 
-async function createUpdateMessage(data, account, domain, db) {
+async function createUpdateMessage(data, account, domain, db, quoteUrl = null) {
   const guid = await db.getGuidForId(data.id);
 
   const note = {
-    ...createNoteObject(data, account, domain),
+    ...createNoteObject(data, account, domain, quoteUrl),
     id: `https://${domain}/m/${guid}`,
     updated: new Date().toISOString(),
   };
@@ -293,7 +294,7 @@ export async function broadcastMessage(data, action, db, account, domain, quoteU
         message = createMessage(noteObject, data.id, account, domain, db);
         break;
       case 'update':
-        message = await createUpdateMessage(data, account, domain, db);
+        message = await createUpdateMessage(data, account, domain, db, quoteUrl);
         break;
       case 'delete':
         message = await createDeleteMessage(data, account, domain, db);

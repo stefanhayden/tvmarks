@@ -116,6 +116,7 @@ router.get('/:showId', async (req, res) => {
 
   // Check if requesting ActivityPub format
   if (isActivityPubRequested(req)) {
+    const quoteUrl = `${show.url}?format=json` || `https://${req.app.get('domain')}/show/${show.id}?format=json`;
     const noteObject = createNoteObject(
       {
         title: show.name,
@@ -126,6 +127,7 @@ router.get('/:showId', async (req, res) => {
       },
       account,
       domain,
+      quoteUrl,
     );
     res.set('Content-Type', 'application/activity+json');
     return res.json(noteObject);
@@ -224,7 +226,8 @@ router.post('/:showId/episode/:episodeId/update', async (req, res) => {
         updatedEp.season
       }e${updatedEp.number}`,
     };
-    broadcastMessage(data, 'update', apDb, account, domain);
+    const quote = `${addedShow.url}?format=json`;
+    broadcastMessage(data, 'update', apDb, account, domain, quote);
   }
 
   await apDb.setPermissions(id, req.body.allowed || '', req.body.blocked || '');
@@ -323,7 +326,8 @@ router.get('/:showId/episode/:episodeId', async (req, res) => {
 
   // Check if requesting ActivityPub format
   if (isActivityPubRequested(req)) {
-    const noteObject = createEpisodeNoteObject(episode, show, account, domain);
+    const quoteUrl = `${show.url}?format=json`;
+    const noteObject = createEpisodeNoteObject(episode, show, account, domain, quoteUrl);
     res.set('Content-Type', 'application/activity+json');
     return res.json(noteObject);
   }
