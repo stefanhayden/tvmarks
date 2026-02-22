@@ -28,7 +28,7 @@ export async function signAndSend(message, name, domain, db, targetDomain, inbox
   }
 }
 
-export function createNoteObject(data, account, domain, quoteUrl = null) {
+export function createNoteObject(data, account, domain) {
   const guidNote = crypto.randomBytes(16).toString('hex');
   const d = new Date();
 
@@ -61,7 +61,10 @@ export function createNoteObject(data, account, domain, quoteUrl = null) {
         name: '#tvmarks',
       },
     ],
-    ...(quoteUrl && { quoteUrl }),
+    // note: `quoteUrl` must not live inside the Note itself for broadcast
+    // posts — that causes receivers (eg. Mastodon) to embed the quoted
+    // object inside the original Note. Instead, `quoteUrl` should be
+    // attached to the Activity (Create/Update) top-level object.
   };
 
   try {
@@ -83,7 +86,7 @@ export function createNoteObject(data, account, domain, quoteUrl = null) {
   return noteMessage;
 }
 
-export function createEpisodeNoteObject(episode, show, account, domain, quoteUrl = null) {
+export function createEpisodeNoteObject(episode, show, account, domain) {
   const d = new Date(episode.airstamp || new Date());
 
   let description = escapeHTML(episode.note || '');
@@ -114,7 +117,7 @@ export function createEpisodeNoteObject(episode, show, account, domain, quoteUrl
         name: '#tvmarks',
       },
     ],
-    ...(quoteUrl && { quoteUrl }),
+    // see note above — do not include `quoteUrl` inside the Note object
   };
 
   try {
@@ -136,7 +139,7 @@ export function createEpisodeNoteObject(episode, show, account, domain, quoteUrl
   return noteMessage;
 }
 
-function createMessage(noteObject, dataId, account, domain, db) {
+function createMessage(noteObject, dataId, account, domain, db, quoteUrl = null) {
   const guidCreate = crypto.randomBytes(16).toString('hex');
 
   const message = {
@@ -146,6 +149,7 @@ function createMessage(noteObject, dataId, account, domain, db) {
     actor: `https://${domain}/u/${account}`,
     to: [`https://${domain}/u/${account}/followers/`, 'https://www.w3.org/ns/activitystreams#Public'],
     object: noteObject,
+    ...(quoteUrl && { quoteUrl }),
   };
 
   db.insertMessage(getGuidFromPermalink(noteObject.id), dataId, JSON.stringify(noteObject));
@@ -157,7 +161,7 @@ async function createUpdateMessage(data, account, domain, db, quoteUrl = null) {
   const guid = await db.getGuidForId(data.id);
 
   const note = {
-    ...createNoteObject(data, account, domain, quoteUrl),
+    ...createNoteObject(data, account, domain),
     id: `https://${domain}/m/${guid}`,
     updated: new Date().toISOString(),
   };
@@ -168,6 +172,7 @@ async function createUpdateMessage(data, account, domain, db, quoteUrl = null) {
     type: 'Update',
     actor: `https://${domain}/u/${account}`,
     object: note,
+    ...(quoteUrl && { quoteUrl }),
   };
 
   return updateMessage;
@@ -288,11 +293,11 @@ export async function broadcastMessage(data, action, db, account, domain, quoteU
       return !matches?.some((x) => x);
     });
 
-    const noteObject = createNoteObject(data, account, domain, quoteUrl);
+    const noteObject = createNoteObject(data, account, domain);
     let message;
     switch (action) {
       case 'create':
-        message = createMessage(noteObject, data.id, account, domain, db);
+        message = createMessage(noteObject, data.id, account, domain, db, quoteUrl);
         break;
       case 'update':
         message = await createUpdateMessage(data, account, domain, db, quoteUrl);
