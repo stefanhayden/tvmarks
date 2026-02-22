@@ -69,7 +69,7 @@ export function createNoteObject(data, account, domain) {
     quote_approval: {
       type: 'QuoteApproval',
       state: 'automatic',
-      automatic: [],
+      automatic: ['public'],
       manual: [],
       current_user: 'automatic',
     },
