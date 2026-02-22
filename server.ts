@@ -12,6 +12,7 @@ import * as tvDb from './src/tvshow-db.js';
 import packageJson from './package.json';
 
 import routes from './src/routes/index.js';
+import apiQuotes from './src/routes/api_quotes.js';
 
 dotenv.config();
 apDb.init();
@@ -134,5 +135,6 @@ app.use('/show', routes.show);
 app.use('/.well-known/nodeinfo', routes.nodeinfo);
 app.use('/nodeinfo/2.0', routes.nodeinfo);
 app.use('/nodeinfo/2.1', routes.nodeinfo);
+app.use('/api/v1', apiQuotes);
 
 app.listen(PORT, () => console.log(`App listening on port ${PORT}`));

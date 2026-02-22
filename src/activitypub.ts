@@ -143,13 +143,27 @@ function createMessage(noteObject, dataId, account, domain, db, quoteUrl = null)
   const guidCreate = crypto.randomBytes(16).toString('hex');
 
   const message = {
-    '@context': ['https://www.w3.org/ns/activitystreams', 'https://w3id.org/security/v1', { quoteUrl: 'as:quoteUrl' }],
+    '@context': [
+      'https://www.w3.org/ns/activitystreams',
+      'https://w3id.org/security/v1',
+      // include Mastodon's client quote namespace so receivers like Mastodon
+      // can understand the `quote` attribute
+      'https://joinmastodon.org/ns',
+      { quoteUrl: 'as:quoteUrl' },
+    ],
     id: `https://${domain}/m/${guidCreate}`,
     type: 'Create',
     actor: `https://${domain}/u/${account}`,
     to: [`https://${domain}/u/${account}/followers/`, 'https://www.w3.org/ns/activitystreams#Public'],
     object: noteObject,
-    ...(quoteUrl && { quoteUrl }),
+    ...(quoteUrl && {
+      quoteUrl,
+      quote: {
+        type: 'Quote',
+        id: quoteUrl,
+        url: quoteUrl,
+      },
+    }),
   };
 
   db.insertMessage(getGuidFromPermalink(noteObject.id), dataId, JSON.stringify(noteObject));
@@ -167,12 +181,19 @@ async function createUpdateMessage(data, account, domain, db, quoteUrl = null) {
   };
 
   const updateMessage = {
-    '@context': ['https://www.w3.org/ns/activitystreams', 'https://w3id.org/security/v1', { quoteUrl: 'as:quoteUrl' }],
+    '@context': ['https://www.w3.org/ns/activitystreams', 'https://w3id.org/security/v1', 'https://joinmastodon.org/ns', { quoteUrl: 'as:quoteUrl' }],
     summary: `${account} updated the show`,
     type: 'Update',
     actor: `https://${domain}/u/${account}`,
     object: note,
-    ...(quoteUrl && { quoteUrl }),
+    ...(quoteUrl && {
+      quoteUrl,
+      quote: {
+        type: 'Quote',
+        id: quoteUrl,
+        url: quoteUrl,
+      },
+    }),
   };
 
   return updateMessage;

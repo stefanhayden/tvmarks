@@ -225,6 +225,21 @@ export const inboxRoute = async (req, res) => {
     if (inReplyToGuid) {
       return handleComment(req, res, inReplyToGuid);
     }
+    // store incoming posts that quote our content so we can list/revoke them
+    try {
+      const hasQuote = !!(req.body.quoteUrl || req.body.quote || req.body.object?.quoteUrl || req.body.object?.quote);
+      if (hasQuote) {
+        const guid = crypto.randomBytes(16).toString('hex');
+        try {
+          await apDb.insertMessage(guid, null, JSON.stringify(req.body));
+        } catch (e) {
+          console.log('failed to store incoming quote message', e);
+        }
+      }
+    } catch (e) {
+      console.log('error checking/storing quote in inbox', e);
+    }
+
     return handleFollowedPost(req, res);
   }
   return res.sendStatus(400);
