@@ -22,12 +22,14 @@ async function sendAcceptMessage(thebody, name, domain, req, res, targetDomain) 
   };
 
   try {
-    const inbox = await getInboxFromActorProfile(message.object.actor);
+    // prefer the actor URL from the object, fall back to the outer actor
+    const inboxActor = message.object?.actor || thebody.actor || req.body?.actor;
+    const inbox = await getInboxFromActorProfile(inboxActor);
 
     return signAndSend(message, name, domain, apDb, targetDomain, inbox);
   } catch (e) {
-    console.log(e.message);
-    return res.status(500).send("Couldn't process sendAcceptMessage");
+    console.log('sendAcceptMessage error', e?.message || e);
+    throw e;
   }
 }
 
@@ -38,7 +40,11 @@ async function handleFollowRequest(req, res) {
   const targetDomain = myURL.hostname;
   const name = req.body.object.replace(`https://${domain}/u/`, '');
 
-  await sendAcceptMessage(req.body, name, domain, req, res, targetDomain);
+  try {
+    await sendAcceptMessage(req.body, name, domain, req, res, targetDomain);
+  } catch (e) {
+    console.log('failed to send Accept for follow request', e?.message || e);
+  }
   // Add the user to the DB of accounts that follow the account
 
   // get the followers JSON for the user
@@ -73,7 +79,11 @@ async function handleUnfollow(req, res) {
   const targetDomain = myURL.hostname;
   const name = req.body.object.object.replace(`https://${domain}/u/`, '');
 
-  await sendAcceptMessage(req.body, name, domain, req, res, targetDomain);
+  try {
+    await sendAcceptMessage(req.body, name, domain, req, res, targetDomain);
+  } catch (e) {
+    console.log('failed to send Accept for unfollow', e?.message || e);
+  }
 
   // get the followers JSON for the user
   const oldFollowersText = (await apDb.getFollowers()) || '[]';
