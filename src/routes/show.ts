@@ -188,10 +188,10 @@ router.post('/:showId/episode/:episodeId/status', async (req, res) => {
         updatedEp.season
       }e${updatedEp.number}`,
     };
-    const quote = `https://${domain}/show/${updatedShow.id}/episode/${updatedEp.id}?format=json`;
+    const quote = `https://${domain}/show/${updatedShow.id}/episode/${updatedEp.id}`;
     broadcastMessage(data, 'create', apDb, account, domain, quote);
   } else {
-    const quote = `https://${domain}/show/${updatedShow.id}/episode/${updatedEp.id}?format=json`;
+    const quote = `https://${domain}/show/${updatedShow.id}/episode/${updatedEp.id}`;
     // unwatched episode
     const data = {
       id: `show-${updatedShow.id}-episode-${updatedEp.id}`,
@@ -224,7 +224,7 @@ router.post('/:showId/episode/:episodeId/update', async (req, res) => {
         updatedEp.season
       }e${updatedEp.number}`,
     };
-    const quote = `https://${domain}/show/${addedShow.id}/episode/${updatedEp.id}?format=json`;
+    const quote = `https://${domain}/show/${addedShow.id}/episode/${updatedEp.id}`;
     broadcastMessage(data, 'update', apDb, account, domain, quote);
   }
 

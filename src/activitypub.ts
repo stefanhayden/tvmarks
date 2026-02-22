@@ -52,6 +52,7 @@ export function createNoteObject(data, account, domain, quoteUrl = null) {
     contentMap: {
       EN: content,
     },
+    url: `https://${domain}/${data.path}`,
     to: [`https://${domain}/u/${account}/followers/`, 'https://www.w3.org/ns/activitystreams#Public'],
     tag: [
       {
