@@ -40,7 +40,7 @@ router.get('/statuses/:id/quotes', async (req, res) => {
     }
   }
 
-  const out = Array.from(results).map((s) => JSON.parse(s));
+  const out = Array.from(results).map((s) => JSON.parse(s as any));
   return res.json(out);
 });
 
