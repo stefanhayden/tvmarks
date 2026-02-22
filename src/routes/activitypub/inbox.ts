@@ -235,9 +235,21 @@ export const inboxRoute = async (req, res) => {
         } catch (e) {
           console.log('failed to store incoming quote message', e);
         }
+
+        try {
+          // Auto-accept the quote so Mastodon-like clients treat it as approved.
+          const myDomain = req.app.get('domain');
+          const myAccount = req.app.get('account');
+          const myURL = new URL(req.body.actor);
+          const targetDomain = myURL.hostname;
+          // sendAcceptMessage expects the local account name as `name`
+          await sendAcceptMessage(req.body, myAccount, myDomain, req, res, targetDomain);
+        } catch (e) {
+          console.log('failed to send Accept for incoming quote', e);
+        }
       }
     } catch (e) {
-      console.log('error checking/storing quote in inbox', e);
+      console.log('error checking/storing/sending accept for quote in inbox', e);
     }
 
     return handleFollowedPost(req, res);

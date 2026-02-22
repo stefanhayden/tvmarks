@@ -65,6 +65,14 @@ export function createNoteObject(data, account, domain) {
     // posts — that causes receivers (eg. Mastodon) to embed the quoted
     // object inside the original Note. Instead, `quoteUrl` should be
     // attached to the Activity (Create/Update) top-level object.
+    // indicate that quotes are auto-approved by default
+    quote_approval: {
+      type: 'QuoteApproval',
+      state: 'automatic',
+      automatic: [],
+      manual: [],
+      current_user: 'automatic',
+    },
   };
 
   try {
@@ -118,6 +126,14 @@ export function createEpisodeNoteObject(episode, show, account, domain) {
       },
     ],
     // see note above — do not include `quoteUrl` inside the Note object
+    // indicate that quotes are auto-approved by default
+    quote_approval: {
+      type: 'QuoteApproval',
+      state: 'automatic',
+      automatic: [],
+      manual: [],
+      current_user: 'automatic',
+    },
   };
 
   try {
