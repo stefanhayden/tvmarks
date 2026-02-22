@@ -139,7 +139,7 @@ function createMessage(noteObject, dataId, account, domain, db) {
   const guidCreate = crypto.randomBytes(16).toString('hex');
 
   const message = {
-    '@context': ['https://www.w3.org/ns/activitystreams', 'https://w3id.org/security/v1'],
+    '@context': ['https://www.w3.org/ns/activitystreams', 'https://w3id.org/security/v1', { quoteUrl: 'as:quoteUrl' }],
     id: `https://${domain}/m/${guidCreate}`,
     type: 'Create',
     actor: `https://${domain}/u/${account}`,
@@ -162,7 +162,7 @@ async function createUpdateMessage(data, account, domain, db, quoteUrl = null) {
   };
 
   const updateMessage = {
-    '@context': ['https://www.w3.org/ns/activitystreams', 'https://w3id.org/security/v1'],
+    '@context': ['https://www.w3.org/ns/activitystreams', 'https://w3id.org/security/v1', { quoteUrl: 'as:quoteUrl' }],
     summary: `${account} updated the show`,
     type: 'Update',
     actor: `https://${domain}/u/${account}`,
