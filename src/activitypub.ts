@@ -43,7 +43,16 @@ export function createNoteObject(data, account, domain) {
 
   const content = `<p><strong>${data.title}</strong>${description}</p>`;
   const noteMessage = {
-    '@context': ['https://www.w3.org/ns/activitystreams', { quoteUrl: 'as:quoteUrl' }],
+    '@context': [
+      'https://www.w3.org/ns/activitystreams',
+      {
+        quoteUrl: 'as:quoteUrl',
+        interactionPolicy: 'gts:interactionPolicy',
+        canQuote: 'gts:canQuote',
+        automaticApproval: 'gts:automaticApproval',
+        gts: 'https://gotosocial.org/ns#',
+      },
+    ],
     id: `https://${domain}/m/${guidNote}`,
     type: 'Note',
     published: d.toISOString(),
@@ -72,14 +81,6 @@ export function createNoteObject(data, account, domain) {
     // posts — that causes receivers (eg. Mastodon) to embed the quoted
     // object inside the original Note. Instead, `quoteUrl` should be
     // attached to the Activity (Create/Update) top-level object.
-    // indicate that quotes are auto-approved by default
-    quote_approval: {
-      type: 'QuoteApproval',
-      state: 'automatic',
-      automatic: ['public'],
-      manual: [],
-      current_user: 'automatic',
-    },
   };
 
   try {
@@ -113,7 +114,16 @@ export function createEpisodeNoteObject(episode, show, account, domain) {
   const content = `<p><strong>${episodeTitle}</strong>${description}</p>`;
 
   const noteMessage = {
-    '@context': ['https://www.w3.org/ns/activitystreams', { quoteUrl: 'as:quoteUrl' }],
+    '@context': [
+      'https://www.w3.org/ns/activitystreams',
+      {
+        quoteUrl: 'as:quoteUrl',
+        interactionPolicy: 'gts:interactionPolicy',
+        canQuote: 'gts:canQuote',
+        automaticApproval: 'gts:automaticApproval',
+        gts: 'https://gotosocial.org/ns#',
+      },
+    ],
     id: `https://${domain}/show/${show.id}/episode/${episode.id}`,
     type: 'Note',
     published: d.toISOString(),
@@ -139,14 +149,6 @@ export function createEpisodeNoteObject(episode, show, account, domain) {
       },
     },
     // see note above — do not include `quoteUrl` inside the Note object
-    // indicate that quotes are auto-approved by default
-    quote_approval: {
-      type: 'QuoteApproval',
-      state: 'automatic',
-      automatic: [],
-      manual: [],
-      current_user: 'automatic',
-    },
   };
 
   try {
