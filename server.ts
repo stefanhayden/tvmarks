@@ -114,6 +114,14 @@ const hbs = create({
     setTitle(item) {
       return replaceEmptyText(item.title, item.url);
     },
+    formatDate(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const day = date.getDate();
+      const suffix = day === 1 || day === 21 || day === 31 ? 'st' : day === 2 || day === 22 ? 'nd' : day === 3 || day === 23 ? 'rd' : 'th';
+      return `${months[date.getMonth()]} ${day}${suffix}, ${date.getFullYear()}`;
+    },
   },
   partialsDir: './src/pages/partials',
   extname: '.hbs',

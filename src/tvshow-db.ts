@@ -489,6 +489,7 @@ export const getUpcomingEpisodes = async (limit = 24, offset = 0) => {
         episodes.airstamp IS NOT NULL
         AND episodes.airstamp != ''
         AND DateTime(episodes.airstamp) > DateTime('now', '${timezoneMod}')
+        AND shows.abandoned != 1
       ORDER BY episodes.airstamp ASC
       LIMIT ? OFFSET ?`,
       limit,
