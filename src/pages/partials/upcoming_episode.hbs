@@ -1,0 +1,29 @@
+<div data-id="{{episode.id}}" style="display: flex; gap: 15px; border-bottom: 1px solid; padding: 15px 5px; margin-bottom: 10px;">
+  <div style="flex-shrink: 0;">
+    <a href="/show/{{episode.show_id}}">
+      <img
+        src="{{episode.show_image}}"
+        style="width: 80px; height: 113px; object-fit: cover; display: block;"
+        alt="{{episode.show_name}}"
+      />
+    </a>
+  </div>
+  <div style="flex-grow: 1;">
+    <div style="margin-bottom: 5px;">
+      <strong>
+        <a href="/show/{{episode.show_id}}">{{episode.show_name}}</a>
+      </strong>
+    </div>
+    <div style="margin-bottom: 5px;">
+      S{{episode.season}} {{#if episode.number}}| E{{episode.number}}{{/if}}
+    </div>
+    <div style="margin-bottom: 5px;">
+      <a href="/show/{{episode.show_id}}/episode/{{episode.id}}">
+        {{episode.name}}
+      </a>
+    </div>
+    <div style="color: rgba(0, 0, 0, 0.5); font-size: 0.9em;">
+      Airs: {{episode.airdate}}
+    </div>
+  </div>
+</div>

@@ -1,0 +1,17 @@
+{{#if error}}
+  <p class="error">
+    {{error}}
+  </p>
+{{else}}
+  {{#if episodes}}
+    <div style="margin-bottom: 50px">
+      {{#each episodes}}
+        {{> upcoming_episode episode=this}}
+      {{/each}}
+    </div>
+
+    {{> pagination pagination=pagination}}
+  {{else}}
+    <p>No upcoming episodes scheduled.</p>
+  {{/if}}
+{{/if}}
