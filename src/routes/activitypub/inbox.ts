@@ -262,6 +262,29 @@ async function handleDeleteRequest(req: Request, res: Response) {
   return res.status(200);
 }
 
+async function handleQuoteAsk(req: Request, res: Response) {
+  // When a remote server asks permission to quote one of our posts,
+  // automatically approve it since we have automaticApproval set to Public
+  const domain = req.app.get('domain');
+  const account = req.app.get('account');
+  const myURL = new URL(req.body.actor);
+  const targetDomain = myURL.hostname;
+
+  try {
+    // Extract the quote object from the Ask activity
+    const quoteObject = req.body.object;
+
+    // Send an Accept response
+    await sendAcceptMessage(quoteObject, account, domain, req, res, targetDomain);
+
+    console.log('Auto-approved quote request via Ask activity');
+    return res.sendStatus(200);
+  } catch (e) {
+    console.log('Error handling quote Ask:', e);
+    return res.sendStatus(500);
+  }
+}
+
 export const inboxRoute = async (req: Request, res: Response): Promise<any> => {
   if (typeof req.body.object === 'string' && req.body.type === 'Follow') {
     return handleFollowRequest(req, res);
@@ -275,6 +298,10 @@ export const inboxRoute = async (req: Request, res: Response): Promise<any> => {
   }
   if (req.body.type === 'Delete') {
     return handleDeleteRequest(req, res);
+  }
+  // Handle Ask activities for quote requests
+  if (req.body.type === 'Ask' && (req.body.object?.type === 'Quote' || req.body.object?.quoteUrl)) {
+    return handleQuoteAsk(req, res);
   }
   if (req.body.type === 'Create' && req.body.object?.type === 'Note') {
     console.log(JSON.stringify(req.body));
