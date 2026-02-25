@@ -175,4 +175,53 @@ router.get('/:name/outbox', async (req: Request<{}, {}, {}, { page: string }>, r
   return res.json(collectionPage);
 });
 
+// Quote authorization route - serves authorization stamps for approved quotes
+// This is referenced in Accept activities sent by the inbox when auto-approving quotes
+router.get('/:name/quoteAuth/:guid', async (req: Request<{ name: string; guid: string }, {}, {}, { remote?: string; local?: string }>, res: Response) => {
+  const { name, guid } = req.params;
+  const { remote, local } = req.query;
+
+  if (!name || !guid) {
+    return res.status(400).send('Bad request.');
+  }
+
+  const domain = req.app.get('domain');
+  const account = req.app.get('account');
+
+  // Verify the account name matches
+  if (name !== account) {
+    return res.status(404).send('Not found.');
+  }
+
+  // The authorization is stateless and encoded in the URL.
+  // If we have the local guid, we can verify the quote exists in our database
+  if (local) {
+    try {
+      const message = await apDb.getMessage(local);
+      if (!message) {
+        return res.status(404).send('Quote authorization not found.');
+      }
+    } catch (e) {
+      console.log('Error verifying quote authorization:', e);
+      return res.status(500).send('Server error.');
+    }
+  }
+
+  // Build the QuoteAuthorization object as per FEP-044f
+  // This tells remote servers that the quote has been approved
+  const authorizationUrl = `https://${domain}/u/${name}/quoteAuth/${guid}${remote || local ? '?' : ''}${remote ? `remote=${encodeURIComponent(remote)}` : ''}${remote && local ? '&' : ''}${local ? `local=${encodeURIComponent(local)}` : ''}`;
+
+  const quoteAuthorization = {
+    '@context': 'https://www.w3.org/ns/activitystreams',
+    id: authorizationUrl,
+    type: 'QuoteAuthorization',
+    attributedTo: `https://${domain}/u/${account}`,
+    ...(remote && { interactionTarget: remote }),
+    ...(local && { interactingObject: `https://${domain}/m/${local}` }),
+  };
+
+  res.setHeader('Content-Type', 'application/activity+json');
+  return res.json(quoteAuthorization);
+});
+
 export default router;
