@@ -61,6 +61,13 @@ export function createNoteObject(data, account, domain) {
         name: '#tvmarks',
       },
     ],
+    // allow quoting per FEP-044f; Mastodon and other implementations will
+    // respect this interaction policy when rendering the note.
+    interactionPolicy: {
+      canQuote: {
+        automaticApproval: ['https://www.w3.org/ns/activitystreams#Public'],
+      },
+    },
     // note: `quoteUrl` must not live inside the Note itself for broadcast
     // posts — that causes receivers (eg. Mastodon) to embed the quoted
     // object inside the original Note. Instead, `quoteUrl` should be
@@ -125,6 +132,12 @@ export function createEpisodeNoteObject(episode, show, account, domain) {
         name: '#tvmarks',
       },
     ],
+    // allow quoting per FEP-044f
+    interactionPolicy: {
+      canQuote: {
+        automaticApproval: ['https://www.w3.org/ns/activitystreams#Public'],
+      },
+    },
     // see note above — do not include `quoteUrl` inside the Note object
     // indicate that quotes are auto-approved by default
     quote_approval: {

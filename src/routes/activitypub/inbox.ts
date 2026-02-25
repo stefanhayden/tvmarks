@@ -9,13 +9,44 @@ import { Request, Response } from 'express';
 import * as apDb from '../../activity-pub-db';
 import * as tvDb from '../../tvshow-db';
 
+// helper type for options passed to sendAcceptMessage
+interface SendAcceptOpts {
+  localGuid?: string;
+  remoteUri?: string;
+}
+
 // const router = express.Router();
 
-async function sendAcceptMessage(thebody, name, domain, req, res, targetDomain) {
+export async function sendAcceptMessage(
+  thebody: any,
+  name: string,
+  domain: string,
+  req: Request,
+  res: Response,
+  targetDomain: string,
+  opts: SendAcceptOpts = {},
+): Promise<{ response: any; message: any }> {
+  // opts may include `localGuid` (the stored id for a quote) and
+  // `remoteUri` (the URI of the post being quoted).  When those values
+  // are provided we embed them into the generated activity ID so that
+  // clients such as PieFed can treat the URI itself as a
+  // *stateless* QuoteAuthorization.  The receiver doesn't need to look
+  // anything up in our database – the information necessary to revoke or
+  // identify the permission is already encoded in the URL.
   const guid = crypto.randomBytes(16).toString('hex');
+
+  let id = `https://${domain}/u/${name}/accept/${guid}`;
+  if (opts.localGuid || opts.remoteUri) {
+    // generate a quote‑approval style URI with query parameters
+    const params = new URLSearchParams();
+    if (opts.remoteUri) params.set('remote', opts.remoteUri);
+    if (opts.localGuid) params.set('local', opts.localGuid);
+    id = `https://${domain}/u/${name}/quoteAuth/${guid}?${params.toString()}`;
+  }
+
   const message = {
     '@context': 'https://www.w3.org/ns/activitystreams',
-    id: `https://${domain}/u/${name}/accept/${guid}`,
+    id,
     type: 'Accept',
     actor: `https://${domain}/u/${name}`,
     object: thebody,
@@ -26,14 +57,17 @@ async function sendAcceptMessage(thebody, name, domain, req, res, targetDomain) 
     const inboxActor = message.object?.actor || thebody.actor || req.body?.actor;
     const inbox = await getInboxFromActorProfile(inboxActor);
 
-    return signAndSend(message, name, domain, apDb, targetDomain, inbox);
+    const response = await signAndSend(message, name, domain, apDb, targetDomain, inbox);
+    // return both response and message so callers (tests) can inspect the
+    // constructed activity without needing to stub network behavior.
+    return { response, message };
   } catch (e) {
     console.log('sendAcceptMessage error', e?.message || e);
     throw e;
   }
 }
 
-async function handleFollowRequest(req, res) {
+async function handleFollowRequest(req: Request, res: Response) {
   const domain = req.app.get('domain');
 
   const myURL = new URL(req.body.actor);
@@ -72,7 +106,7 @@ async function handleFollowRequest(req, res) {
   return res.status(200);
 }
 
-async function handleUnfollow(req, res) {
+async function handleUnfollow(req: Request, res: Response) {
   const domain = req.app.get('domain');
 
   const myURL = new URL(req.body.actor);
@@ -109,7 +143,7 @@ async function handleUnfollow(req, res) {
   }
 }
 
-async function handleFollowAccepted(req, res) {
+async function handleFollowAccepted(req: Request, res: Response) {
   const oldFollowingText = (await apDb.getFollowing()) || '[]';
 
   let follows = parseJSON(oldFollowingText);
@@ -135,7 +169,11 @@ async function handleFollowAccepted(req, res) {
   }
 }
 
-async function handleComment(req: Request<{}, {}, { actor: string; object: { id: string; content: string } }>, res: Response, inReplyToGuid) {
+async function handleComment(
+  req: Request<{}, {}, { actor: string; object: { id: string; content: string } }>,
+  res: Response,
+  inReplyToGuid: string | undefined,
+) {
   const id = await apDb.getIdFromMessageGuid(inReplyToGuid);
 
   if (typeof id !== 'string') {
@@ -179,7 +217,7 @@ async function handleComment(req: Request<{}, {}, { actor: string; object: { id:
   return res.status(200);
 }
 
-async function handleFollowedPost(req, res) {
+async function handleFollowedPost(req: Request, res: Response) {
   const urls = linkify.find(req.body.object.content);
   if (urls?.length > 0) {
     // store this for now
@@ -200,7 +238,7 @@ async function handleFollowedPost(req, res) {
   return res.status(200);
 }
 
-async function handleDeleteRequest(req, res) {
+async function handleDeleteRequest(req: Request, res: Response) {
   console.log(JSON.stringify(req.body));
 
   const commentId = req.body?.object?.id;
@@ -212,7 +250,7 @@ async function handleDeleteRequest(req, res) {
   return res.status(200);
 }
 
-export const inboxRoute = async (req, res) => {
+export const inboxRoute = async (req: Request, res: Response): Promise<any> => {
   if (typeof req.body.object === 'string' && req.body.type === 'Follow') {
     return handleFollowRequest(req, res);
   }
@@ -239,6 +277,9 @@ export const inboxRoute = async (req, res) => {
     try {
       const hasQuote = !!(req.body.quoteUrl || req.body.quote || req.body.object?.quoteUrl || req.body.object?.quote);
       if (hasQuote) {
+        // capture the quoted URI so we can embed it in the authorization
+        const remoteUri = req.body.quoteUrl || req.body.quote?.id || req.body.object?.quoteUrl || req.body.object?.quote?.id || null;
+
         const guid = crypto.randomBytes(16).toString('hex');
         try {
           await apDb.insertMessage(guid, null, JSON.stringify(req.body));
@@ -253,11 +294,17 @@ export const inboxRoute = async (req, res) => {
           const myURL = new URL(req.body.actor);
           const targetDomain = myURL.hostname;
           // sendAcceptMessage expects the local account name as `name`
-          await sendAcceptMessage(req.body, myAccount, myDomain, req, res, targetDomain);
+          // pass the guid and remote URI so the generated Accept/QuoteAuth
+          // URI includes them.  That lets PieFed-style clients issue
+          // stateless blanket permissions (see FEP-044f discussion).
+          await sendAcceptMessage(req.body, myAccount, myDomain, req, res, targetDomain, {
+            localGuid: guid,
+            remoteUri,
+          });
         } catch (e) {
-          console.log('failed to send Accept for incoming quote', e);
+          console.log('error sending accept message for quote in inbox', e);
         }
-      }
+      } // close if (hasQuote)
     } catch (e) {
       console.log('error checking/storing/sending accept for quote in inbox', e);
     }
