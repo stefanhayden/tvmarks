@@ -262,25 +262,49 @@ async function handleDeleteRequest(req: Request, res: Response) {
   return res.status(200);
 }
 
-async function handleQuoteAsk(req: Request, res: Response) {
-  // When a remote server asks permission to quote one of our posts,
-  // automatically approve it since we have automaticApproval set to Public
+async function handleQuoteRequest(req: Request, res: Response) {
+  // Mastodon sends QuoteRequest activities when a user wants to quote a post.
+  // We automatically approve since we have automaticApproval set to Public.
   const domain = req.app.get('domain');
   const account = req.app.get('account');
   const myURL = new URL(req.body.actor);
   const targetDomain = myURL.hostname;
 
   try {
-    // Extract the quote object from the Ask activity
-    const quoteObject = req.body.object;
+    // Extract the quoted status URI from the instrument field
+    const instrumentUri = typeof req.body.instrument === 'string'
+      ? req.body.instrument
+      : req.body.instrument?.id;
 
-    // Send an Accept response
-    await sendAcceptMessage(quoteObject, account, domain, req, res, targetDomain);
+    // Generate a unique GUID for this quote approval
+    const guid = crypto.randomBytes(16).toString('hex');
 
-    console.log('Auto-approved quote request via Ask activity');
+    // Store the quote request in the database
+    await apDb.insertMessage(guid, null, JSON.stringify(req.body));
+
+    // Build the approval/authorization URI
+    const approvalUri = `https://${domain}/u/${account}/quoteAuth/${guid}${instrumentUri ? `?remote=${encodeURIComponent(instrumentUri)}` : ''}`;
+
+    // Build the Accept response with the result field Mastodon expects
+    const acceptMessage = {
+      '@context': 'https://www.w3.org/ns/activitystreams',
+      id: `https://${domain}/u/${account}/accept/${guid}`,
+      type: 'Accept',
+      actor: `https://${domain}/u/${account}`,
+      object: req.body,
+      // Mastodon expects the approval URI in the 'result' field
+      result: approvalUri,
+    };
+
+    // Send the Accept to the requester's inbox
+    const inbox = await getInboxFromActorProfile(req.body.actor);
+    await signAndSend(acceptMessage, account, domain, apDb, targetDomain, inbox);
+
+    console.log('Auto-approved QuoteRequest from', req.body.actor);
+    console.log('Approval URI:', approvalUri);
     return res.sendStatus(200);
   } catch (e) {
-    console.log('Error handling quote Ask:', e);
+    console.log('Error handling QuoteRequest:', e);
     return res.sendStatus(500);
   }
 }
@@ -299,9 +323,13 @@ export const inboxRoute = async (req: Request, res: Response): Promise<any> => {
   if (req.body.type === 'Delete') {
     return handleDeleteRequest(req, res);
   }
-  // Handle Ask activities for quote requests
+  // Handle QuoteRequest activities from Mastodon
+  if (req.body.type === 'QuoteRequest') {
+    return handleQuoteRequest(req, res);
+  }
+  // Handle Ask activities for quote requests (for other implementations)
   if (req.body.type === 'Ask' && (req.body.object?.type === 'Quote' || req.body.object?.quoteUrl)) {
-    return handleQuoteAsk(req, res);
+    return handleQuoteRequest(req, res);
   }
   if (req.body.type === 'Create' && req.body.object?.type === 'Note') {
     console.log(JSON.stringify(req.body));
