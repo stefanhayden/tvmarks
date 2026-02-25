@@ -117,6 +117,17 @@ router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number }>('/upc
 
   const episodes = await tvDb.getUpcomingEpisodes(limit, offset);
 
+  // Calculate days until air date for each episode
+  const now = new Date();
+  const episodesWithDays = episodes?.map((episode) => {
+    const airDate = new Date(episode.airstamp);
+    const daysUntil = Math.round((airDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+    return {
+      ...episode,
+      days_until: daysUntil,
+    };
+  });
+
   const params: {
     episodes: any;
     offset: number;
@@ -125,7 +136,7 @@ router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number }>('/upc
     title?: string;
     pagination?: Pagination;
   } = {
-    episodes,
+    episodes: episodesWithDays,
     offset,
     limit,
   };
