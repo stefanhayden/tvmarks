@@ -17,7 +17,7 @@ interface SendAcceptOpts {
 
 // const router = express.Router();
 
-export async function sendAcceptMessage(
+export let sendAcceptMessage = async function (
   thebody: any,
   name: string,
   domain: string,
@@ -65,6 +65,13 @@ export async function sendAcceptMessage(
     console.log('sendAcceptMessage error', e?.message || e);
     throw e;
   }
+};
+
+// test helper: allow overriding the internal binding during unit tests
+// (ESM exports are read-only, so callers can't simply assign to
+// `inboxMod.sendAcceptMessage`).
+export function __test_overrideSendAcceptMessage(fn: typeof sendAcceptMessage) {
+  sendAcceptMessage = fn;
 }
 
 async function handleFollowRequest(req: Request, res: Response) {
@@ -75,6 +82,7 @@ async function handleFollowRequest(req: Request, res: Response) {
   const name = req.body.object.replace(`https://${domain}/u/`, '');
 
   try {
+    // Accept the follow object itself
     await sendAcceptMessage(req.body, name, domain, req, res, targetDomain);
   } catch (e) {
     console.log('failed to send Accept for follow request', e?.message || e);
@@ -218,7 +226,11 @@ async function handleComment(
 }
 
 async function handleFollowedPost(req: Request, res: Response) {
-  const urls = linkify.find(req.body.object.content);
+  // ensure content is a string before passing to linkify; some
+  // foreign servers send Notes with no `content` field, which would
+  // cause `linkify.find(undefined)` to throw in its replace call.
+  const content = typeof req.body.object?.content === 'string' ? req.body.object.content : '';
+  const urls = linkify.find(content);
   if (urls?.length > 0) {
     // store this for now
     // TODO: determine if the actor is in your current follow list!
@@ -293,11 +305,24 @@ export const inboxRoute = async (req: Request, res: Response): Promise<any> => {
           const myAccount = req.app.get('account');
           const myURL = new URL(req.body.actor);
           const targetDomain = myURL.hostname;
-          // sendAcceptMessage expects the local account name as `name`
-          // pass the guid and remote URI so the generated Accept/QuoteAuth
-          // URI includes them.  That lets PieFed-style clients issue
-          // stateless blanket permissions (see FEP-044f discussion).
-          await sendAcceptMessage(req.body, myAccount, myDomain, req, res, targetDomain, {
+          // sendAcceptMessage expects the local account name as `name`.
+          // We want to approve *only* the Quote object, not the entire
+          // Create activity; Mastodon sees the Accept for the Quote and
+          // marks the post as approved.  Build a minimal object if needed.
+          let acceptTarget: any = req.body;
+          if (req.body.object?.quote) {
+            acceptTarget = req.body.object.quote;
+          } else if (remoteUri) {
+            // fallback compose a Quote-like object if only a URL is
+            // available (some implementations send only quoteUrl)
+            acceptTarget = {
+              type: 'Quote',
+              id: remoteUri,
+              url: remoteUri,
+            };
+          }
+
+          await sendAcceptMessage(acceptTarget, myAccount, myDomain, req, res, targetDomain, {
             localGuid: guid,
             remoteUri,
           });
