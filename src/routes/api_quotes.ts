@@ -32,11 +32,13 @@ router.get('/statuses/:id/quotes', async (req, res) => {
             results.add(JSON.stringify(parsed));
           } catch (e) {
             // ignore parse errors
+            console.log(e);
           }
         });
       }
     } catch (e) {
       // ignore
+      console.log(e);
     }
   }
 
