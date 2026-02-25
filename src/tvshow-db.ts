@@ -409,18 +409,18 @@ export const getShowsAbandoned = async (limit = 24, offset = 0) => {
 export const getTvshowsForCSVExport = async () => {
   // We use a try catch block in case of db errors
   try {
-    const headers = ['title', 'url', 'description', 'tags', 'created_at', 'updated_at'];
+    const headers = ['name', 'url', 'note', 'status', 'premiered', 'ended', 'episodes_count', 'watched_episodes_count', 'created_at', 'updated_at'];
     const selectHeaders = headers.join(',');
     // This will create an object where the keys and values match. This will
     // allow the csv stringifier to interpret this as a header row.
     const columnTitles = Object.fromEntries(headers.map((header) => [header, header]));
-    const results = await db.all(`SELECT ${selectHeaders} from bookmarks`);
+    const results = await db.all(`SELECT ${selectHeaders} from shows`);
     return [columnTitles].concat(results);
   } catch (dbError) {
     // Database connection error
     console.error('failed getTvshowsForCSVExport', dbError);
   }
-  return undefined;
+  return [];
 };
 
 export const getShow = async (id) => {
