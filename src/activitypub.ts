@@ -32,9 +32,6 @@ export function createNoteObject(data, account, domain) {
   const guidNote = crypto.randomBytes(16).toString('hex');
   const d = new Date();
 
-  // let titleText = `<a href="https://${domain}/${data.path}" rel="nofollow noopener noreferrer">${data.name}</a>`;
-
-  // const name = escapeHTML(data.name);
   let description = escapeHTML(data.description || '');
 
   if (description?.trim().length > 0) {
@@ -334,15 +331,12 @@ export async function broadcastMessage(data, action, db, account, domain, quoteU
       showPermissions?.blocked
         ?.split('\n')
         ?.concat(globalPermissions?.blocked?.split('\n'))
-        .filter((x) => !x?.match(/^@([^@]+)@(.+)$/)) || [];
+        .filter((x) => x?.match(/^@([^@]+)@(.+)$/)) || [];
 
-    // now let's try to remove the blocked users
-    followers.filter((actor) => {
-      const matches = blocklist.forEach((username) => {
-        actorMatchesUsername(actor, username);
-      });
-
-      return !matches?.some((x) => x);
+    // Filter out blocked users from the followers list
+    const allowedFollowers = followers.filter((actor) => {
+      const isBlocked = blocklist.some((username) => actorMatchesUsername(actor, username));
+      return !isBlocked;
     });
 
     const noteObject = createNoteObject(data, account, domain);
@@ -363,8 +357,8 @@ export async function broadcastMessage(data, action, db, account, domain, quoteU
     }
 
     console.log(`sending this message to all followers: ${JSON.stringify(message)}`);
-    console.log('followers', followers);
-    for (const follower of followers) {
+    console.log('followers', allowedFollowers);
+    for (const follower of allowedFollowers) {
       const inbox = `${follower}/inbox`;
       const myURL = new URL(follower);
       const targetDomain = myURL.host;

@@ -2,7 +2,6 @@ import admin from './admin';
 import auth from './auth';
 import comment from './comment';
 import core from './core';
-// import inbox from './activitypub/inbox';
 import message from './activitypub/message';
 import user from './activitypub/user';
 import webfinger from './activitypub/webfinger';
@@ -14,7 +13,6 @@ export default {
   auth,
   comment,
   core,
-  // inbox,
   message,
   user,
   webfinger,

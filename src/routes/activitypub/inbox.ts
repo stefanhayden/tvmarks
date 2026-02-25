@@ -393,7 +393,3 @@ export const inboxRoute = async (req: Request, res: Response): Promise<any> => {
   }
   return res.sendStatus(400);
 };
-
-// router.post('/', inboxRoute);
-
-// export default router;
