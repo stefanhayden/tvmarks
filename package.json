@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "start": "npm run build && node ./dist/server.js",
-    "watch": "nodemon --ignore public/ --ignore dist/ --exec (npm run build | true) npm run start",
+    "watch": "nodemon --ignore public/ --ignore dist/ --exec 'npm run build && node ./dist/server.js'",
     "lint": "eslint .",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
