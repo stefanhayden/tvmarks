@@ -1,5 +1,5 @@
 import express from 'express';
-import { data, actorInfo } from '../util';
+import { data, actorInfo, calculateDaysUntilAirDate } from '../util';
 import { isAuthenticated } from '../session-auth';
 import { refreshShowData, refreshWatchNext } from './admin';
 import * as tvDb from '../tvshow-db';
@@ -118,15 +118,10 @@ router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number }>('/upc
   const episodes = await tvDb.getUpcomingEpisodes(limit, offset);
 
   // Calculate days until air date for each episode
-  const now = new Date();
-  const episodesWithDays = episodes?.map((episode) => {
-    const airDate = new Date(episode.airstamp);
-    const daysUntil = Math.ceil((airDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
-    return {
-      ...episode,
-      days_until: daysUntil,
-    };
-  });
+  const episodesWithDays = episodes?.map((episode) => ({
+    ...episode,
+    days_until: calculateDaysUntilAirDate(episode.airstamp),
+  }));
 
   const params: {
     episodes: any;

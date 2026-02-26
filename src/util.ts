@@ -129,6 +129,24 @@ export function replaceEmptyText(currentValue: string, defaultValue: string) {
   return currentValue;
 }
 
+/**
+ * Calculate the number of calendar days until an episode airs.
+ * Returns 0 for episodes airing today, 1 for tomorrow, etc.
+ * @param airstamp - The episode's air timestamp (ISO string)
+ * @param referenceDate - Optional reference date (defaults to today)
+ * @returns Number of days until the episode airs
+ */
+export function calculateDaysUntilAirDate(airstamp: string, referenceDate?: Date): number {
+  const today = referenceDate || new Date();
+  today.setHours(0, 0, 0, 0); // Start of today
+
+  const episodeDate = new Date(airstamp);
+  episodeDate.setHours(0, 0, 0, 0); // Start of episode day
+
+  const daysUntil = Math.round((episodeDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+  return daysUntil;
+}
+
 export function simpleLogger(req, res, next) {
   // middleware function
   const currentDatetime = new Date();
