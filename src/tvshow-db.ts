@@ -476,6 +476,32 @@ export const getRecentEpisodesByShowId = async (showId) => {
   return undefined;
 };
 
+export const getUpcomingEpisodes = async (limit = 24, offset = 0) => {
+  try {
+    const result = await db.all(
+      `SELECT
+        episodes.*,
+        shows.name as show_name,
+        shows.image as show_image
+      FROM episodes
+      INNER JOIN shows ON episodes.show_id = shows.id
+      WHERE
+        episodes.airstamp IS NOT NULL
+        AND episodes.airstamp != ''
+        AND DateTime(episodes.airstamp) > DateTime('now', '${timezoneMod}')
+        AND shows.abandoned != 1
+      ORDER BY episodes.airstamp ASC
+      LIMIT ? OFFSET ?`,
+      limit,
+      offset,
+    );
+    return result;
+  } catch (dbError) {
+    console.error('failed getUpcomingEpisodes', dbError);
+  }
+  return undefined;
+};
+
 export const updateEpisodeWatchStatus = async (id: number | string, status: 'WATCHED' | null) => {
   try {
     await db.run(
