@@ -121,7 +121,7 @@ router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number }>('/upc
   const now = new Date();
   const episodesWithDays = episodes?.map((episode) => {
     const airDate = new Date(episode.airstamp);
-    const daysUntil = Math.round((airDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+    const daysUntil = Math.ceil((airDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
     return {
       ...episode,
       days_until: daysUntil,
