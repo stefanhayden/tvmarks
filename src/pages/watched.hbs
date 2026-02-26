@@ -1,0 +1,17 @@
+{{#if error}}
+  <p class="error">
+    {{error}}
+  </p>
+{{else}}
+  {{#if episodes}}
+    <div style="margin-bottom: 50px">
+      {{#each episodes}}
+        {{> watched_episode episode=this}}
+      {{/each}}
+    </div>
+
+    {{> pagination pagination=pagination}}
+  {{else}}
+    <p>No watched episodes yet.</p>
+  {{/if}}
+{{/if}}

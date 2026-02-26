@@ -1,0 +1,53 @@
+{{#if episode.note}}
+  {{! Expanded layout for episodes with notes }}
+  <div data-id='{{episode.id}}' style='display: flex; gap: 15px; border-bottom: 1px solid; padding: 15px 5px; margin-bottom: 5px;'>
+    <div style='flex-shrink: 0;'>
+      <a href='/show/{{episode.show_id}}'>
+        <img src='{{episode.show_image}}' style='width: 80px; height: 113px; object-fit: cover; display: block;' alt='{{episode.show_name}}' />
+      </a>
+    </div>
+    <div style='flex-grow: 1;'>
+      <div>
+        <strong><a href='/show/{{episode.show_id}}'>{{episode.show_name}}</a></strong>
+        <span style='color: rgba(0, 0, 0, 0.6);'>
+          - S{{episode.season}}{{#if episode.number}}E{{episode.number}}{{/if}}
+        </span>
+        -
+        <a href='/show/{{episode.show_id}}/episode/{{episode.id}}'>{{episode.name}}</a>
+      </div>
+      <div style='color: rgba(0, 0, 0, 0.5); font-size: 0.85em;'>
+        Watched:
+        {{formatDate episode.watched_at}}
+      </div>
+      <div style='margin-top: 10px; padding: 10px; font-size: 0.9em;'>
+        {{episode.note}}
+      </div>
+    </div>
+  </div>
+{{else}}
+  {{! Compact layout for episodes without notes }}
+  <div
+    data-id='{{episode.id}}'
+    style='display: flex; gap: 10px; border-bottom: 1px solid; padding: 8px 5px; margin-bottom: 5px; align-items: center;'
+  >
+    <div style='flex-shrink: 0;'>
+      <a href='/show/{{episode.show_id}}'>
+        <img src='{{episode.show_image}}' style='height: 50px; object-fit: cover; display: block;' alt='{{episode.show_name}}' />
+      </a>
+    </div>
+    <div style='flex-grow: 1;'>
+      <div>
+        <strong><a href='/show/{{episode.show_id}}'>{{episode.show_name}}</a></strong>
+        <span style='color: rgba(0, 0, 0, 0.6);'>
+          - S{{episode.season}}{{#if episode.number}}E{{episode.number}}{{/if}}
+        </span>
+        -
+        <a href='/show/{{episode.show_id}}/episode/{{episode.id}}'>{{episode.name}}</a>
+      </div>
+      <div style='color: rgba(0, 0, 0, 0.5); font-size: 0.85em;'>
+        Watched:
+        {{formatDate episode.watched_at}}
+      </div>
+    </div>
+  </div>
+{{/if}}

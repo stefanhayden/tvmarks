@@ -36,7 +36,10 @@
   {{/unless}}
 
   {{#if (or showsToWatch showsUpToDate showsNotStarted showsCompleted showsAbandoned)}}
-    <div style="float: right"><a href="/upcoming">Upcoming</a></div>
+    <div style="float: right">
+      <a href="/upcoming">Upcoming</a> | 
+      <a href="/watched">Watched</a>
+    </div>
   {{/if}}
 
   {{#if showsToWatch}}

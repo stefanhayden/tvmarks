@@ -154,6 +154,44 @@ router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number }>('/upc
   return req.query.raw ? res.send(params) : res.render('upcoming', params);
 });
 
+router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number }>('/watched', async (req, res) => {
+  const limit = Math.max(req.query?.limit || 24, 1);
+  const offset = Math.max(req.query?.offset || 0, 0);
+  const currentPage = (limit + offset) / limit;
+
+  const episodes = await tvDb.getRecentlyWatchedEpisodes(limit, offset);
+
+  const params: {
+    episodes: any;
+    offset: number;
+    limit: number;
+    error?: string;
+    title?: string;
+    pagination?: Pagination;
+  } = {
+    episodes,
+    offset,
+    limit,
+  };
+
+  if (!episodes) params.error = data.errorMessage;
+
+  params.title = 'Watched Episodes';
+  const pagination: Pagination = {
+    url: '/watched',
+    currentPage,
+    offset,
+    limit,
+    hasPreviousPage: currentPage > 1,
+    hasNextPage: episodes.length === limit,
+    nextOffset: Math.min(offset + limit),
+    previousOffset: Math.max(offset - limit, 0),
+  };
+  params.pagination = pagination;
+
+  return req.query.raw ? res.send(params) : res.render('watched', params);
+});
+
 router.get('/about', async (req, res) => {
   res.render('about', {
     title: 'About',

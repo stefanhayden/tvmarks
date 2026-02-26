@@ -104,9 +104,7 @@ export function generateLinkedDisplayName(comment) {
   };
 }
 
-export function addBookmarkDomain(bookmark) {
-  return { domain: new URL(bookmark.url).hostname, ...bookmark };
-}
+
 
 export function insertRelativeTimestamp(object) {
   // timestamps created by SQLite's CURRENT_TIMESTAMP are in UTC regardless
@@ -498,6 +496,30 @@ export const getUpcomingEpisodes = async (limit = 24, offset = 0) => {
     return result;
   } catch (dbError) {
     console.error('failed getUpcomingEpisodes', dbError);
+  }
+  return undefined;
+};
+
+export const getRecentlyWatchedEpisodes = async (limit = 24, offset = 0) => {
+  try {
+    const result = await db.all(
+      `SELECT
+        episodes.*,
+        shows.name as show_name,
+        shows.image as show_image
+      FROM episodes
+      INNER JOIN shows ON episodes.show_id = shows.id
+      WHERE
+        episodes.watched_status = 'WATCHED'
+        AND episodes.watched_at IS NOT NULL
+      ORDER BY episodes.watched_at DESC
+      LIMIT ? OFFSET ?`,
+      limit,
+      offset,
+    );
+    return result;
+  } catch (dbError) {
+    console.error('failed getRecentlyWatchedEpisodes', dbError);
   }
   return undefined;
 };
