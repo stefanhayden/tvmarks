@@ -368,7 +368,7 @@ router.post('/fetchMissingImage/:showId', isAuthenticated, async (req, res) => {
 
 // to to set a max images to stop request from timing out
 export async function fetchMissingImages(req, maxImages = 50) {
-  const shows = await tvDb.getAllInProgressShows();
+  const shows = await tvDb.getAllShows();
   let fetchedImages = 0;
 
   const showsPromises = shows.map(async (show) => {
