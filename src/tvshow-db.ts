@@ -911,6 +911,18 @@ export const getAllInProgressShows = async () => {
   return undefined;
 };
 
+export const getAllShows = async () => {
+  try {
+    return await db.all(`
+        SELECT * FROM shows 
+        ORDER BY last_watched_date, updated_at DESC
+      `);
+  } catch (dbError) {
+    console.error('failed getAllShows', dbError);
+  }
+  return undefined;
+};
+
 export const getAllAiredEpisodesCountByShow = async () => {
   try {
     return await db.all(`

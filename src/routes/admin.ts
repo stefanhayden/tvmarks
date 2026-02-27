@@ -363,7 +363,7 @@ router.post('/fetchMissingImage/:showId', isAuthenticated, async (req, res) => {
 
 // to to set a max images to stop request from timing out
 export async function fetchMissingImages(req, maxImages = 50) {
-  const shows = await tvDb.getAllInProgressShows();
+  const shows = await tvDb.getAllShows();
   let fetchedImages = 0;
 
   const showsPromises = shows.map(async (show) => {
@@ -523,16 +523,6 @@ export async function refreshShowData() {
     // updated episodes
     const currentEpisodesWithNulls = await tvDb.getEpisodesByShowId(show.id);
     const currentEpisodes = currentEpisodesWithNulls.filter((ep) => ep.number !== null);
-
-    // try not updating iages for speed
-    // let image;
-    // if (updatedShow.image && updatedShow.image.medium) {
-    //   const fileExt = updatedShow.image.medium.split('.').reverse()[0];
-    //   const showImagePath = `shows/${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
-    //   console.log(`download image for ${updatedShow.name}`);
-    //   await downloadImage(updatedShow.image.medium, showImagePath);
-    //   image = `/${showImagePath}`;
-    // }
 
     const episodes_count = currentEpisodes.filter((ep) => ep.number !== null).length;
     const aired_episodes_count = currentEpisodes.filter((ep) => {
