@@ -1,15 +1,13 @@
 <div class="search">
   <form action="/admin" onsubmit="this.querySelector('button').disabled = true">
-    <div class="form-group">
+    <div class="form-group" style="display: flex; gap: 10px; align-items: center;">
       <label for="query" class="visually-hidden">
         Query Shows
       </label>
-      <input id="query" name="query" value="{{this.query}}" />
-      <small>powered by <a href="https://www.tvmaze.com">tvmaze</a></small>
-    </div>
-    <div class="form-group">
+      <input id="query" name="query" value="{{this.query}}" style="flex: 1;" />
       <button>Search tv</button>
     </div>
+    <small>powered by <a href="https://www.tvmaze.com">tvmaze</a></small>
   </form>
 </div>
 {{#if error}}

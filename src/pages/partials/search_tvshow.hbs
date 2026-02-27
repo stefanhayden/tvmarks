@@ -1,42 +1,52 @@
-<div class="bookmark">
-  <img src="{{{tvshow.image.medium}}}" />
-  <div class="headline">
-    <a href="{{tvshow.url}}" title="view on tvmaze" target="_blank">
-      {{tvshow.name}}
-    </a>
+<div class="bookmark" style="display: flex; gap: 20px; align-items: flex-start;">
+  <div style="flex-shrink: 0;">
+    <img src="{{{tvshow.image.medium}}}" style="max-width: 150px; height: auto;" />
   </div>
-  <div class="subhead">
-    <a href="/bookmark/{{bookmark.id}}" class="bookmark-date" title="{{bookmark.created_at}}">
-      {{bookmark.timestamp}}
-    </a>
-    {{#if tvshow.network.name}}
-      <span class="bookmark-domain">
-          {{tvshow.network.name}}
-        {{#if tvshow.network.country.code}}
-          ({{{tvshow.network.country.code}}})
-        {{/if}}
-      </span>
-    {{/if}}
-  </div>
-  <div class="description">
-    {{{tvshow.summary}}}
-  </div>
-  <form method="post" action="/admin/show/add/{{{tvshow.id}}}" style="margin-bottom: 10px;" onsubmit="this.querySelector('button').disabled = true">
-    <textarea placeholder="I can't wait to watch!" name="description" style="height: 6rem; margin-bottom: 10px;"></textarea>
-    <button>
-      add show
-    </button>
-  </form>
-  <div class="bottom">
-    {{^if permalink}}
-      {{#if bookmark.comment_count}}
-        <span>
-          <a href="/bookmark/{{bookmark.id}}">
-            {{bookmark.comment_count}}
-            {{pluralize bookmark.comment_count "comment" "comments"}}
-          </a>
+  <div style="flex: 1;">
+    <div class="headline">
+      <a href="{{tvshow.url}}" title="view on tvmaze" target="_blank">
+        {{tvshow.name}}
+      </a>
+    </div>
+    <div class="subhead">
+      <a href="/bookmark/{{bookmark.id}}" class="bookmark-date" title="{{bookmark.created_at}}">
+        {{bookmark.timestamp}}
+      </a>
+      {{#if tvshow.network.name}}
+        <span class="bookmark-domain">
+            {{tvshow.network.name}}
+          {{#if tvshow.network.country.code}}
+            ({{{tvshow.network.country.code}}})
+          {{/if}}
         </span>
       {{/if}}
+    </div>
+    <div class="description">
+      {{{tvshow.summary}}}
+    </div>
+    {{#if existsLocally}}
+      <a href="/show/{{{tvshow.id}}}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin-bottom: 10px;">
+        Go to show
+      </a>
+    {{else}}
+      <form method="post" action="/admin/show/add/{{{tvshow.id}}}" style="margin-bottom: 10px;" onsubmit="this.querySelector('button').disabled = true">
+        <textarea placeholder="I can't wait to watch!" name="description" style="height: 6rem; margin-bottom: 10px; width: 100%; box-sizing: border-box;"></textarea>
+        <button>
+          add show
+        </button>
+      </form>
     {{/if}}
+    <div class="bottom">
+      {{^if permalink}}
+        {{#if bookmark.comment_count}}
+          <span>
+            <a href="/bookmark/{{bookmark.id}}">
+              {{bookmark.comment_count}}
+              {{pluralize bookmark.comment_count "comment" "comments"}}
+            </a>
+          </span>
+        {{/if}}
+      {{/if}}
+    </div>
   </div>
 </div>

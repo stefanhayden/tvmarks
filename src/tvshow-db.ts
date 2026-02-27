@@ -917,11 +917,11 @@ export const getAllAiredEpisodesCountByShow = async () => {
         SELECT shows.id, shows.name, shows.aired_episodes_count, count(CASE WHEN episodes.show_id == shows.id THEN 1 END ) as new_aired_episodes_count
         FROM shows
         LEFT JOIN episodes ON shows.id == episodes.show_id
-        WHERE 
-          shows.status != 'Ended' 
-          AND episodes.number IS NOT NULL 
-          AND episodes.airstamp IS NOT NULL 
-          AND episodes.airstamp != '' 
+        WHERE
+          shows.status != 'Ended'
+          AND episodes.number IS NOT NULL
+          AND episodes.airstamp IS NOT NULL
+          AND episodes.airstamp != ''
           AND DateTime(episodes.airstamp) <= DateTime('now')
         GROUP BY shows.id
       `);
@@ -929,4 +929,17 @@ export const getAllAiredEpisodesCountByShow = async () => {
     console.error('failed getAllAiredEpisodesCountByShow', dbError);
   }
   return undefined;
+};
+
+export const searchShowsByName = async (query: string) => {
+  try {
+    const results = await db.all<Show[]>(
+      `SELECT * FROM shows WHERE name LIKE ? ORDER BY name ASC`,
+      `%${query}%`
+    );
+    return results;
+  } catch (dbError) {
+    console.error('failed searchShowsByName', dbError);
+  }
+  return [];
 };

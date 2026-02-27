@@ -21,7 +21,7 @@ type adminLinkType = {
 };
 
 const ADMIN_LINKS: adminLinkType[] = [
-  { href: '/admin', label: 'Add new show' },
+  { href: '/admin', label: 'Find shows' },
   { href: '/admin/followers', label: 'Permissions & followers' },
   { href: '/admin/following', label: 'Federated follows' },
   { href: '/admin/update', label: 'Update Show data' },
@@ -300,9 +300,20 @@ router.get('/', isAuthenticated, async (req, res) => {
       adminLinks?: adminLinkType[];
       currentPath?: string;
       query?: unknown;
-    } = { title: 'Add new show' };
+    } = { title: 'Find shows' };
     if (req.query.query) {
-      params.searchTv = await tvMaze.search(req.query.query);
+      // Search both TVMaze and local database
+      const [tvMazeResults, localShows] = await Promise.all([tvMaze.search(req.query.query), tvDb.searchShowsByName(req.query.query as string)]);
+
+      // Create a map of local show IDs for quick lookup
+      const localShowIds = new Set(localShows.map((show: { id: number }) => show.id));
+
+      // Combine results: mark TVMaze results with whether they exist locally
+      params.searchTv = tvMazeResults.map((result: { show: { id: number } }) => ({
+        ...result,
+        existsLocally: localShowIds.has(result.show.id),
+      }));
+
       if (params.searchTv.length === 0) {
         params.error = 'No matches...';
       }

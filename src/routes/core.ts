@@ -235,7 +235,7 @@ router.get('/manifest', async (req, res) => {
     scope: '/',
     shortcuts: [
       {
-        name: 'Add new show',
+        name: 'Find shows',
         url: '/admin',
       },
       {
