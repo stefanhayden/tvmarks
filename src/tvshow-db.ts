@@ -943,6 +943,95 @@ export const getAllAiredEpisodesCountByShow = async () => {
   return undefined;
 };
 
+export const getWatchedYears = async () => {
+  try {
+    const rows = await db.all<{ year: string }[]>(`
+      SELECT DISTINCT strftime('%Y', watched_at) as year
+      FROM episodes
+      WHERE watched_status = 'WATCHED' AND watched_at IS NOT NULL
+      ORDER BY year ASC
+    `);
+    return rows.map((r) => Number(r.year));
+  } catch (dbError) {
+    console.error('failed getWatchedYears', dbError);
+  }
+  return [];
+};
+
+export const getStats = async (year: number) => {
+  const y = String(year);
+  try {
+    const yearSummary = await db.get(`
+      SELECT
+        COUNT(*) as episodes_watched,
+        SUM(COALESCE(runtime, 0)) as minutes_watched,
+        COUNT(DISTINCT show_id) as shows_watched
+      FROM episodes
+      WHERE watched_status = 'WATCHED'
+        AND watched_at IS NOT NULL
+        AND strftime('%Y', watched_at) = ?
+    `, y);
+
+    const byMonth = await db.all(`
+      SELECT
+        CAST(strftime('%m', watched_at) AS INTEGER) as month_num,
+        COUNT(*) as episodes,
+        SUM(COALESCE(runtime, 0)) as minutes
+      FROM episodes
+      WHERE watched_status = 'WATCHED'
+        AND watched_at IS NOT NULL
+        AND strftime('%Y', watched_at) = ?
+      GROUP BY month_num
+      ORDER BY month_num
+    `, y);
+
+    const topShows = await db.all(`
+      SELECT
+        shows.id, shows.name, shows.image,
+        COUNT(*) as episodes_watched,
+        SUM(COALESCE(episodes.runtime, 0)) as minutes_watched
+      FROM episodes
+      INNER JOIN shows ON episodes.show_id = shows.id
+      WHERE episodes.watched_status = 'WATCHED'
+        AND episodes.watched_at IS NOT NULL
+        AND strftime('%Y', episodes.watched_at) = ?
+      GROUP BY shows.id
+      ORDER BY episodes_watched DESC
+      LIMIT 20
+    `, y);
+
+    const byNetwork = await db.all(`
+      SELECT shows.network_name, COUNT(DISTINCT shows.id) as shows_count, COUNT(episodes.id) as episodes_count
+      FROM episodes
+      INNER JOIN shows ON episodes.show_id = shows.id
+      WHERE episodes.watched_status = 'WATCHED'
+        AND episodes.watched_at IS NOT NULL
+        AND strftime('%Y', episodes.watched_at) = ?
+        AND shows.network_name IS NOT NULL AND shows.network_name != ''
+      GROUP BY shows.network_name
+      ORDER BY episodes_count DESC
+      LIMIT 10
+    `, y);
+
+    const byType = await db.all(`
+      SELECT shows.type, COUNT(DISTINCT shows.id) as shows_count, COUNT(episodes.id) as episodes_count
+      FROM episodes
+      INNER JOIN shows ON episodes.show_id = shows.id
+      WHERE episodes.watched_status = 'WATCHED'
+        AND episodes.watched_at IS NOT NULL
+        AND strftime('%Y', episodes.watched_at) = ?
+        AND shows.type IS NOT NULL AND shows.type != ''
+      GROUP BY shows.type
+      ORDER BY episodes_count DESC
+    `, y);
+
+    return { yearSummary, byMonth, topShows, byNetwork, byType };
+  } catch (dbError) {
+    console.error('failed getStats', dbError);
+  }
+  return undefined;
+};
+
 export const searchShowsByName = async (query: string) => {
   try {
     const results = await db.all<Show[]>(

@@ -192,6 +192,66 @@ router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number }>('/wat
   return req.query.raw ? res.send(params) : res.render('watched', params);
 });
 
+router.get<{}, {}, {}, { year?: string }>('/stats', async (req, res) => {
+  const currentYear = new Date().getFullYear();
+  const year = req.query.year ? parseInt(req.query.year, 10) : currentYear;
+  const [stats, watchedYears] = await Promise.all([tvDb.getStats(year), tvDb.getWatchedYears()]);
+
+  if (!stats) {
+    return res.render('stats', { title: '', error: 'Could not load stats.' });
+  }
+
+  const { yearSummary, byMonth, topShows, byNetwork, byType } = stats;
+
+  const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const currentMonth = year === currentYear ? new Date().getMonth() + 1 : 12;
+
+  const prevYears = watchedYears.filter((y) => y < year);
+  const prevYear = prevYears.length > 0 ? prevYears[prevYears.length - 1] : null;
+  const nextYear = watchedYears.find((y) => y > year) ?? null;
+
+  // Build a full 12-month array, filling zeros for months with no data
+  const byMonthMap = new Map(byMonth.map((m) => [m.month_num, m]));
+  const maxEpisodes = byMonth.length > 0 ? Math.max(...byMonth.map((m) => m.episodes)) : 1;
+  const maxMinutes = byMonth.length > 0 ? Math.max(...byMonth.map((m) => m.minutes || 0)) : 1;
+  const maxShowEpisodes = topShows.length > 0 ? Math.max(...topShows.map((s) => s.episodes_watched)) : 1;
+
+  const months = MONTH_NAMES.slice(0, currentMonth).map((name, i) => {
+    const num = i + 1;
+    const data = byMonthMap.get(num);
+    const minutes = data?.minutes || 0;
+    const episodes = data?.episodes || 0;
+    return {
+      name,
+      num,
+      episodes,
+      hours: Math.round(minutes / 60),
+      episodesPercent: Math.round((episodes / maxEpisodes) * 100),
+      hoursPercent: Math.round((minutes / maxMinutes) * 100),
+    };
+  });
+
+  return res.render('stats', {
+    title: `${year} Stats`,
+    selectedYear: year,
+    prevYear,
+    nextYear,
+    summary: {
+      episodes_watched: yearSummary.episodes_watched || 0,
+      hours_watched: Math.round((yearSummary.minutes_watched || 0) / 60),
+      shows_watched: yearSummary.shows_watched || 0,
+    },
+    months,
+    topShows: topShows.map((s) => ({
+      ...s,
+      hours: Math.round((s.minutes_watched || 0) / 60),
+      percent: Math.round((s.episodes_watched / maxShowEpisodes) * 100),
+    })),
+    byNetwork,
+    byType,
+  });
+});
+
 router.get('/about', async (req, res) => {
   res.render('about', {
     title: 'About',

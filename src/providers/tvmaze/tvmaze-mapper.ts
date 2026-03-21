@@ -36,7 +36,7 @@ export class TVMazeMapper {
       premiered: show.premiered,
       ended: show.ended,
       officialSite: show.officialSite,
-      network: show.network,
+      network: show.network ?? show.webChannel,
       image: show.image,
       externals: show.externals,
     };
