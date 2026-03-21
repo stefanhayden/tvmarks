@@ -10,6 +10,7 @@ import session, { isAuthenticated } from './src/session-auth.js';
 import * as apDb from './src/activity-pub-db.js';
 import * as tvDb from './src/tvshow-db.js';
 import packageJson from './package.json';
+import { ProviderFactory } from './src/providers/provider-factory.js';
 
 import routes from './src/routes/index.js';
 import apiQuotes from './src/routes/api_quotes.js';
@@ -41,6 +42,10 @@ app.use((req, res, next) => {
 app.set('site_name', actorInfo.disabled === false ? actorInfo.displayName : 'Tvmarks');
 
 tvDb.init();
+
+// Initialize TV data provider
+ProviderFactory.initialize({ type: 'tvmaze' });
+
 app.set('account', account);
 app.set('domain', domain);
 app.disable('x-powered-by');
