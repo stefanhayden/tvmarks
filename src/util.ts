@@ -138,13 +138,26 @@ export function replaceEmptyText(currentValue: string, defaultValue: string) {
  */
 export function calculateDaysUntilAirDate(airstamp: string, referenceDate?: Date): number {
   const today = referenceDate || new Date();
-  today.setHours(0, 0, 0, 0); // Start of today
 
-  const episodeDate = new Date(airstamp);
-  episodeDate.setHours(0, 0, 0, 0); // Start of episode day
+  // Extract the calendar date from the airstamp string as-is (respects its own timezone)
+  const episodeDateStr = airstamp.slice(0, 10); // YYYY-MM-DD
 
-  const daysUntil = Math.round((episodeDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
-  return daysUntil;
+  // Extract the UTC offset from the airstamp (e.g. "-05:00", "+00:00")
+  const offsetMatch = airstamp.match(/([+-])(\d{2}):(\d{2})$/);
+  let offsetMinutes = 0;
+  if (offsetMatch) {
+    const sign = offsetMatch[1] === '+' ? 1 : -1;
+    offsetMinutes = sign * (parseInt(offsetMatch[2]) * 60 + parseInt(offsetMatch[3]));
+  }
+
+  // Shift the reference date into the airstamp's timezone to get the correct calendar date
+  const todayShifted = new Date(today.getTime() + offsetMinutes * 60 * 1000);
+  const todayDateStr = todayShifted.toISOString().slice(0, 10); // YYYY-MM-DD
+
+  const episodeTime = new Date(episodeDateStr + 'T00:00:00Z').getTime();
+  const todayTime = new Date(todayDateStr + 'T00:00:00Z').getTime();
+
+  return Math.round((episodeTime - todayTime) / (24 * 60 * 60 * 1000));
 }
 
 export function simpleLogger(req, res, next) {
