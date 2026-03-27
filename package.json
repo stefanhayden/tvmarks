@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
-    "build": "npx tsc"
+    "build": "tsc"
   },
   "dependencies": {
     "@types/node-fetch": "^2.6.12",
