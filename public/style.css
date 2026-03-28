@@ -948,3 +948,30 @@ a.bookmark-date {
   font-style: italic;
   font-size: 0.9rem;
 }
+
+/* Show search results */
+.search-result-card {
+  border-radius: 12px;
+  border: 1px solid #ddd;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.search-result-action {
+  display: inline-block;
+  padding: 0.4rem 1rem;
+  border-radius: 99px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.search-result-action--exists {
+  background: #ede8ff;
+  color: var(--color-accent);
+}
+
+.search-result-action--exists:hover {
+  background: #d9d0ff;
+}

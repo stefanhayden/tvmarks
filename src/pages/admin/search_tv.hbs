@@ -17,7 +17,7 @@
 {{else}}
   <div class="bookmarks">
     {{#each searchTv }}
-      {{> search_tvshow tvshow=this.show }}
+      {{> search_tvshow tvshow=this.show existsLocally=this.existsLocally }}
     {{/each}}
   </div>
 {{/if}}

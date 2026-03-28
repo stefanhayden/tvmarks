@@ -1,39 +1,41 @@
-<div class="bookmark" style="display: flex; gap: 20px; align-items: flex-start;">
+<div class="bookmark search-result-card" style="display: flex; gap: 1.25rem; align-items: flex-start;">
+  {{#if tvshow.image.medium}}
   <div style="flex-shrink: 0;">
-    <img src="{{{tvshow.image.medium}}}" style="max-width: 150px; height: auto;" />
+    <img src="{{{tvshow.image.medium}}}" style="width: 90px; height: auto; border-radius: 6px; display: block;" />
   </div>
-  <div style="flex: 1;">
+  {{/if}}
+  <div style="flex: 1; min-width: 0;">
     <div class="headline">
       <a href="{{tvshow.url}}" title="view on tvmaze" target="_blank">
         {{tvshow.name}}
       </a>
     </div>
     <div class="subhead">
-      <a href="/bookmark/{{bookmark.id}}" class="bookmark-date" title="{{bookmark.created_at}}">
-        {{bookmark.timestamp}}
-      </a>
+      {{#if bookmark}}
+        <a href="/bookmark/{{bookmark.id}}" class="bookmark-date" title="{{bookmark.created_at}}">
+          {{bookmark.timestamp}}
+        </a>
+      {{/if}}
       {{#if tvshow.network.name}}
         <span class="bookmark-domain">
-            {{tvshow.network.name}}
+          {{tvshow.network.name}}
           {{#if tvshow.network.country.code}}
             ({{{tvshow.network.country.code}}})
           {{/if}}
         </span>
       {{/if}}
     </div>
-    <div class="description">
+    <div class="description" style="font-size: 0.9rem; color: var(--color-dimmed); margin-top: 0.4rem; margin-bottom: 0.75rem;">
       {{{tvshow.summary}}}
     </div>
     {{#if existsLocally}}
-      <a href="/show/{{{tvshow.id}}}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin-bottom: 10px;">
-        Go to show
+      <a href="/show/{{{tvshow.id}}}" class="search-result-action search-result-action--exists">
+        View in library
       </a>
     {{else}}
-      <form method="post" action="/admin/show/add/{{{tvshow.id}}}" style="margin-bottom: 10px;" onsubmit="this.querySelector('button').disabled = true">
-        <textarea placeholder="I can't wait to watch!" name="description" style="height: 6rem; margin-bottom: 10px; width: 100%; box-sizing: border-box;"></textarea>
-        <button>
-          add show
-        </button>
+      <form method="post" action="/admin/show/add/{{{tvshow.id}}}" style="margin-bottom: 0;" onsubmit="this.querySelector('button').disabled = true">
+        <textarea placeholder="I can't wait to watch!" name="description" style="height: 5rem; margin-bottom: 0.5rem; width: 100%;"></textarea>
+        <button>add show</button>
       </form>
     {{/if}}
     <div class="bottom">
