@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // Core provider interfaces and types for TV data abstraction
 
 export interface SearchResult {

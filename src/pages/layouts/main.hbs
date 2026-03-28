@@ -39,6 +39,9 @@
         {{#if loggedIn}}
           <a href="/network">Network</a>
           <a href="/admin">Shows</a>
+        {{/if}}
+        <a href="/stats">Stats</a>
+        {{#if loggedIn}}
           <a href="/admin">Admin</a>
           <a href="/logout">Logout</a>
         {{else}}
@@ -59,6 +62,7 @@
     </div>
     <footer class="footer">
       <a href="/about">About</a>
+      <a href="/stats">Stats</a>
       {{#if loggedIn}}
         <a href="/network">Network</a>
         <a href="/bookmark/new">Add</a>
