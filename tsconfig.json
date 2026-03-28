@@ -1,5 +1,5 @@
 {
-  "include": ["./src/**/*"],
+  "include": ["./src/**/*", "./server.ts"],
   "exclude": ["eslint.config.*", "./dist/**/*"],
   "compilerOptions": {
     "target": "ES6", // Compiles to modern JavaScript
