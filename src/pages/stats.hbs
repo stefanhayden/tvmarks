@@ -32,6 +32,18 @@
           <span class='stats-card__number'>{{summary.shows_watched}}</span>
           <span class='stats-card__label'>shows watched</span>
         </div>
+        {{#if longestStreak}}
+          <div class='stats-card stats-card--4'>
+            <span class='stats-card__number'>{{longestStreak}}</span>
+            <span class='stats-card__label'>day longest streak</span>
+          </div>
+        {{/if}}
+        {{#if currentStreak}}
+          <div class='stats-card stats-card--5'>
+            <span class='stats-card__number'>{{currentStreak}}</span>
+            <span class='stats-card__label'>day current streak</span>
+          </div>
+        {{/if}}
       </div>
     </section>
 
@@ -60,6 +72,27 @@
       </div>
     </section>
 
+    {{#if cumulativePolygon}}
+    <section class='stats-section stats-cumulative'>
+      <h2>Cumulative episodes</h2>
+      <svg viewBox='0 0 500 60' preserveAspectRatio='none' class='stats-cumulative-svg'>
+        <defs>
+          <linearGradient id='cumGrad' x1='0' y1='0' x2='0' y2='1'>
+            <stop offset='0%' stop-color='#7b5ff5' stop-opacity='0.3'/>
+            <stop offset='100%' stop-color='#7b5ff5' stop-opacity='0.02'/>
+          </linearGradient>
+        </defs>
+        <polygon points='{{cumulativePolygon}}' fill='url(#cumGrad)' />
+        <polyline points='{{cumulativePolyline}}' fill='none' stroke='#7b5ff5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' />
+      </svg>
+      <div class='stats-cumulative-months'>
+        {{#each chartMonths}}
+          <span style='left: {{xPct}}%'>{{name}}</span>
+        {{/each}}
+      </div>
+    </section>
+    {{/if}}
+
     <div class='stats-columns'>
 
       <section class='stats-section'>
@@ -85,6 +118,22 @@
             {{#each byType}}
               <div class='stats-tag-row'>
                 <span class='stats-tag-row__label'>{{type}}</span>
+                <span class='stats-tag-row__count'>{{episodes_count}} ep</span>
+              </div>
+            {{/each}}
+          </div>
+        {{else}}
+          <p class='stats-empty'>No data.</p>
+        {{/if}}
+      </section>
+
+      <section class='stats-section'>
+        <h2>Era</h2>
+        {{#if byDecade}}
+          <div class='stats-tag-list'>
+            {{#each byDecade}}
+              <div class='stats-tag-row'>
+                <span class='stats-tag-row__label'>{{label}}</span>
                 <span class='stats-tag-row__count'>{{episodes_count}} ep</span>
               </div>
             {{/each}}

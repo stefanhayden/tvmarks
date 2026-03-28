@@ -1025,7 +1025,34 @@ export const getStats = async (year: number) => {
       ORDER BY episodes_count DESC
     `, y);
 
-    return { yearSummary, byMonth, topShows, byNetwork, byType };
+    const byDecade = await db.all(`
+      SELECT
+        (CAST(strftime('%Y', shows.premiered) AS INTEGER) / 10) * 10 as decade,
+        COUNT(DISTINCT shows.id) as shows_count,
+        COUNT(episodes.id) as episodes_count
+      FROM episodes
+      INNER JOIN shows ON episodes.show_id = shows.id
+      WHERE episodes.watched_status = 'WATCHED'
+        AND episodes.watched_at IS NOT NULL
+        AND strftime('%Y', episodes.watched_at) = ?
+        AND shows.premiered IS NOT NULL AND shows.premiered != ''
+      GROUP BY decade
+      ORDER BY decade DESC
+    `, y);
+
+    const byDay = await db.all(`
+      SELECT
+        strftime('%Y-%m-%d', watched_at) as day,
+        COUNT(*) as episodes
+      FROM episodes
+      WHERE watched_status = 'WATCHED'
+        AND watched_at IS NOT NULL
+        AND strftime('%Y', watched_at) = ?
+      GROUP BY day
+      ORDER BY day
+    `, y);
+
+    return { yearSummary, byMonth, topShows, byNetwork, byType, byDecade, byDay };
   } catch (dbError) {
     console.error('failed getStats', dbError);
   }

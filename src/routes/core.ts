@@ -120,7 +120,7 @@ router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number }>('/upc
   // Calculate days until air date for each episode
   const episodesWithDays = episodes?.map((episode) => ({
     ...episode,
-    days_until: calculateDaysUntilAirDate(episode.airstamp),
+    days_until: calculateDaysUntilAirDate(episode.airdate),
   }));
 
   const params: {
@@ -201,7 +201,71 @@ router.get<{}, {}, {}, { year?: string }>('/stats', async (req, res) => {
     return res.render('stats', { title: '', error: 'Could not load stats.' });
   }
 
-  const { yearSummary, byMonth, topShows, byNetwork, byType } = stats;
+  const { yearSummary, byMonth, topShows, byNetwork, byType, byDecade, byDay } = stats;
+
+  // Streaks
+  const sortedDays: string[] = byDay.map((d: { day: string }) => d.day).sort();
+  let longestStreak = 0;
+  let currentStreak = 0;
+  if (sortedDays.length > 0) {
+    let run = 1;
+    longestStreak = 1;
+    for (let i = 1; i < sortedDays.length; i++) {
+      const prev = new Date(sortedDays[i - 1] + 'T12:00:00Z');
+      const curr = new Date(sortedDays[i] + 'T12:00:00Z');
+      const diff = Math.round((curr.getTime() - prev.getTime()) / 86400000);
+      run = diff === 1 ? run + 1 : 1;
+      if (run > longestStreak) longestStreak = run;
+    }
+    if (year === currentYear) {
+      const daySet = new Set(sortedDays);
+      const todayStr = new Date().toISOString().split('T')[0];
+      const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      const anchorDay = daySet.has(todayStr) ? todayStr : daySet.has(yesterdayStr) ? yesterdayStr : null;
+      if (anchorDay) {
+        let checkMs = new Date(anchorDay + 'T12:00:00Z').getTime();
+        while (true) {
+          const d = new Date(checkMs).toISOString().split('T')[0];
+          if (!daySet.has(d)) break;
+          currentStreak++;
+          checkMs -= 86400000;
+        }
+      }
+    }
+  }
+
+  // Cumulative chart
+  const CHART_W = 500;
+  const CHART_H = 60;
+  const isLeap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInYear = isLeap ? 366 : 365;
+  const startOfYearMs = Date.UTC(year, 0, 1);
+  const episodesSoFar = yearSummary.episodes_watched || 0;
+  const fractionElapsed = year === currentYear ? Math.min((Date.now() - startOfYearMs) / (daysInYear * 86400000), 1) : 1;
+  const projectedTotal = fractionElapsed > 0 ? episodesSoFar / fractionElapsed : episodesSoFar;
+  const totalEpisodes = Math.max(Math.round(projectedTotal), 1);
+  let cumEpisodes = 0;
+  const chartPoints: string[] = [];
+  for (const d of byDay as { day: string; episodes: number }[]) {
+    cumEpisodes += d.episodes;
+    const dayOfYear = Math.round((Date.parse(d.day + 'T00:00:00Z') - startOfYearMs) / 86400000) + 1;
+    const x = Math.round((dayOfYear / daysInYear) * CHART_W);
+    const y = Math.round(CHART_H - (cumEpisodes / totalEpisodes) * CHART_H);
+    chartPoints.push(`${x},${y}`);
+  }
+  const cumulativePolyline = chartPoints.length > 0 ? `0,${CHART_H} ` + chartPoints.join(' ') : '';
+  const lastX = chartPoints.length > 0 ? chartPoints[chartPoints.length - 1].split(',')[0] : '0';
+  const cumulativePolygon =
+    chartPoints.length > 0 ? `0,${CHART_H} ` + chartPoints.join(' ') + ` ${lastX},${CHART_H}` : '';
+  const chartMonths = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'].map((name, i) => {
+    const dayOfYear = Math.round((Date.UTC(year, i, 1) - startOfYearMs) / 86400000) + 1;
+    return { name, xPct: Math.round((dayOfYear / daysInYear) * 100) };
+  });
+
+  // Decades
+  const byDecadeFormatted = (byDecade as { decade: number; shows_count: number; episodes_count: number }[]).map(
+    (d) => ({ label: d.decade ? `${d.decade}s` : 'Unknown', shows_count: d.shows_count, episodes_count: d.episodes_count }),
+  );
 
   const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const currentMonth = year === currentYear ? new Date().getMonth() + 1 : 12;
@@ -249,6 +313,12 @@ router.get<{}, {}, {}, { year?: string }>('/stats', async (req, res) => {
     })),
     byNetwork,
     byType,
+    byDecade: byDecadeFormatted,
+    longestStreak,
+    currentStreak,
+    cumulativePolyline,
+    cumulativePolygon,
+    chartMonths,
   });
 });
 
