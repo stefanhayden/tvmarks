@@ -22,6 +22,16 @@ export function isAuthenticated(req, res, next) {
   if (req.session.loggedIn) next();
   else res.redirect(`/login?sendTo=${encodeURIComponent(req.originalUrl)}`); // TODO: redirect on hitting this? or better provide an error?
 }
+function isSafeRelativeRedirect(value: unknown): value is string {
+  if (typeof value !== 'string' || !value.startsWith('/')) return false;
+  if (value.startsWith('//') || value.startsWith('/\\')) return false;
+  let decoded: string;
+  try { decoded = decodeURIComponent(value); } catch { return false; }
+  if (!decoded.startsWith('/')) return false;
+  if (decoded.startsWith('//') || decoded.startsWith('/\\')) return false;
+  return true;
+}
+
 export function login(req, res, next) {
   req.session.regenerate((err) => {
     if (err) {
@@ -37,7 +47,7 @@ export function login(req, res, next) {
         return next(saveErr);
       }
 
-      if (req.body.sendTo && req.body.sendTo.startsWith('/')) {
+      if (isSafeRelativeRedirect(req.body.sendTo)) {
         return res.redirect(decodeURIComponent(req.body.sendTo));
       }
       return res.redirect('/');
