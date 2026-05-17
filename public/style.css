@@ -515,7 +515,7 @@ a.bookmark-date {
   margin-bottom: 2rem;
   padding: 1.5rem;
   border-radius: 10px;
-  box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 0, 0, 0.15);
   position: relative;
  line-height: 1.8em;
 }
@@ -556,14 +556,44 @@ a.bookmark-date {
   content: '🔗';
 }
 
+.network-post-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+  gap: 1rem;
+}
+
 .network-post-credit {
-  padding: 2px;
-  padding-left: 15px;
-  background-color: var(--color-background);
-  filter: brightness(.90);
-  font-size: small;
-  border-radius: 15px 15px 15px 15px;
-  margin-bottom: 15px;
+  font-size: 0.8rem;
+  color: var(--color-dimmed);
+}
+
+.network-post-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.network-post-action-form {
+  display: inline;
+}
+
+.network-post-action-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-family);
+  font-size: 0.75rem;
+  color: var(--color-dimmed);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+.network-post-action-link:hover {
+  color: var(--color-foreground);
+  text-decoration-style: solid;
 }
 
 :root {

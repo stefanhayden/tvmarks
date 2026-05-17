@@ -3,19 +3,20 @@
     <div class="network-post-content">
       {{{this.content}}}
     </div>
-    <div class="network-post-credit">
-      by {{this.name}}
-    </div>
-    <div style="display: flex; gap: 10px;">
-      <form method="POST" action="/comment/{{this.id}}/delete">
-        
-        <input type="hidden" name="Referrer" value="/network">
-        <button>Delete</button>
-      </form>
-      <form action="/admin/followers/block" method="POST">
-        <input type="hidden" name="actor" value="{{this.name}}">
-        <button type="submit">Block</button>
-      </form>
+    <div class="network-post-footer">
+      <div class="network-post-credit">
+        by {{this.name}}
+      </div>
+      <div class="network-post-actions">
+        <form method="POST" action="/comment/{{this.id}}/delete" class="network-post-action-form">
+          <input type="hidden" name="Referrer" value="/network">
+          <button type="submit" class="network-post-action-link">delete</button>
+        </form>
+        <form action="/admin/followers/block" method="POST" class="network-post-action-form">
+          <input type="hidden" name="actor" value="{{this.name}}">
+          <button type="submit" class="network-post-action-link">block</button>
+        </form>
+      </div>
     </div>
   </div>
 {{/each}}
