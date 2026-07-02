@@ -79,7 +79,7 @@ function getSignatureParams(body, method, url) {
  */
 function getSignatureHeader(signature, signatureKeys) {
   return [
-    `keyId="https://${domain}/u/${account}"`,
+    `keyId="https://${domain}/u/${account}#main-key"`,
     `algorithm="rsa-sha256"`,
     `headers="${signatureKeys.join(' ')}"`,
     `signature="${signature}"`,
