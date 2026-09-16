@@ -357,6 +357,14 @@ router.post('/:showId/abandon', isAuthenticated, async (req, res) => {
   const { showId } = req.params;
 
   const abandoned = req.body.abandon === 'TRUE';
+
+  if (abandoned) {
+    const show = await tvDb.getShow(showId);
+    if (!show || show.watched_episodes_count === 0) {
+      return res.redirect(301, `/show/${showId}`);
+    }
+  }
+
   await tvDb.updateShow(showId, { abandoned });
 
   res.redirect(301, `/`);

@@ -139,20 +139,23 @@
 
   <div style="display:flex; gap: 10px; justify-content: right; margin-bottom: 10px;">
     {{#if @root.loggedIn}} 
-      <form method="post" action="/show/{{show.id}}/abandon"
-            onsubmit="this.querySelector('button').disabled = 'disabled'">
-        {{#if show.abandoned}}
+      {{#if show.abandoned}}
+        <form method="post" action="/show/{{show.id}}/abandon"
+              onsubmit="this.querySelector('button').disabled = 'disabled'">
           <input type="hidden" name="abandon" value="FALSE" />
           <button>
             resume
           </button>
-        {{else}}
+        </form>
+      {{else if show.watched_episodes_count}}
+        <form method="post" action="/show/{{show.id}}/abandon"
+              onsubmit="this.querySelector('button').disabled = 'disabled'">
           <input type="hidden" name="abandon" value="TRUE" />
           <button>
             abandon
           </button>
-        {{/if}}
-      </form>
+        </form>
+      {{/if}}
     
       <form method="post" 
             action="/show/{{show.id}}/refresh"

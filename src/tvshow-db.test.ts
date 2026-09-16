@@ -141,18 +141,85 @@ describe('tvshow-db', () => {
       next_episode_towatch_airdate: past6Months.split(' ')[0],
       abandoned: 1,
     } as tvDb.Show);
+
+    // ABANDONED #4
+    // marked as abandoned, but no next episode to watch date is known
+    // (e.g. between seasons) - should still show as abandoned
+    await tvDb.createShow({
+      id: 53,
+      status: 'Running',
+      episodes_count: 5,
+      aired_episodes_count: 5,
+      watched_episodes_count: 1,
+      last_watched_date: past6Months.split(' ')[0],
+      next_episode_towatch_airdate: null,
+      abandoned: 1,
+    } as tvDb.Show);
+
+    // ABANDONED #5
+    // status isn't 'Running' or 'Ended', otherwise same as ABANDONED #1
+    await tvDb.createShow({
+      id: 54,
+      status: 'In Development',
+      episodes_count: 5,
+      aired_episodes_count: 3,
+      watched_episodes_count: 1,
+      last_watched_date: past6Months.split(' ')[0],
+      next_episode_towatch_airdate: past6Months.split(' ')[0],
+    } as tvDb.Show);
+
+    // ABANDONED #6
+    // not caught up, gone stale, but next episode to watch has no known
+    // air date (e.g. refresh only looked at a season window with nothing
+    // unwatched in it) - should still show as abandoned, not disappear
+    await tvDb.createShow({
+      id: 55,
+      status: 'Running',
+      episodes_count: 5,
+      aired_episodes_count: 3,
+      watched_episodes_count: 1,
+      last_watched_date: past6Months.split(' ')[0],
+      next_episode_towatch_airdate: null,
+    } as tvDb.Show);
+
+    // UP TO DATE + manually abandoned - should only show as abandoned,
+    // not also as up to date
+    await tvDb.createShow({
+      id: 32,
+      status: 'Running',
+      episodes_count: 3,
+      aired_episodes_count: 2,
+      watched_episodes_count: 2,
+      last_watched_date: past3Days.split(' ')[0],
+      next_episode_towatch_airdate: past3Days.split(' ')[0],
+      abandoned: 1,
+    } as tvDb.Show);
+
+    // ENDED show cancelled before anything aired - should only show as not
+    // started, not also as completed
+    await tvDb.createShow({
+      id: 22,
+      status: 'Ended',
+      episodes_count: 0,
+      aired_episodes_count: 0,
+      watched_episodes_count: 0,
+      last_watched_date: null,
+      next_episode_towatch_airdate: null,
+    } as tvDb.Show);
   });
 
   test('showsNotStarted', async () => {
     const showsNotStarted = await tvDb.getShowsNotStarted();
 
-    expect(showsNotStarted?.length).toBe(1);
-    expect(showsNotStarted[0].id).toBe(1);
+    const ids = showsNotStarted.map((s) => s.id);
+    expect(ids.sort((a, b) => a - b)).toEqual([1, 22]);
   });
 
   test('getShowsCompleted', async () => {
     const getShowsCompleted = await tvDb.getShowsCompleted();
 
+    // id 22 (Ended, 0 aired episodes) is NOT completed - nothing aired yet,
+    // it belongs in "not started" only
     expect(getShowsCompleted?.length).toBe(2);
     expect(getShowsCompleted[0].id).toBe(2);
     expect(getShowsCompleted[1].id).toBe(21);
@@ -161,6 +228,8 @@ describe('tvshow-db', () => {
   test('getShowsUpToDate', async () => {
     const getShowsUpToDate = await tvDb.getShowsUpToDate();
 
+    // id 32 is caught up but manually abandoned, so it belongs in
+    // "abandoned" only, not also "up to date"
     expect(getShowsUpToDate?.length).toBe(2);
     expect(getShowsUpToDate[0].id).toBe(3);
     expect(getShowsUpToDate[1].id).toBe(31);
@@ -178,9 +247,7 @@ describe('tvshow-db', () => {
   test('getShowsAbandoned', async () => {
     const getShowsAbandoned = await tvDb.getShowsAbandoned();
 
-    expect(getShowsAbandoned?.length).toBe(3);
-    expect(getShowsAbandoned[0].id).toBe(5);
-    expect(getShowsAbandoned[1].id).toBe(51);
-    expect(getShowsAbandoned[2].id).toBe(52);
+    const ids = getShowsAbandoned.map((s) => s.id);
+    expect(ids.sort((a, b) => a - b)).toEqual([5, 32, 51, 52, 53, 54, 55]);
   });
 });
