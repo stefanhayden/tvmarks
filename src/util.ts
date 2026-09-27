@@ -144,6 +144,18 @@ export function calculateDaysUntilAirDate(airdate: string, referenceDate?: Date)
   return Math.round((episodeTime - todayTime) / (24 * 60 * 60 * 1000));
 }
 
+// episodes with no airstamp are treated as not aired
+export function isEpisodeAired(airstamp: string | null | undefined, referenceDate?: Date): boolean {
+  if (!airstamp) return false;
+  const airTime = new Date(airstamp).getTime();
+  return !Number.isNaN(airTime) && airTime <= (referenceDate || new Date()).getTime();
+}
+
+// specials (no episode number) are not counted
+export function countAiredEpisodes(episodes: { number?: number | null; airstamp?: string | null }[], referenceDate?: Date): number {
+  return episodes.filter((ep) => ep.number !== null && isEpisodeAired(ep.airstamp, referenceDate)).length;
+}
+
 export function simpleLogger(req, res, next) {
   // middleware function
   const currentDatetime = new Date();

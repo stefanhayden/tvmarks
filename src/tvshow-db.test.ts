@@ -206,6 +206,39 @@ describe('tvshow-db', () => {
       last_watched_date: null,
       next_episode_towatch_airdate: null,
     } as tvDb.Show);
+
+    // COMPLETED - ended, nothing aired yet but episodes marked watched
+    await tvDb.createShow({
+      id: 23,
+      status: 'Ended',
+      episodes_count: 2,
+      aired_episodes_count: 0,
+      watched_episodes_count: 1,
+      last_watched_date: past3Days.split(' ')[0],
+      next_episode_towatch_airdate: null,
+    } as tvDb.Show);
+
+    // UP TO DATE - missing status is treated as not ended
+    await tvDb.createShow({
+      id: 33,
+      status: null,
+      episodes_count: 2,
+      aired_episodes_count: 2,
+      watched_episodes_count: 2,
+      last_watched_date: past3Days.split(' ')[0],
+      next_episode_towatch_airdate: null,
+    } as tvDb.Show);
+
+    // ABANDONED #7 - behind with no last watched date is treated as stale
+    await tvDb.createShow({
+      id: 56,
+      status: 'Running',
+      episodes_count: 5,
+      aired_episodes_count: 3,
+      watched_episodes_count: 1,
+      last_watched_date: null,
+      next_episode_towatch_airdate: null,
+    } as tvDb.Show);
   });
 
   test('showsNotStarted', async () => {
@@ -218,11 +251,9 @@ describe('tvshow-db', () => {
   test('getShowsCompleted', async () => {
     const getShowsCompleted = await tvDb.getShowsCompleted();
 
-    // id 22 (Ended, 0 aired episodes) is NOT completed - nothing aired yet,
-    // it belongs in "not started" only
-    expect(getShowsCompleted?.length).toBe(2);
-    expect(getShowsCompleted[0].id).toBe(2);
-    expect(getShowsCompleted[1].id).toBe(21);
+    // id 22 (Ended, nothing watched) belongs in "not started" only
+    const ids = getShowsCompleted.map((s) => s.id);
+    expect(ids.sort((a, b) => a - b)).toEqual([2, 21, 23]);
   });
 
   test('getShowsUpToDate', async () => {
@@ -230,9 +261,8 @@ describe('tvshow-db', () => {
 
     // id 32 is caught up but manually abandoned, so it belongs in
     // "abandoned" only, not also "up to date"
-    expect(getShowsUpToDate?.length).toBe(2);
-    expect(getShowsUpToDate[0].id).toBe(3);
-    expect(getShowsUpToDate[1].id).toBe(31);
+    const ids = getShowsUpToDate.map((s) => s.id);
+    expect(ids.sort((a, b) => a - b)).toEqual([3, 31, 33]);
   });
 
   test('getShowsToWatch', async () => {
@@ -248,6 +278,6 @@ describe('tvshow-db', () => {
     const getShowsAbandoned = await tvDb.getShowsAbandoned();
 
     const ids = getShowsAbandoned.map((s) => s.id);
-    expect(ids.sort((a, b) => a - b)).toEqual([5, 32, 51, 52, 53, 54, 55]);
+    expect(ids.sort((a, b) => a - b)).toEqual([5, 32, 51, 52, 53, 54, 55, 56]);
   });
 });
