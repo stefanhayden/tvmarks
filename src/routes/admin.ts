@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import escapeHTML from 'escape-html';
 import { stringify as csvStringify } from 'csv-stringify/sync'; // https://github.com/adaltas/node-csv/issues/323
-import { domain, actorInfo, parseJSON, account, dataDir } from '../util';
+import { domain, actorInfo, parseJSON, account, dataDir, countAiredEpisodes } from '../util';
 import { isAuthenticated } from '../session-auth';
 import { lookupActorInfo, createFollowMessage, createUnfollowMessage, signAndSend, getInboxFromActorProfile, broadcastMessage } from '../activitypub';
 import { downloadImage } from '../download-image';
@@ -11,8 +11,6 @@ import * as apDb from '../activity-pub-db';
 import * as tvDb from '../tvshow-db';
 import { ProviderFactory } from '../providers/provider-factory';
 import { DatabaseMapper } from '../providers/base/db-mapper';
-
-const timezone_offset = Number(process.env.TIMEZONE_OFFSET || '+0');
 
 const imageDirectory = 'public/shows';
 
@@ -438,10 +436,7 @@ export async function refreshShowEpisodesData(_, showId) {
   const currentEpisodesWithNulls = await tvDb.getEpisodesByShowId(showId);
   const currentEpisodes = currentEpisodesWithNulls.filter((ep) => ep.number !== null);
   const episodes_count = currentEpisodes.filter((ep) => ep.number !== null).length;
-  const aired_episodes_count = currentEpisodes.filter((ep) => {
-    const airstamp = new Date(new Date(ep.airstamp).setHours(new Date().getHours() + timezone_offset));
-    return ep.number !== null && airstamp <= new Date();
-  }).length;
+  const aired_episodes_count = countAiredEpisodes(currentEpisodes);
 
   return tvDb.updateShow(showId, {
     episodes_count,
@@ -498,12 +493,7 @@ export async function refreshShowData() {
     const currentEpisodes = currentEpisodesWithNulls.filter((ep) => ep.number !== null);
 
     const episodes_count = currentEpisodes.filter((ep) => ep.number !== null).length;
-    const aired_episodes_count = currentEpisodes.filter((ep) => {
-      const airstamp = new Date(new Date(ep.airstamp).setHours(new Date().getHours() + timezone_offset));
-      return ep.number !== null && airstamp <= new Date();
-    }).length;
-
-    // const aired_episodes_count = currentEpisodes.filter((ep) => ep.number !== null && new Date(ep.airstamp) < new Date()).length;
+    const aired_episodes_count = countAiredEpisodes(currentEpisodes);
     const next_episode_towatch_airdate = currentEpisodes.find((ep) => ep.watched_status !== 'WATCHED')?.airdate || null;
 
     console.log(`update show data for ${updatedShow.name}`);
@@ -572,7 +562,7 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
     const episodes = await provider.getEpisodes(req.params.showId, true);
 
     const episodes_count = episodes.filter((ep) => ep.number !== null).length;
-    const aired_episodes_count = episodes.filter((ep) => ep.number !== null && new Date(ep.airdate) < new Date()).length;
+    const aired_episodes_count = countAiredEpisodes(episodes);
     const watched_episodes_count = 0;
     const last_watched_date = null;
     const next_episode_towatch_airdate = episodes.find((ep) => ep.season === 1 && ep.number === 1)?.airdate || null;

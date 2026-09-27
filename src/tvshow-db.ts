@@ -289,7 +289,7 @@ export const getShowsCompleted = async (limit = 24, offset = 0) => {
     const results = await db.all<Show[]>(
       `SELECT * from shows
         WHERE aired_episodes_count <= watched_episodes_count
-        AND aired_episodes_count > 0
+        AND watched_episodes_count > 0
         AND status == 'Ended'
         AND abandoned != 1
         ORDER BY last_watched_date DESC LIMIT ? OFFSET ?`,
@@ -314,23 +314,10 @@ export const getShowsToWatch = async (limit = 24, offset = 0) => {
           WHERE
             abandoned != 1 AND
             watched_episodes_count > 0 AND
+            aired_episodes_count > watched_episodes_count AND
             (
-              DateTime(next_episode_towatch_airdate) <= DateTime('now', '${timezoneMod}') OR
-              watched_episodes_count < aired_episodes_count
-            ) AND
-            (
-              (
-                (status == 'Ended') AND
-                last_watched_date > date('now', '-3 month', '${timezoneMod}')
-              ) OR
-              (
-                status != 'Ended' AND
-                aired_episodes_count > watched_episodes_count AND
-                (
-                  DateTime(next_episode_towatch_airdate) > date('now', '-3 month', '${timezoneMod}') OR
-                  last_watched_date > date('now', '-3 month', '${timezoneMod}')
-                )
-              )
+              DateTime(next_episode_towatch_airdate) > date('now', '-3 month', '${timezoneMod}') OR
+              last_watched_date > date('now', '-3 month', '${timezoneMod}')
             )
           ORDER BY last_watched_date DESC LIMIT ? OFFSET ?;
         `,
@@ -359,7 +346,7 @@ export const getShowsUpToDate = async (limit = 24, offset = 0) => {
             aired_episodes_count <= watched_episodes_count
           )
           AND watched_episodes_count != 0
-          AND status != 'Ended'
+          AND status IS NOT 'Ended'
           AND abandoned != 1
         ORDER BY last_watched_date DESC LIMIT ? OFFSET ?`,
       limit,
@@ -386,20 +373,8 @@ export const getShowsAbandoned = async (limit = 24, offset = 0) => {
               OR
               (
                 aired_episodes_count > watched_episodes_count AND
-                (
-                  (
-                    status == 'Ended' AND last_watched_date < date('now', '-3 month', '${timezoneMod}')
-                  )
-                  OR
-                  (
-                    status != 'Ended' AND
-                    last_watched_date < date('now', '-3 month', '${timezoneMod}') AND
-                    (
-                      DateTime(next_episode_towatch_airdate) < date('now', '-3 month', '${timezoneMod}') OR
-                      next_episode_towatch_airdate IS NULL
-                    )
-                  )
-                )
+                (last_watched_date IS NULL OR last_watched_date < date('now', '-3 month', '${timezoneMod}')) AND
+                (next_episode_towatch_airdate IS NULL OR DateTime(next_episode_towatch_airdate) < date('now', '-3 month', '${timezoneMod}'))
               )
             )
           ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
@@ -912,7 +887,7 @@ export const getAllInProgressShows = async () => {
   try {
     return await db.all(`
         SELECT * FROM shows 
-        WHERE status != 'Ended'
+        WHERE status IS NOT 'Ended'
         AND DateTime(updated_at) <= DateTime('now', '-4 hour')
         ORDER BY last_watched_date, updated_at DESC
       `);
@@ -941,8 +916,7 @@ export const getAllAiredEpisodesCountByShow = async () => {
         FROM shows
         LEFT JOIN episodes ON shows.id == episodes.show_id
         WHERE
-          shows.status != 'Ended'
-          AND episodes.number IS NOT NULL
+          episodes.number IS NOT NULL
           AND episodes.airstamp IS NOT NULL
           AND episodes.airstamp != ''
           AND DateTime(episodes.airstamp) <= DateTime('now')
