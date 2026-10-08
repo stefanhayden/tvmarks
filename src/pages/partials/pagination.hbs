@@ -1,7 +1,7 @@
 {{#with pagination}}
   <div class="pagination">
     {{#if hasPreviousPage }}
-      <a href="{{url}}?offset={{previousOffset}}">
+      <a href="{{url}}?offset={{previousOffset}}{{#if query}}&{{query}}{{/if}}">
         Previous
       </a>
     {{else}}
@@ -13,7 +13,7 @@
       Page {{currentPage}}
     </span>
     {{#if hasNextPage}}
-      <a href="{{url}}?offset={{nextOffset}}">
+      <a href="{{url}}?offset={{nextOffset}}{{#if query}}&{{query}}{{/if}}">
         Next
       </a>
     {{else}}

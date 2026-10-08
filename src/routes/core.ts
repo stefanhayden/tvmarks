@@ -1,5 +1,5 @@
 import express from 'express';
-import { data, actorInfo, calculateDaysUntilAirDate } from '../util';
+import { data, actorInfo, calculateDaysUntilAirDate, localDateString } from '../util';
 import { isAuthenticated } from '../session-auth';
 import { refreshShowData, refreshWatchNext } from './admin';
 import * as tvDb from '../tvshow-db';
@@ -57,6 +57,7 @@ router.get<{}, {}, {}, { raw?: boolean }, {}>('/', async (req, res) => {
 
 type Pagination = {
   url: string;
+  query?: string;
   currentPage: number;
   offset: number;
   limit: number;
@@ -110,23 +111,42 @@ router.get<{ type: string }, {}, {}, { raw?: boolean; limit?: number; offset?: n
   return req.query.raw ? res.send(params) : res.render('shows-by-type', params);
 });
 
-router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number }>('/upcoming', async (req, res) => {
-  const limit = Math.max(req.query?.limit || 24, 1);
-  const offset = Math.max(req.query?.offset || 0, 0);
-  const currentPage = (limit + offset) / limit;
+router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number; abandoned?: string | string[] }>('/upcoming', async (req, res) => {
+  const limit = Math.max(Number(req.query?.limit) || 24, 1);
+  const offset = Math.max(Number(req.query?.offset) || 0, 0);
+  const currentPage = Math.floor(offset / limit) + 1;
 
-  const episodes = await tvDb.getUpcomingEpisodes(limit, offset);
+  const showAbandoned = ['1', 'true'].includes(String([req.query?.abandoned].flat().pop()));
+
+  const episodes = await tvDb.getUpcomingEpisodes(limit, offset, showAbandoned);
 
   // Calculate days until air date for each episode
-  const episodesWithDays = episodes?.map((episode) => ({
-    ...episode,
-    days_until: calculateDaysUntilAirDate(episode.airdate),
-  }));
+  const episodesWithDays = episodes?.map((episode) => {
+    // airdate is the broadcaster's calendar date, the same one the show page lists
+    const airsOn = episode.airdate || localDateString(new Date(episode.airstamp));
+    return {
+      ...episode,
+      airs_on: airsOn,
+      // a broadcaster far enough behind us can still be on "yesterday" when the episode airs
+      days_until: Math.max(calculateDaysUntilAirDate(airsOn), 0),
+    };
+  });
+
+  // keep the page size and the abandoned toggle when following links
+  const linkQuery = (abandoned: boolean) => {
+    const query = new URLSearchParams();
+    if (req.query?.limit) query.set('limit', String(limit));
+    if (abandoned) query.set('abandoned', '1');
+    return query.toString();
+  };
+  const toggleQuery = linkQuery(!showAbandoned);
 
   const params: {
     episodes: any;
     offset: number;
     limit: number;
+    showAbandoned: boolean;
+    toggleAbandonedUrl: string;
     error?: string;
     title?: string;
     pagination?: Pagination;
@@ -134,6 +154,8 @@ router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number }>('/upc
     episodes: episodesWithDays,
     offset,
     limit,
+    showAbandoned,
+    toggleAbandonedUrl: toggleQuery ? `/upcoming?${toggleQuery}` : '/upcoming',
   };
 
   if (!episodes) params.error = data.errorMessage;
@@ -141,11 +163,12 @@ router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number }>('/upc
   params.title = 'Upcoming Episodes';
   const pagination: Pagination = {
     url: '/upcoming',
+    query: linkQuery(showAbandoned) || undefined,
     currentPage,
     offset,
     limit,
     hasPreviousPage: currentPage > 1,
-    hasNextPage: episodes.length === limit,
+    hasNextPage: episodes?.length === limit,
     nextOffset: Math.min(offset + limit),
     previousOffset: Math.max(offset - limit, 0),
   };

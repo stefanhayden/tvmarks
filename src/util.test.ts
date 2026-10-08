@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateDaysUntilAirDate, isEpisodeAired, countAiredEpisodes } from './util';
+import { calculateDaysUntilAirDate, localDateString, formatDate, isEpisodeAired, countAiredEpisodes } from './util';
 
 describe('calculateDaysUntilAirDate', () => {
   it('should return 0 for an episode airing today', () => {
@@ -56,6 +56,55 @@ describe('calculateDaysUntilAirDate', () => {
     const today = new Date('2026-03-27T10:00:00Z');
     const result = calculateDaysUntilAirDate('2026-03-30', today);
     expect(result).toBe(3);
+  });
+});
+
+describe('calculateDaysUntilAirDate in a configured timezone', () => {
+  it('should count from the local day once UTC has rolled over to tomorrow', () => {
+    // 9pm at UTC-5 on Oct 6 is already Oct 7 in UTC
+    const now = new Date('2026-10-07T02:00:00Z');
+    expect(calculateDaysUntilAirDate('2026-10-07', now, -5)).toBe(1);
+    expect(calculateDaysUntilAirDate('2026-10-07', now, 0)).toBe(0);
+  });
+
+  it('should count from the local day when it is ahead of UTC', () => {
+    // 1am at UTC+3 on Oct 8 is still Oct 7 in UTC
+    const now = new Date('2026-10-07T22:00:00Z');
+    expect(calculateDaysUntilAirDate('2026-10-08', now, 3)).toBe(0);
+  });
+});
+
+describe('localDateString', () => {
+  it('should shift the instant by the timezone offset', () => {
+    const instant = new Date('2026-10-08T00:30:00Z');
+    expect(localDateString(instant, 0)).toBe('2026-10-08');
+    expect(localDateString(instant, -5)).toBe('2026-10-07');
+  });
+});
+
+describe('formatDate', () => {
+  it('should keep the calendar day of a date-only string', () => {
+    expect(formatDate('2026-05-20')).toBe('May 20th, 2026');
+    expect(formatDate('2026-01-01')).toBe('January 1st, 2026');
+    expect(formatDate('2026-12-31')).toBe('December 31st, 2026');
+  });
+
+  it('should use the right ordinal suffix', () => {
+    expect(formatDate('2026-03-02')).toBe('March 2nd, 2026');
+    expect(formatDate('2026-03-03')).toBe('March 3rd, 2026');
+    expect(formatDate('2026-03-11')).toBe('March 11th, 2026');
+    expect(formatDate('2026-03-22')).toBe('March 22nd, 2026');
+  });
+
+  it('should format a local date and time', () => {
+    expect(formatDate('2026-05-20 21:15:00')).toBe('May 20th, 2026');
+  });
+
+  it('should return an empty string for missing, invalid or impossible dates', () => {
+    expect(formatDate('')).toBe('');
+    expect(formatDate(null)).toBe('');
+    expect(formatDate('not a date')).toBe('');
+    expect(formatDate('2026-02-31')).toBe('');
   });
 });
 

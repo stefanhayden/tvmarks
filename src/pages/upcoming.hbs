@@ -3,6 +3,9 @@
     {{error}}
   </p>
 {{else}}
+  <p style="text-align: right;">
+    <a href="{{toggleAbandonedUrl}}">{{#if showAbandoned}}hide{{else}}show{{/if}} abandoned shows</a>
+  </p>
   {{#if episodes}}
     <div style="margin-bottom: 50px">
       {{#each episodes}}
