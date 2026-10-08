@@ -13,6 +13,9 @@
       <strong>
         <a href="/show/{{episode.show_id}}">{{episode.show_name}}</a>
       </strong>
+      {{#if episode.show_abandoned}}
+        <span style="color: rgba(0, 0, 0, 0.5);">(abandoned)</span>
+      {{/if}}
     </div>
     <div style="margin-bottom: 5px;">
       S{{episode.season}} {{#if episode.number}}| E{{episode.number}}{{/if}}
@@ -23,7 +26,7 @@
       </a>
     </div>
     <div style="color: rgba(0, 0, 0, 0.5); font-size: 1.2em;">
-      Airs: {{formatDate episode.airstamp}}
+      Airs: {{formatDate episode.airs_on}}
     </div>
   </div>
   <div style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 80px;">

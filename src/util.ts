@@ -147,19 +147,41 @@ export function replaceEmptyText(currentValue: string, defaultValue: string) {
   return currentValue;
 }
 
+const configuredTimezoneOffset = () => Number(process.env.TIMEZONE_OFFSET) || 0;
+
+// YYYY-MM-DD of the given instant in the configured timezone (TIMEZONE_OFFSET hours from UTC)
+export function localDateString(date: Date, timezoneOffset = configuredTimezoneOffset()): string {
+  return new Date(date.getTime() + timezoneOffset * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 /**
  * Calculate the number of calendar days until an episode airs.
  * Returns 0 for episodes airing today, 1 for tomorrow, etc.
- * @param airstamp - The episode's air timestamp (ISO string)
- * @param referenceDate - Optional reference date (defaults to today)
+ * @param airdate - The episode's air date (YYYY-MM-DD)
+ * @param referenceDate - Optional reference date (defaults to now)
+ * @param timezoneOffset - Hours from UTC used to decide what "today" is (defaults to TIMEZONE_OFFSET)
  * @returns Number of days until the episode airs
  */
-export function calculateDaysUntilAirDate(airdate: string, referenceDate?: Date): number {
-  const today = referenceDate || new Date();
-  const todayDateStr = today.toISOString().slice(0, 10); // YYYY-MM-DD in UTC
+export function calculateDaysUntilAirDate(airdate: string, referenceDate?: Date, timezoneOffset?: number): number {
+  const todayDateStr = localDateString(referenceDate || new Date(), timezoneOffset);
   const episodeTime = new Date(airdate + 'T00:00:00Z').getTime();
   const todayTime = new Date(todayDateStr + 'T00:00:00Z').getTime();
   return Math.round((episodeTime - todayTime) / (24 * 60 * 60 * 1000));
+}
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+export function formatDate(dateString: string | null | undefined): string {
+  if (!dateString) return '';
+  // a bare YYYY-MM-DD is parsed as UTC midnight, which can land on the previous day in local time
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(dateString);
+  const date = new Date(dateOnly ? `${dateString}T00:00:00` : dateString);
+  if (Number.isNaN(date.getTime())) return '';
+  const day = date.getDate();
+  // impossible dates like 02-31 would otherwise roll over into the next month
+  if (dateOnly && day !== Number(dateString.slice(8))) return '';
+  const suffix = day === 1 || day === 21 || day === 31 ? 'st' : day === 2 || day === 22 ? 'nd' : day === 3 || day === 23 ? 'rd' : 'th';
+  return `${MONTHS[date.getMonth()]} ${day}${suffix}, ${date.getFullYear()}`;
 }
 
 // episodes with no airstamp are treated as not aired

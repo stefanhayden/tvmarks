@@ -5,7 +5,7 @@ import { create } from 'express-handlebars';
 import escapeHTML from 'escape-html';
 import helpers from 'handlebars-helpers';
 
-import { domain, account, simpleLogger, actorInfo, replaceEmptyText, dataDir } from './src/util';
+import { domain, account, simpleLogger, actorInfo, replaceEmptyText, dataDir, formatDate } from './src/util';
 import session, { isAuthenticated } from './src/session-auth.js';
 import * as apDb from './src/activity-pub-db.js';
 import * as tvDb from './src/tvshow-db.js';
@@ -119,14 +119,7 @@ const hbs = create({
     setTitle(item) {
       return replaceEmptyText(item.title, item.url);
     },
-    formatDate(dateString) {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-      const day = date.getDate();
-      const suffix = day === 1 || day === 21 || day === 31 ? 'st' : day === 2 || day === 22 ? 'nd' : day === 3 || day === 23 ? 'rd' : 'th';
-      return `${months[date.getMonth()]} ${day}${suffix}, ${date.getFullYear()}`;
-    },
+    formatDate,
   },
   partialsDir: './src/pages/partials',
   extname: '.hbs',

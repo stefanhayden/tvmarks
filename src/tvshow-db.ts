@@ -460,20 +460,21 @@ export const getRecentEpisodesByShowId = async (showId) => {
   return undefined;
 };
 
-export const getUpcomingEpisodes = async (limit = 24, offset = 0) => {
+export const getUpcomingEpisodes = async (limit = 24, offset = 0, includeAbandoned = false) => {
   try {
     const result = await db.all(
       `SELECT
         episodes.*,
         shows.name as show_name,
-        shows.image as show_image
+        shows.image as show_image,
+        shows.abandoned as show_abandoned
       FROM episodes
       INNER JOIN shows ON episodes.show_id = shows.id
       WHERE
         episodes.airstamp IS NOT NULL
         AND episodes.airstamp != ''
-        AND DateTime(episodes.airstamp) > DateTime('now', '${timezoneMod}')
-        AND shows.abandoned != 1
+        AND DateTime(episodes.airstamp) > DateTime('now')
+        ${includeAbandoned ? '' : 'AND shows.abandoned IS NOT 1'}
       ORDER BY episodes.airstamp ASC
       LIMIT ? OFFSET ?`,
       limit,
