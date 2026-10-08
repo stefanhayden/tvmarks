@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { synthesizeActivity } from '../../activitypub';
 import { inboxRoute } from './inbox';
 import * as apDb from '../../activity-pub-db';
+import { getQuoteAuthorization, quoteAuthorizationContext } from '../../quote-authorization';
 
 const router = express.Router();
 
@@ -177,9 +178,8 @@ router.get('/:name/outbox', async (req: Request<{}, {}, {}, { page: string }>, r
 
 // Quote authorization route - serves authorization stamps for approved quotes
 // This is referenced in Accept activities sent by the inbox when auto-approving quotes
-router.get('/:name/quoteAuth/:guid', async (req: Request<{ name: string; guid: string }, {}, {}, { remote?: string; local?: string }>, res: Response) => {
+export const quoteAuthRoute = async (req: Request<{ name: string; guid: string }>, res: Response): Promise<any> => {
   const { name, guid } = req.params;
-  const { remote, local } = req.query;
 
   if (!name || !guid) {
     return res.status(400).send('Bad request.');
@@ -193,35 +193,15 @@ router.get('/:name/quoteAuth/:guid', async (req: Request<{ name: string; guid: s
     return res.status(404).send('Not found.');
   }
 
-  // The authorization is stateless and encoded in the URL.
-  // If we have the local guid, we can verify the quote exists in our database
-  if (local) {
-    try {
-      const message = await apDb.getMessage(local);
-      if (!message) {
-        return res.status(404).send('Quote authorization not found.');
-      }
-    } catch (e) {
-      console.log('Error verifying quote authorization:', e);
-      return res.status(500).send('Server error.');
-    }
+  const quoteAuthorization = await getQuoteAuthorization(guid, domain, account);
+  if (!quoteAuthorization) {
+    return res.status(404).send('Quote authorization not found.');
   }
 
-  // Build the QuoteAuthorization object as per FEP-044f
-  // This tells remote servers that the quote has been approved
-  const authorizationUrl = `https://${domain}/u/${name}/quoteAuth/${guid}${remote || local ? '?' : ''}${remote ? `remote=${encodeURIComponent(remote)}` : ''}${remote && local ? '&' : ''}${local ? `local=${encodeURIComponent(local)}` : ''}`;
-
-  const quoteAuthorization = {
-    '@context': 'https://www.w3.org/ns/activitystreams',
-    id: authorizationUrl,
-    type: 'QuoteAuthorization',
-    attributedTo: `https://${domain}/u/${account}`,
-    ...(remote && { interactionTarget: remote }),
-    ...(local && { interactingObject: `https://${domain}/m/${local}` }),
-  };
-
   res.setHeader('Content-Type', 'application/activity+json');
-  return res.json(quoteAuthorization);
-});
+  return res.json({ '@context': quoteAuthorizationContext, ...quoteAuthorization });
+};
+
+router.get('/:name/quoteAuth/:guid', quoteAuthRoute);
 
 export default router;
