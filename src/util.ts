@@ -96,6 +96,24 @@ export function parseJSON(text) {
   }
 }
 
+// ActivityPub properties can be a bare URI or an object carrying one
+export function uriOf(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const { id, url, href } = value as Record<string, unknown>;
+    return [id, url, href].find((v): v is string => typeof v === 'string');
+  }
+  return undefined;
+}
+
+// The URI of the post being quoted, whether the quote is declared on the
+// activity or on the object it wraps
+export function quoteTargetOf(activity: any): string | undefined {
+  return [activity?.quoteUrl, activity?.quote, activity?.object?.quoteUrl, activity?.object?.quote].map(uriOf).find(Boolean);
+}
+
 // I like being able to refer to people like I would on Mastodon
 // i.e. @username@instance.tld. But lots of activitypub stuff treats the
 // identifier for an actor as the URL that represents their profile,
