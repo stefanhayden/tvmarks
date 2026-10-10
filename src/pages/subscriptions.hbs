@@ -4,7 +4,7 @@
   </p>
 {{else}}
   <div class="subscriptions-page">
-    {{#if (or needed notNeeded)}}
+    {{#if hasSubscriptions}}
       <div class="stats-summary-grid">
         <div class="stats-card stats-card--4">
           <span class="stats-card__number">{{needed.length}}</span>
@@ -65,9 +65,14 @@
                 {{#if this.betweenSeasons}}
                   {{> subscription_shows label="Between seasons" shows=this.betweenSeasons}}
                 {{/if}}
-                {{#if this.idle}}
-                  {{> subscription_shows label="Nothing in progress" shows=this.idle}}
+                {{#if this.notStarted}}
+                  {{> subscription_shows label="Not started" shows=this.notStarted}}
                 {{/if}}
+                {{#unless this.betweenSeasons}}
+                  {{#unless this.notStarted}}
+                    <p class="subscriptions-page__hint">Nothing left to watch.</p>
+                  {{/unless}}
+                {{/unless}}
               </div>
             </div>
           {{/each}}

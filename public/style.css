@@ -1100,6 +1100,12 @@ a.bookmark-date {
   filter: brightness(1.15);
 }
 
+.service-picker .service-picker__auto {
+  background: none;
+  color: var(--color-dimmed);
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
 .service-picker__scroll {
   flex: none;
   width: 2rem;

@@ -68,24 +68,62 @@ export const slugifyServiceName = (name: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
+// network names from the data provider that go by another name as a service, keyed by slugifyServiceName
+const networkAliases = new Map([
+  ['hbo', 'hbo-max'],
+  ['max', 'hbo-max'],
+  ['apple-tv-plus', 'apple-tv'],
+  ['amazon-prime-video', 'prime-video'],
+  ['amazon-prime', 'prime-video'],
+  ['paramount-plus-with-showtime', 'paramount-plus'],
+  ['showtime', 'paramount-plus'],
+  ['youtube-premium', 'youtube'],
+  ['the-roku-channel', 'roku-channel'],
+]);
+
+// Never guessed from a network: choices only the viewer can make,
+// and broadcast channels that share a name with a service but could be watched anywhere.
+const neverGuessed = [NO_SERVICE, 'cable', 'other', 'pbs', 'channel-4'];
+
+// The service a show is most likely watched on, going by the network it airs on.
+// A network matches when a service carries its name or it is listed above. That covers streaming networks and
+// the premium channels with a service of their own, like HBO and Starz. Broadcast networks like NBC or PBS don't match.
+export const createStreamingServiceMatcher = <S extends StreamingService>(services: S[]) => {
+  // a service's slug is its name run through slugifyServiceName, the same as is done to the network here
+  const bySlug = new Map(services.filter((service) => !neverGuessed.includes(service.slug)).map((service) => [service.slug, service]));
+
+  return (networkName: string | null | undefined) => {
+    const network = slugifyServiceName(networkName || '');
+    // a service named exactly like the network wins over an alias
+    return bySlug.get(network) || bySlug.get(networkAliases.get(network)) || undefined;
+  };
+};
+
+// 'network' when the service was guessed from the network, 'manual' once the viewer has picked one.
+// Only used to know what a new guess may replace, a guessed service otherwise counts like any other.
+export type StreamingServiceSource = 'manual' | 'network';
+
 type ServiceShow = { id: number; streaming_service?: string | null };
 
 // A subscription is needed only while one of its shows is in progress (see getShowIdsInProgress).
-// Everything else on a service (between seasons, finished, abandoned, not started) doesn't need the subscription right now.
+// Shows between seasons or not started are listed as not needing it right now.
+// Abandoned shows (flagged, or untouched for three months) and completed shows aren't listed at all.
 export const groupShowsBySubscription = <T extends ServiceShow, S extends StreamingService>(
   services: S[],
-  shows: { watching: T[]; upToDate: T[]; others: T[] },
+  shows: { watching: T[]; upToDate: T[]; notStarted: T[] },
   inProgressShowIds: Set<number>,
+  // services to list even with no shows left to list, because they were in use until recently
+  alwaysListed: string[] = [],
 ) => {
   const groups = new Map(
     services
       .filter((service) => service.slug !== NO_SERVICE)
-      .map((service) => [service.slug, { service, watching: [] as T[], upToDate: [] as T[], betweenSeasons: [] as T[], idle: [] as T[] }]),
+      .map((service) => [service.slug, { service, watching: [] as T[], upToDate: [] as T[], betweenSeasons: [] as T[], notStarted: [] as T[] }]),
   );
   const unassigned: T[] = [];
   const seen = new Set<number>();
 
-  const add = (list: T[], bucket: 'watching' | 'upToDate' | 'betweenSeasons' | 'idle') =>
+  const add = (list: T[], bucket: 'watching' | 'upToDate' | 'betweenSeasons' | 'notStarted') =>
     list.forEach((show) => {
       if (seen.has(show.id)) return;
       seen.add(show.id);
@@ -99,11 +137,11 @@ export const groupShowsBySubscription = <T extends ServiceShow, S extends Stream
   add(shows.watching.filter(inProgress), 'watching');
   add(shows.upToDate.filter(inProgress), 'upToDate');
   add([...shows.watching, ...shows.upToDate], 'betweenSeasons');
-  add(shows.others, 'idle');
+  add(shows.notStarted, 'notStarted');
 
   const activeCount = (group: { watching: T[]; upToDate: T[] }) => group.watching.length + group.upToDate.length;
-  const idleCount = (group: { betweenSeasons: T[]; idle: T[] }) => group.betweenSeasons.length + group.idle.length;
-  const used = [...groups.values()].filter((group) => activeCount(group) + idleCount(group) > 0);
+  const idleCount = (group: { betweenSeasons: T[]; notStarted: T[] }) => group.betweenSeasons.length + group.notStarted.length;
+  const used = [...groups.values()].filter((group) => activeCount(group) + idleCount(group) > 0 || alwaysListed.includes(group.service.slug));
 
   return {
     needed: used.filter((group) => activeCount(group) > 0).sort((a, b) => activeCount(b) - activeCount(a)),

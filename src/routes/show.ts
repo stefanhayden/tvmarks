@@ -40,6 +40,7 @@ router.get('/:showId', async (req, res) => {
     activityUrl?: string;
     streamingServices?: unknown;
     streamingService?: unknown;
+    streamingServicePicked?: boolean;
   } = {};
   const now = new Date();
 
@@ -56,6 +57,7 @@ router.get('/:showId', async (req, res) => {
     params.streamingService = await tvDb.getStreamingService(show.streaming_service);
   }
   if (isLoggedIn) params.streamingServices = await tvDb.getStreamingServices();
+  params.streamingServicePicked = show.streaming_service_source !== 'network';
 
   if (show.image) {
     params.openGraph = {
@@ -384,9 +386,14 @@ router.post('/:showId/abandon', isAuthenticated, async (req, res) => {
 router.post('/:showId/service', isAuthenticated, async (req, res) => {
   const { showId } = req.params;
 
-  // anything that isn't a known service clears it
-  const service = await tvDb.getStreamingService(req.body.service);
-  await tvDb.setShowStreamingService(showId, service?.slug || null);
+  if (req.body.auto) {
+    // back to guessing from the network
+    await tvDb.setShowStreamingService(showId, null);
+  } else {
+    // a service that isn't known, like one removed since the page was loaded, changes nothing
+    const service = await tvDb.getStreamingService(req.body.service);
+    if (service) await tvDb.setShowStreamingService(showId, service.slug);
+  }
 
   res.redirect(`/show/${showId}`);
 });

@@ -28,28 +28,40 @@ export const addSubscriptionNoticeIfUnused = async (showId: string | number) => 
   }
 };
 
-// The notices to show, after dropping any that stopped being true since they were left:
+// Every stored notice, with whether it stopped being true since it was left:
 // the service is in use again, or its show moved to another service, was deleted, or has something to watch.
+const checkSubscriptionNotices = async () => {
+  const notices = (await tvDb.getSubscriptionNotices()) || [];
+  return Promise.all(
+    notices.map(async (notice) => {
+      const service = await tvDb.getStreamingService(notice.service);
+      const show = await tvDb.getShow(notice.show_id);
+      const inProgress = service && (await tvDb.getShowIdsInProgress(service.slug));
+
+      const stale = !service || !show || show.streaming_service !== service.slug || inProgress?.length > 0 || (await hasSomethingToWatch(show)) === true;
+      return { ...notice, slug: notice.service, service, stale };
+    }),
+  );
+};
+
+// The notices to show. Ones that stopped being true are deleted.
 export const getCurrentSubscriptionNotices = async () => {
   try {
-    const notices = (await tvDb.getSubscriptionNotices()) || [];
-    const current = await Promise.all(
-      notices.map(async (notice) => {
-        const service = await tvDb.getStreamingService(notice.service);
-        const show = await tvDb.getShow(notice.show_id);
-        const inProgress = service && (await tvDb.getShowIdsInProgress(service.slug));
-
-        const stale = !service || !show || show.streaming_service !== service.slug || inProgress?.length > 0 || (await hasSomethingToWatch(show)) === true;
-        if (stale) {
-          await tvDb.deleteSubscriptionNotice(notice.service);
-          return undefined;
-        }
-        return { ...notice, service };
-      }),
-    );
-    return current.filter(Boolean);
+    const notices = await checkSubscriptionNotices();
+    await Promise.all(notices.filter((notice) => notice.stale).map((notice) => tvDb.deleteSubscriptionNotice(notice.slug)));
+    return notices.filter((notice) => !notice.stale);
   } catch (error) {
     console.error('failed getCurrentSubscriptionNotices', error);
+  }
+  return [];
+};
+
+// The services with a notice that is still true, without changing anything
+export const getServicesWithSubscriptionNotice = async () => {
+  try {
+    return (await checkSubscriptionNotices()).filter((notice) => !notice.stale).map((notice) => notice.slug);
+  } catch (error) {
+    console.error('failed getServicesWithSubscriptionNotice', error);
   }
   return [];
 };

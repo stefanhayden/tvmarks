@@ -10,7 +10,7 @@ import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import { stripHtml } from 'string-strip-html';
 import { timeSince, account, domain, dataDir } from './util';
-import { defaultStreamingServices, StreamingService } from './streaming-services';
+import { createStreamingServiceMatcher, defaultStreamingServices, StreamingService, StreamingServiceSource } from './streaming-services';
 
 export type Show = {
   id: number;
@@ -41,7 +41,8 @@ export type Show = {
   next_episode_towatch_airdate: string | null;
   last_watched_episode_id: number | null;
   abandoned: number | boolean; // 1 |  0 -- this is how the DB does true / false
-  streaming_service?: string | null; // slug from streaming-services.ts
+  streaming_service?: string | null; // slug from the streaming_services table
+  streaming_service_source?: StreamingServiceSource | null; // null until a service is guessed or the viewer decides
   created_at: string;
   updated_at: string;
 };
@@ -191,6 +192,7 @@ export const init = async (dbFile = `${dataDir}/tvshows.db`) => {
               last_watched_episode_id INTEGER DEFAULT NULL,
               abandoned BOOLEAN DEFAULT FALSE,
               streaming_service TEXT DEFAULT NULL,
+              streaming_service_source TEXT DEFAULT NULL, -- "manual", "network"
               
               created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
               updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -247,6 +249,12 @@ export const init = async (dbFile = `${dataDir}/tvshows.db`) => {
           await db.run('ALTER TABLE shows ADD COLUMN streaming_service TEXT DEFAULT NULL');
           console.log('Column shows.streaming_service added');
         }
+        // databases created before guessed services were told apart from picked ones
+        if (!columns.some((column) => column.name === 'streaming_service_source')) {
+          await db.run('ALTER TABLE shows ADD COLUMN streaming_service_source TEXT DEFAULT NULL');
+          await db.run(`UPDATE shows SET streaming_service_source = 'manual' WHERE streaming_service IS NOT NULL`);
+          console.log('Column shows.streaming_service_source added');
+        }
       }
 
       // reminders that a streaming service is no longer in use, kept until dismissed
@@ -278,6 +286,8 @@ export const init = async (dbFile = `${dataDir}/tvshows.db`) => {
           service.textColor,
         );
       }
+      // cheap, and picks up shows that predate guessing as well as newly added services and aliases
+      await guessStreamingServices();
       await refreshStreamingServiceCounts();
 
       // return db;
@@ -612,6 +622,8 @@ export const createStreamingService = async (service: StreamingService) => {
       service.color,
       service.textColor,
     );
+    // shows on a network of this name can now be matched
+    await guessStreamingServices();
     return await getStreamingService(service.slug);
   } catch (dbError) {
     console.error('failed createStreamingService', dbError);
@@ -619,12 +631,13 @@ export const createStreamingService = async (service: StreamingService) => {
   return undefined;
 };
 
-// only services added from the admin page can be removed, their shows go back to having no service
+// only services added from the admin page can be removed, their shows go back to being guessed from the network
 export const deleteStreamingService = async (slug: string) => {
   try {
     const result = await db.run(`DELETE FROM streaming_services WHERE slug = ? AND builtin = 0`, slug);
     if (!result.changes) return false;
-    await db.run(`UPDATE shows SET streaming_service = NULL WHERE streaming_service = ?`, slug);
+    await db.run(`UPDATE shows SET streaming_service = NULL, streaming_service_source = NULL WHERE streaming_service = ?`, slug);
+    await guessStreamingServices();
     await db.run(`DELETE FROM subscription_notices WHERE service = ?`, slug);
     return true;
   } catch (dbError) {
@@ -649,14 +662,86 @@ export const refreshStreamingServiceCounts = async (slugs?: (string | null | und
   }
 };
 
+// The viewer's own choice, which a guess never replaces.
+// Without a service the show goes back to being guessed from its network; "None" is the choice for having no service.
 export const setShowStreamingService = async (showId: string | number, slug: string | null) => {
   try {
-    const previous = await db.get<Pick<Show, 'streaming_service'>>(`SELECT streaming_service FROM shows WHERE id = ?`, showId);
-    await db.run(`UPDATE shows SET streaming_service = ? WHERE id = ?`, slug, showId);
-    await refreshStreamingServiceCounts([previous?.streaming_service, slug]);
+    const previous = await db.get<Pick<Show, 'streaming_service' | 'network_name'>>(`SELECT streaming_service, network_name FROM shows WHERE id = ?`, showId);
+    if (!previous) return;
+
+    let service = slug;
+    if (!slug) {
+      const services = await getStreamingServices();
+      if (!services) return;
+      service = createStreamingServiceMatcher(services)(previous.network_name)?.slug || null;
+    }
+    const source: StreamingServiceSource | null = slug ? 'manual' : service ? 'network' : null;
+    await db.run(`UPDATE shows SET streaming_service = ?, streaming_service_source = ? WHERE id = ?`, service, source, showId);
+    await refreshStreamingServiceCounts([previous.streaming_service, service]);
   } catch (dbError) {
     console.error('failed setShowStreamingService', dbError);
   }
+};
+
+// only an earlier guess or no service at all can be replaced by a guess, never the viewer's own choice.
+// A service with no source was stored before guesses were tracked, so it is the viewer's too.
+const guessableCondition = `(streaming_service_source = 'network' OR (streaming_service IS NULL AND streaming_service_source IS NULL))`;
+
+// Guesses the streaming service from the network for every show the viewer hasn't decided on, or for just one show.
+// A guessed service is treated like any other from then on, and follows the network if that changes.
+// createShow and updateShow call this when they write a network, so it only needs calling when the services change.
+const guessStreamingServices = async (showId?: string | number) => {
+  try {
+    const services = await getStreamingServices();
+    // without the services every guess would look like it no longer matches
+    if (!services) return;
+    const match = createStreamingServiceMatcher(services);
+
+    const shows = await db.all<Pick<Show, 'id' | 'network_name' | 'streaming_service'>[]>(
+      // a show without a network keeps what it has, the provider leaving the network out isn't a reason to drop a guess
+      `SELECT id, network_name, streaming_service FROM shows
+        WHERE ${guessableCondition} AND network_name IS NOT NULL AND network_name != '' AND ($id IS NULL OR id = $id)`,
+      { $id: showId ?? null },
+    );
+    const changes = shows
+      .map((show) => ({ id: show.id, from: show.streaming_service || null, to: match(show.network_name)?.slug || null }))
+      .filter((change) => change.from !== change.to);
+
+    // one statement per batch, so there is no transaction left open on the shared connection
+    // 5 parameters per change, kept under the 999 that older SQLite builds allow
+    for (let i = 0; i < changes.length; i += 150) {
+      const batch = changes.slice(i, i + 150);
+      await db.run(
+        `UPDATE shows SET
+            streaming_service = CASE id ${batch.map(() => 'WHEN ? THEN ?').join(' ')} END,
+            streaming_service_source = CASE id ${batch.map(() => 'WHEN ? THEN ?').join(' ')} END
+          WHERE id IN (${batch.map(() => '?').join(',')}) AND ${guessableCondition}`,
+        ...batch.flatMap((change) => [change.id, change.to]),
+        ...batch.flatMap((change) => [change.id, change.to ? 'network' : null]),
+        ...batch.map((change) => change.id),
+      );
+    }
+    if (changes.length > 0) await refreshStreamingServiceCounts(changes.flatMap((change) => [change.from, change.to]));
+  } catch (dbError) {
+    console.error('failed guessStreamingServices', dbError);
+  }
+};
+
+// Services of shows watched in the last three months and not flagged abandoned.
+// Three months is the same window after which the homepage treats an unfinished show as abandoned.
+export const getRecentlyUsedServices = async () => {
+  try {
+    const result = await db.all<{ streaming_service: string }[]>(
+      `SELECT DISTINCT streaming_service FROM shows
+        WHERE streaming_service IS NOT NULL
+          AND abandoned IS NOT 1
+          AND last_watched_date > date('now', '-3 month', '${timezoneMod}')`,
+    );
+    return result.map((row) => row.streaming_service);
+  } catch (dbError) {
+    console.error('failed getRecentlyUsedServices', dbError);
+  }
+  return undefined;
 };
 
 export const getSubscriptionNotices = async () => {
@@ -779,6 +864,7 @@ export const createShow = async (body: Omit<Show, 'last_watched_episode_id' | 'c
         $abandoned: body.abandoned,
       },
     );
+    if (body.network_name) await guessStreamingServices(result.lastID);
     return getShow(result.lastID);
   } catch (dbError) {
     console.error('failed createShow', dbError);
@@ -794,6 +880,9 @@ export const updateShow = async (id: string, body: Partial<Show>) => {
       return acc;
     }, {});
 
+    const writesNetwork = 'network_name' in body;
+    const previous = writesNetwork ? await db.get<Pick<Show, 'network_name'>>('SELECT network_name from shows WHERE id = ?', id) : undefined;
+
     await db.run(
       `UPDATE shows SET
           ${keys.map((v) => `${v}=$${v}`).join(',')}, 
@@ -804,6 +893,8 @@ export const updateShow = async (id: string, body: Partial<Show>) => {
         ...data,
       },
     );
+    // the guessed streaming service follows the network
+    if (writesNetwork && (previous?.network_name || null) !== (body.network_name || null)) await guessStreamingServices(id);
 
     return await db.get<Show>('SELECT * from shows WHERE id = ?', id);
   } catch (dbError) {
@@ -1110,19 +1201,6 @@ export const getAllShows = async () => {
       `);
   } catch (dbError) {
     console.error('failed getAllShows', dbError);
-  }
-  return undefined;
-};
-
-export const getShowsWithStreamingService = async () => {
-  try {
-    return await db.all<Show[]>(`
-        SELECT * FROM shows
-        WHERE streaming_service IS NOT NULL
-        ORDER BY last_watched_date DESC
-      `);
-  } catch (dbError) {
-    console.error('failed getShowsWithStreamingService', dbError);
   }
   return undefined;
 };
