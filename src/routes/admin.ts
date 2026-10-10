@@ -11,6 +11,7 @@ import * as apDb from '../activity-pub-db';
 import * as tvDb from '../tvshow-db';
 import { ProviderFactory } from '../providers/provider-factory';
 import { DatabaseMapper } from '../providers/base/db-mapper';
+import { slugifyServiceName } from '../streaming-services';
 
 const imageDirectory = 'public/shows';
 
@@ -23,6 +24,7 @@ const ADMIN_LINKS: adminLinkType[] = [
   { href: '/admin', label: 'Find shows' },
   { href: '/admin/followers', label: 'Permissions & followers' },
   { href: '/admin/following', label: 'Federated follows' },
+  { href: '/admin/services', label: 'Streaming services' },
   { href: '/admin/update', label: 'Update Show data' },
   { href: '/admin/data', label: 'Data export' },
 ];
@@ -39,6 +41,41 @@ router.get('/update', isAuthenticated, async (req, res) => {
   params.currentPath = req.originalUrl;
 
   return res.render('admin/update', params);
+});
+
+const renderServices = async (req: express.Request, res: express.Response, error?: string) =>
+  res.render('admin/services', {
+    title: 'Streaming services',
+    adminLinks: ADMIN_LINKS,
+    currentPath: '/admin/services',
+    services: await tvDb.getStreamingServices(),
+    // not "error", which is a logging helper in the templates
+    formError: error,
+    // keep what was typed when the form is shown again with an error
+    form: { color: '#2914a0', textColor: '#ffffff', ...(error ? req.body : {}) },
+  });
+
+router.get('/services', isAuthenticated, async (req, res) => renderServices(req, res));
+
+router.post('/services', isAuthenticated, async (req, res) => {
+  const name = String(req.body.name || '').trim();
+  const slug = slugifyServiceName(name);
+  const isColor = (value: unknown) => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);
+
+  if (!slug || name.length > 40) return renderServices(req, res, 'Give the service a name of up to 40 characters.');
+  if (!isColor(req.body.color) || !isColor(req.body.textColor)) return renderServices(req, res, 'Pick a background and a text color.');
+  if (await tvDb.getStreamingService(slug)) return renderServices(req, res, `There is already a service called ${name}.`);
+
+  const created = await tvDb.createStreamingService({ slug, name, color: req.body.color, textColor: req.body.textColor });
+  if (!created) return renderServices(req, res, 'Could not add the service.');
+
+  return res.redirect('/admin/services');
+});
+
+router.post('/services/:slug/delete', isAuthenticated, async (req, res) => {
+  await tvDb.deleteStreamingService(String(req.params.slug));
+
+  return res.redirect('/admin/services');
 });
 
 router.get('/followers', isAuthenticated, async (req, res) => {

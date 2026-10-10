@@ -1,5 +1,5 @@
 import * as tvDb from './tvshow-db';
-import { getStreamingService } from './streaming-services';
+import { NO_SERVICE } from './streaming-services';
 
 // Whether a show has unwatched episodes, in any season, that have aired or air soon.
 // undefined when that couldn't be determined, so callers can leave things as they are.
@@ -15,8 +15,9 @@ const hasSomethingToWatch = async (show: tvDb.Show) => {
 export const addSubscriptionNoticeIfUnused = async (showId: string | number) => {
   try {
     const show = await tvDb.getShow(showId);
-    const service = getStreamingService(show?.streaming_service)?.slug;
-    if (!service) return;
+    const service = (await tvDb.getStreamingService(show?.streaming_service))?.slug;
+    // owned media isn't a subscription
+    if (!service || service === NO_SERVICE) return;
 
     const inProgress = await tvDb.getShowIdsInProgress(service);
     if (inProgress?.length === 0 && (await hasSomethingToWatch(show)) === false) {
@@ -34,7 +35,7 @@ export const getCurrentSubscriptionNotices = async () => {
     const notices = (await tvDb.getSubscriptionNotices()) || [];
     const current = await Promise.all(
       notices.map(async (notice) => {
-        const service = getStreamingService(notice.service);
+        const service = await tvDb.getStreamingService(notice.service);
         const show = await tvDb.getShow(notice.show_id);
         const inProgress = service && (await tvDb.getShowIdsInProgress(service.slug));
 

@@ -10,6 +10,7 @@ import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import { stripHtml } from 'string-strip-html';
 import { timeSince, account, domain, dataDir } from './util';
+import { defaultStreamingServices, StreamingService } from './streaming-services';
 
 export type Show = {
   id: number;
@@ -256,6 +257,28 @@ export const init = async (dbFile = `${dataDir}/tvshows.db`) => {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
           );`,
       );
+
+      // the services a show can be assigned, the built in ones plus any added from the admin page
+      await db.run(
+        `CREATE TABLE IF NOT EXISTS streaming_services (
+            slug TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            color TEXT,
+            text_color TEXT,
+            builtin BOOLEAN DEFAULT 0,
+            shows_count INTEGER DEFAULT 0 -- cached, see refreshStreamingServiceCounts
+          );`,
+      );
+      for (const service of defaultStreamingServices) {
+        await db.run(
+          `INSERT OR IGNORE INTO streaming_services (slug, name, color, text_color, builtin) VALUES (?, ?, ?, ?, 1)`,
+          service.slug,
+          service.name,
+          service.color,
+          service.textColor,
+        );
+      }
+      await refreshStreamingServiceCounts();
 
       // return db;
     } catch (dbError) {
@@ -554,6 +577,88 @@ export const getEpisodesToWatchSoonCount = async (showId: string | number) => {
   return undefined;
 };
 
+export type StoredStreamingService = StreamingService & { builtin: number; shows_count: number };
+
+const streamingServiceColumns = 'slug, name, color, text_color as textColor, builtin, shows_count';
+
+// "None" first, then the services used by the most shows
+export const getStreamingServices = async () => {
+  try {
+    return await db.all<StoredStreamingService[]>(
+      `SELECT ${streamingServiceColumns} FROM streaming_services ORDER BY slug = 'none' DESC, shows_count DESC, rowid ASC`,
+    );
+  } catch (dbError) {
+    console.error('failed getStreamingServices', dbError);
+  }
+  return undefined;
+};
+
+export const getStreamingService = async (slug?: string | null) => {
+  if (!slug) return undefined;
+  try {
+    return await db.get<StoredStreamingService>(`SELECT ${streamingServiceColumns} FROM streaming_services WHERE slug = ?`, slug);
+  } catch (dbError) {
+    console.error('failed getStreamingService', dbError);
+  }
+  return undefined;
+};
+
+export const createStreamingService = async (service: StreamingService) => {
+  try {
+    await db.run(
+      `INSERT INTO streaming_services (slug, name, color, text_color, builtin) VALUES (?, ?, ?, ?, 0)`,
+      service.slug,
+      service.name,
+      service.color,
+      service.textColor,
+    );
+    return await getStreamingService(service.slug);
+  } catch (dbError) {
+    console.error('failed createStreamingService', dbError);
+  }
+  return undefined;
+};
+
+// only services added from the admin page can be removed, their shows go back to having no service
+export const deleteStreamingService = async (slug: string) => {
+  try {
+    const result = await db.run(`DELETE FROM streaming_services WHERE slug = ? AND builtin = 0`, slug);
+    if (!result.changes) return false;
+    await db.run(`UPDATE shows SET streaming_service = NULL WHERE streaming_service = ?`, slug);
+    await db.run(`DELETE FROM subscription_notices WHERE service = ?`, slug);
+    return true;
+  } catch (dbError) {
+    console.error('failed deleteStreamingService', dbError);
+  }
+  return false;
+};
+
+// shows_count is a cache of how many shows use each service, so the picker can sort without counting every time
+export const refreshStreamingServiceCounts = async (slugs?: (string | null | undefined)[]) => {
+  try {
+    const only = slugs?.filter(Boolean);
+    if (only && only.length === 0) return;
+    await db.run(
+      `UPDATE streaming_services
+        SET shows_count = (SELECT count(id) FROM shows WHERE shows.streaming_service = streaming_services.slug)
+        ${only ? `WHERE slug IN (${only.map(() => '?').join(',')})` : ''}`,
+      ...(only || []),
+    );
+  } catch (dbError) {
+    console.error('failed refreshStreamingServiceCounts', dbError);
+  }
+};
+
+export const setShowStreamingService = async (showId: string | number, slug: string | null) => {
+  try {
+    const previous = await db.get<Pick<Show, 'streaming_service'>>(`SELECT streaming_service FROM shows WHERE id = ?`, showId);
+    await db.run(`UPDATE shows SET streaming_service = ? WHERE id = ?`, slug, showId);
+    await refreshStreamingServiceCounts([previous?.streaming_service, slug]);
+  } catch (dbError) {
+    console.error('failed setShowStreamingService', dbError);
+  }
+};
+
 export const getSubscriptionNotices = async () => {
   try {
     return await db.all<{ service: string; show_id: number; show_name: string | null; created_at: string }[]>(
@@ -749,6 +854,7 @@ export const updateShowImage = async (id: string, body: Pick<Show, 'image'>) => 
 export const deleteShow = async (id: string) => {
   try {
     await db.run('DELETE from shows WHERE id = ?', id);
+    await refreshStreamingServiceCounts();
   } catch (dbError) {
     console.error('failed deleteShow', dbError);
   }
@@ -959,6 +1065,7 @@ export const deleteAllShows = async () => {
   try {
     // Delete the shows
     await db.run('DELETE from shows');
+    await refreshStreamingServiceCounts();
 
     // Return empty array
     return [];

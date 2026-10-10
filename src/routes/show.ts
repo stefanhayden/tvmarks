@@ -6,7 +6,7 @@ import { broadcastMessage, createEpisodeNoteObject, createNoteObject } from '../
 import { refreshShowEpisodesData } from './admin';
 import * as apDb from '../activity-pub-db';
 import * as tvDb from '../tvshow-db';
-import { streamingServices, getStreamingService } from '../streaming-services';
+import { NO_SERVICE } from '../streaming-services';
 import { addSubscriptionNoticeIfUnused } from '../subscription-notices';
 
 const router = express.Router();
@@ -50,8 +50,12 @@ router.get('/:showId', async (req, res) => {
   }
 
   params.show = show;
-  params.streamingServices = streamingServices;
-  params.streamingService = getStreamingService(show.streaming_service);
+  const isLoggedIn = 'loggedIn' in req.session && req.session.loggedIn;
+  // visitors only need to know about a real service
+  if (isLoggedIn || show.streaming_service !== NO_SERVICE) {
+    params.streamingService = await tvDb.getStreamingService(show.streaming_service);
+  }
+  if (isLoggedIn) params.streamingServices = await tvDb.getStreamingServices();
 
   if (show.image) {
     params.openGraph = {
@@ -381,8 +385,8 @@ router.post('/:showId/service', isAuthenticated, async (req, res) => {
   const { showId } = req.params;
 
   // anything that isn't a known service clears it
-  const service = getStreamingService(req.body.service);
-  await tvDb.updateShow(showId, { streaming_service: service?.slug || null });
+  const service = await tvDb.getStreamingService(req.body.service);
+  await tvDb.setShowStreamingService(showId, service?.slug || null);
 
   res.redirect(`/show/${showId}`);
 });

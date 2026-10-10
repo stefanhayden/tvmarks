@@ -221,20 +221,21 @@ router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number }>('/wat
 });
 
 router.get<{}, {}, {}, { raw?: boolean }>('/subscriptions', async (req, res) => {
-  const [watching, upToDate, others, inProgressShowIds] = await Promise.all([
+  const [services, watching, upToDate, others, inProgressShowIds] = await Promise.all([
+    tvDb.getStreamingServices(),
     tvDb.getShowsToWatch(-1),
     tvDb.getShowsUpToDate(-1),
     tvDb.getShowsWithStreamingService(),
     tvDb.getShowIdsInProgress(),
   ]);
 
-  if (!watching || !upToDate || !others || !inProgressShowIds) {
+  if (!services || !watching || !upToDate || !others || !inProgressShowIds) {
     return res.render('subscriptions', { title: 'Subscriptions', error: data.errorMessage });
   }
 
   const params = {
     title: 'Subscriptions',
-    ...groupShowsBySubscription({ watching, upToDate, others }, new Set(inProgressShowIds)),
+    ...groupShowsBySubscription(services, { watching, upToDate, others }, new Set(inProgressShowIds)),
   };
 
   return req.query.raw ? res.send(params) : res.render('subscriptions', params);

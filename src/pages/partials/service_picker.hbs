@@ -5,11 +5,8 @@
   </button>
   <div class="service-picker__row">
     {{#each services}}
-      <button name="service" value="{{this.slug}}" class="service-badge" style="background: {{this.color}}; color: {{this.textColor}};" title="Watching on {{this.name}}">{{this.name}}</button>
+      <button name="service" value="{{this.slug}}" class="service-badge" style="background: {{this.color}}; color: {{this.textColor}};" title="{{#eq this.slug "none"}}No subscription, I own it{{else}}Watching on {{this.name}}{{/eq}}">{{this.name}}</button>
     {{/each}}
-    {{#if clearable}}
-      <button name="service" value="" class="service-badge service-picker__clear" title="Remove the streaming service">None</button>
-    {{/if}}
   </div>
   <button type="button" class="service-picker__scroll" aria-label="More services"
           onclick="const row = this.parentNode.querySelector('.service-picker__row'); row.scrollBy({ left: row.clientWidth, behavior: 'smooth' })">

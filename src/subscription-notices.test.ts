@@ -63,8 +63,10 @@ test('no notice while the show has an episode within 30 days or another show is 
     [45, false],
   ]);
   await seed(5, null, [[-10, true]]);
+  // owned media isn't a subscription
+  await seed(6, 'none', [[-10, true]]);
 
-  for (const id of [1, 2, 3, 4, 5]) await addSubscriptionNoticeIfUnused(id);
+  for (const id of [1, 2, 3, 4, 5, 6]) await addSubscriptionNoticeIfUnused(id);
   expect(await stored()).toEqual([['peacock', 4]]);
 });
 

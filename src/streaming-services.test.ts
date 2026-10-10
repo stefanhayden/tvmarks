@@ -1,17 +1,18 @@
 import { expect, test } from 'vitest';
 import * as tvDb from './tvshow-db';
-import { groupShowsBySubscription } from './streaming-services';
+import { defaultStreamingServices, groupShowsBySubscription, slugifyServiceName } from './streaming-services';
 
 const show = (id: number, streaming_service: string | null = null) => ({ id, streaming_service });
 
 test('a subscription is needed only while one of its shows is in progress', () => {
-  const watching = [show(1, 'netflix'), show(2, 'hulu'), show(3), show(12, 'tubi'), show(13)];
+  // owned media ('none') is never a subscription and never needs a service picking
+  const watching = [show(1, 'netflix'), show(2, 'hulu'), show(3), show(12, 'tubi'), show(13), show(14, 'none')];
   const upToDate = [show(4, 'netflix'), show(5, 'not-a-service'), show(9, 'netflix'), show(10, 'starz'), show(11)];
   // every show with a service, including the ones already listed above
   const others = [...watching, ...upToDate, show(6, 'netflix'), show(7, 'peacock'), show(8, 'peacock')].filter((s) => s.streaming_service);
-  const inProgress = new Set([1, 2, 3, 4, 5, 6]);
+  const inProgress = new Set([1, 2, 3, 4, 5, 6, 14]);
 
-  const { needed, notNeeded, unassigned } = groupShowsBySubscription({ watching, upToDate, others }, inProgress);
+  const { needed, notNeeded, unassigned } = groupShowsBySubscription(defaultStreamingServices, { watching, upToDate, others }, inProgress);
   const ids = (list: { id: number }[]) => list.map((s) => s.id);
 
   expect(needed.map((g) => [g.service.slug, ids(g.watching), ids(g.upToDate), ids(g.betweenSeasons), ids(g.idle)])).toEqual([
@@ -87,4 +88,39 @@ test('the streaming service is stored on the show', async () => {
 
   await tvDb.updateShow('1', { streaming_service: null });
   expect(await tvDb.getShowsWithStreamingService()).toEqual([]);
+});
+
+test('services come from the database, None first and then by how many shows use them', async () => {
+  await tvDb.init(':memory:');
+  const slugs = async () => (await tvDb.getStreamingServices()).map((service) => service.slug);
+
+  expect((await slugs()).slice(0, 3)).toEqual(['none', 'netflix', 'hbo-max']);
+
+  for (const id of [1, 2, 3]) await tvDb.createShow({ id, name: `Show ${id}` } as tvDb.Show);
+  await tvDb.setShowStreamingService(1, 'hulu');
+  await tvDb.setShowStreamingService(2, 'hulu');
+  await tvDb.setShowStreamingService(3, 'peacock');
+  expect((await slugs()).slice(0, 4)).toEqual(['none', 'hulu', 'peacock', 'netflix']);
+
+  // the cached count follows shows changing service and being deleted
+  await tvDb.setShowStreamingService(1, 'peacock');
+  await tvDb.deleteShow('2');
+  expect((await tvDb.getStreamingService('hulu')).shows_count).toBe(0);
+  expect((await slugs()).slice(0, 3)).toEqual(['none', 'peacock', 'netflix']);
+});
+
+test('services can be added and removed, built in ones cannot be removed', async () => {
+  await tvDb.init(':memory:');
+  expect(slugifyServiceName(' Paramount+ with Showtime! ')).toBe('paramount-plus-with-showtime');
+
+  const added = await tvDb.createStreamingService({ slug: 'my-service', name: 'My Service', color: '#000000', textColor: '#ffffff' });
+  expect(added).toMatchObject({ slug: 'my-service', name: 'My Service', textColor: '#ffffff', builtin: 0, shows_count: 0 });
+
+  await tvDb.createShow({ id: 1, name: 'Show' } as tvDb.Show);
+  await tvDb.setShowStreamingService(1, 'my-service');
+
+  expect(await tvDb.deleteStreamingService('netflix')).toBe(false);
+  expect(await tvDb.deleteStreamingService('my-service')).toBe(true);
+  expect(await tvDb.getStreamingService('my-service')).toBeUndefined();
+  expect((await tvDb.getShow(1)).streaming_service).toBeNull();
 });
