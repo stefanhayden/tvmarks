@@ -1,0 +1,49 @@
+<p>
+  These are the services you can pick on a show page. Services used by the most shows are listed first, here and on the show page.
+</p>
+
+{{#if formError}}
+  <p class="error">
+    {{formError}}
+  </p>
+{{/if}}
+
+<h3>
+  Add a service
+</h3>
+<form action="/admin/services" method="post" class="service-admin-form" style="margin-bottom: 2rem;">
+  <label>
+    Name
+    <input type="text" name="name" value="{{form.name}}" maxlength="40" required />
+  </label>
+  <label>
+    Background
+    <input type="color" name="color" value="{{form.color}}" />
+  </label>
+  <label>
+    Text
+    <input type="color" name="textColor" value="{{form.textColor}}" />
+  </label>
+  <button type="submit">Add</button>
+</form>
+
+<h3>
+  Services
+</h3>
+<div class="service-admin-list">
+  {{#each services}}
+    <div class="service-admin-list__row">
+      {{> service_badge service=this}}
+      <span class="service-admin-list__count">
+        {{this.shows_count}} {{pluralize this.shows_count "show" "shows"}}
+      </span>
+      {{#unless this.builtin}}
+        <form action="/admin/services/{{this.slug}}/delete" method="post"
+              data-confirm="Remove {{this.name}}? Its shows will go back to having no service."
+              onsubmit="return confirm(this.dataset.confirm)">
+          <button type="submit">Remove</button>
+        </form>
+      {{/unless}}
+    </div>
+  {{/each}}
+</div>

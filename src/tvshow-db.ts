@@ -10,6 +10,7 @@ import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import { stripHtml } from 'string-strip-html';
 import { timeSince, account, domain, dataDir } from './util';
+import { defaultStreamingServices, StreamingService } from './streaming-services';
 
 export type Show = {
   id: number;
@@ -40,6 +41,7 @@ export type Show = {
   next_episode_towatch_airdate: string | null;
   last_watched_episode_id: number | null;
   abandoned: number | boolean; // 1 |  0 -- this is how the DB does true / false
+  streaming_service?: string | null; // slug from streaming-services.ts
   created_at: string;
   updated_at: string;
 };
@@ -188,6 +190,7 @@ export const init = async (dbFile = `${dataDir}/tvshows.db`) => {
               next_episode_towatch_airdate DATETIME DEFAULT NULL,
               last_watched_episode_id INTEGER DEFAULT NULL,
               abandoned BOOLEAN DEFAULT FALSE,
+              streaming_service TEXT DEFAULT NULL,
               
               created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
               updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -237,7 +240,45 @@ export const init = async (dbFile = `${dataDir}/tvshows.db`) => {
         console.log('Update shows created');
       } else {
         console.log('Yes DB exists.. lets continue to app...');
+
+        // databases created before streaming services were tracked
+        const columns = await db.all<{ name: string }[]>('PRAGMA table_info(shows)');
+        if (!columns.some((column) => column.name === 'streaming_service')) {
+          await db.run('ALTER TABLE shows ADD COLUMN streaming_service TEXT DEFAULT NULL');
+          console.log('Column shows.streaming_service added');
+        }
       }
+
+      // reminders that a streaming service is no longer in use, kept until dismissed
+      await db.run(
+        `CREATE TABLE IF NOT EXISTS subscription_notices (
+            service TEXT PRIMARY KEY,
+            show_id INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          );`,
+      );
+
+      // the services a show can be assigned, the built in ones plus any added from the admin page
+      await db.run(
+        `CREATE TABLE IF NOT EXISTS streaming_services (
+            slug TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            color TEXT,
+            text_color TEXT,
+            builtin BOOLEAN DEFAULT 0,
+            shows_count INTEGER DEFAULT 0 -- cached, see refreshStreamingServiceCounts
+          );`,
+      );
+      for (const service of defaultStreamingServices) {
+        await db.run(
+          `INSERT OR IGNORE INTO streaming_services (slug, name, color, text_color, builtin) VALUES (?, ?, ?, ?, 1)`,
+          service.slug,
+          service.name,
+          service.color,
+          service.textColor,
+        );
+      }
+      await refreshStreamingServiceCounts();
 
       // return db;
     } catch (dbError) {
@@ -305,20 +346,33 @@ export const getShowsCompleted = async (limit = 24, offset = 0) => {
   return undefined;
 };
 
+// shared so "in progress" below always agrees with the homepage categories
+const showsToWatchCondition = `
+            shows.abandoned != 1 AND
+            shows.watched_episodes_count > 0 AND
+            shows.aired_episodes_count > shows.watched_episodes_count AND
+            (
+              DateTime(shows.next_episode_towatch_airdate) > date('now', '-3 month', '${timezoneMod}') OR
+              shows.last_watched_date > date('now', '-3 month', '${timezoneMod}')
+            )`;
+
+const showsUpToDateCondition = `
+          (
+            (DateTime(shows.next_episode_towatch_airdate) > DateTime('now', '${timezoneMod}') AND shows.aired_episodes_count == shows.watched_episodes_count)
+            OR
+            shows.aired_episodes_count <= shows.watched_episodes_count
+          )
+          AND shows.watched_episodes_count != 0
+          AND shows.status IS NOT 'Ended'
+          AND shows.abandoned != 1`;
+
 export const getShowsToWatch = async (limit = 24, offset = 0) => {
   // We use a try catch block in case of db errors
   try {
     const results = await db.all<Show[]>(
       `select *
         from shows
-          WHERE
-            abandoned != 1 AND
-            watched_episodes_count > 0 AND
-            aired_episodes_count > watched_episodes_count AND
-            (
-              DateTime(next_episode_towatch_airdate) > date('now', '-3 month', '${timezoneMod}') OR
-              last_watched_date > date('now', '-3 month', '${timezoneMod}')
-            )
+          WHERE ${showsToWatchCondition}
           ORDER BY last_watched_date DESC LIMIT ? OFFSET ?;
         `,
       limit,
@@ -339,15 +393,7 @@ export const getShowsUpToDate = async (limit = 24, offset = 0) => {
     const results = await db.all<Show[]>(
       `SELECT *
           from shows
-        WHERE 
-          (
-            (DateTime(next_episode_towatch_airdate) > DateTime('now', '${timezoneMod}') AND aired_episodes_count == watched_episodes_count)
-            OR
-            aired_episodes_count <= watched_episodes_count
-          )
-          AND watched_episodes_count != 0
-          AND status IS NOT 'Ended'
-          AND abandoned != 1
+        WHERE ${showsUpToDateCondition}
         ORDER BY last_watched_date DESC LIMIT ? OFFSET ?`,
       limit,
       offset,
@@ -485,6 +531,162 @@ export const getUpcomingEpisodes = async (limit = 24, offset = 0, includeAbandon
     console.error('failed getUpcomingEpisodes', dbError);
   }
   return undefined;
+};
+
+// how far ahead a scheduled episode still counts as something to watch
+export const WATCH_SOON_DAYS = 30;
+const watchSoonCondition = `
+        episodes.number IS NOT NULL
+        AND episodes.watched_status IS NOT 'WATCHED'
+        AND episodes.airstamp IS NOT NULL
+        AND episodes.airstamp != ''
+        AND DateTime(episodes.airstamp) <= DateTime('now', '+${WATCH_SOON_DAYS} day')`;
+
+// Shows that are keeping a streaming service in use: in Watch Next or Up To Date, and part way through a season.
+// Part way through means the season of the furthest watched episode has a later episode to watch soon,
+// so a season that hasn't been started and episodes that were skipped don't count.
+export const getShowIdsInProgress = async (service?: string) => {
+  try {
+    const result = await db.all<{ show_id: number }[]>(
+      `SELECT DISTINCT episodes.show_id FROM episodes
+      INNER JOIN shows ON shows.id = episodes.show_id
+      INNER JOIN episodes last_watched ON last_watched.id = shows.last_watched_episode_id
+      WHERE
+        episodes.season = last_watched.season
+        AND episodes.number > last_watched.number
+        AND ${watchSoonCondition}
+        AND ((${showsToWatchCondition}) OR (${showsUpToDateCondition}))
+        AND ($service IS NULL OR shows.streaming_service = $service)`,
+      { $service: service ?? null },
+    );
+    return result.map((row) => row.show_id);
+  } catch (dbError) {
+    console.error('failed getShowIdsInProgress', dbError);
+  }
+  return undefined;
+};
+
+// unwatched episodes of a show, in any season, that have aired or will air soon
+export const getEpisodesToWatchSoonCount = async (showId: string | number) => {
+  try {
+    const result = await db.get<{ count: number }>(`SELECT count(id) as count FROM episodes WHERE show_id = ? AND ${watchSoonCondition}`, showId);
+    return result.count;
+  } catch (dbError) {
+    console.error('failed getEpisodesToWatchSoonCount', dbError);
+  }
+  return undefined;
+};
+
+export type StoredStreamingService = StreamingService & { builtin: number; shows_count: number };
+
+const streamingServiceColumns = 'slug, name, color, text_color as textColor, builtin, shows_count';
+
+// "None" first, then the services used by the most shows
+export const getStreamingServices = async () => {
+  try {
+    return await db.all<StoredStreamingService[]>(
+      `SELECT ${streamingServiceColumns} FROM streaming_services ORDER BY slug = 'none' DESC, shows_count DESC, rowid ASC`,
+    );
+  } catch (dbError) {
+    console.error('failed getStreamingServices', dbError);
+  }
+  return undefined;
+};
+
+export const getStreamingService = async (slug?: string | null) => {
+  if (!slug) return undefined;
+  try {
+    return await db.get<StoredStreamingService>(`SELECT ${streamingServiceColumns} FROM streaming_services WHERE slug = ?`, slug);
+  } catch (dbError) {
+    console.error('failed getStreamingService', dbError);
+  }
+  return undefined;
+};
+
+export const createStreamingService = async (service: StreamingService) => {
+  try {
+    await db.run(
+      `INSERT INTO streaming_services (slug, name, color, text_color, builtin) VALUES (?, ?, ?, ?, 0)`,
+      service.slug,
+      service.name,
+      service.color,
+      service.textColor,
+    );
+    return await getStreamingService(service.slug);
+  } catch (dbError) {
+    console.error('failed createStreamingService', dbError);
+  }
+  return undefined;
+};
+
+// only services added from the admin page can be removed, their shows go back to having no service
+export const deleteStreamingService = async (slug: string) => {
+  try {
+    const result = await db.run(`DELETE FROM streaming_services WHERE slug = ? AND builtin = 0`, slug);
+    if (!result.changes) return false;
+    await db.run(`UPDATE shows SET streaming_service = NULL WHERE streaming_service = ?`, slug);
+    await db.run(`DELETE FROM subscription_notices WHERE service = ?`, slug);
+    return true;
+  } catch (dbError) {
+    console.error('failed deleteStreamingService', dbError);
+  }
+  return false;
+};
+
+// shows_count is a cache of how many shows use each service, so the picker can sort without counting every time
+export const refreshStreamingServiceCounts = async (slugs?: (string | null | undefined)[]) => {
+  try {
+    const only = slugs?.filter(Boolean);
+    if (only && only.length === 0) return;
+    await db.run(
+      `UPDATE streaming_services
+        SET shows_count = (SELECT count(id) FROM shows WHERE shows.streaming_service = streaming_services.slug)
+        ${only ? `WHERE slug IN (${only.map(() => '?').join(',')})` : ''}`,
+      ...(only || []),
+    );
+  } catch (dbError) {
+    console.error('failed refreshStreamingServiceCounts', dbError);
+  }
+};
+
+export const setShowStreamingService = async (showId: string | number, slug: string | null) => {
+  try {
+    const previous = await db.get<Pick<Show, 'streaming_service'>>(`SELECT streaming_service FROM shows WHERE id = ?`, showId);
+    await db.run(`UPDATE shows SET streaming_service = ? WHERE id = ?`, slug, showId);
+    await refreshStreamingServiceCounts([previous?.streaming_service, slug]);
+  } catch (dbError) {
+    console.error('failed setShowStreamingService', dbError);
+  }
+};
+
+export const getSubscriptionNotices = async () => {
+  try {
+    return await db.all<{ service: string; show_id: number; show_name: string | null; created_at: string }[]>(
+      `SELECT subscription_notices.*, shows.name as show_name
+        FROM subscription_notices
+        LEFT JOIN shows ON shows.id = subscription_notices.show_id
+        ORDER BY subscription_notices.created_at DESC`,
+    );
+  } catch (dbError) {
+    console.error('failed getSubscriptionNotices', dbError);
+  }
+  return undefined;
+};
+
+export const setSubscriptionNotice = async (service: string, showId: number) => {
+  try {
+    await db.run(`INSERT OR REPLACE INTO subscription_notices (service, show_id) VALUES (?, ?)`, service, showId);
+  } catch (dbError) {
+    console.error('failed setSubscriptionNotice', dbError);
+  }
+};
+
+export const deleteSubscriptionNotice = async (service: string) => {
+  try {
+    await db.run(`DELETE FROM subscription_notices WHERE service = ?`, service);
+  } catch (dbError) {
+    console.error('failed deleteSubscriptionNotice', dbError);
+  }
 };
 
 export const getRecentlyWatchedEpisodes = async (limit = 24, offset = 0) => {
@@ -652,6 +854,7 @@ export const updateShowImage = async (id: string, body: Pick<Show, 'image'>) => 
 export const deleteShow = async (id: string) => {
   try {
     await db.run('DELETE from shows WHERE id = ?', id);
+    await refreshStreamingServiceCounts();
   } catch (dbError) {
     console.error('failed deleteShow', dbError);
   }
@@ -862,6 +1065,7 @@ export const deleteAllShows = async () => {
   try {
     // Delete the shows
     await db.run('DELETE from shows');
+    await refreshStreamingServiceCounts();
 
     // Return empty array
     return [];
@@ -906,6 +1110,19 @@ export const getAllShows = async () => {
       `);
   } catch (dbError) {
     console.error('failed getAllShows', dbError);
+  }
+  return undefined;
+};
+
+export const getShowsWithStreamingService = async () => {
+  try {
+    return await db.all<Show[]>(`
+        SELECT * FROM shows
+        WHERE streaming_service IS NOT NULL
+        ORDER BY last_watched_date DESC
+      `);
+  } catch (dbError) {
+    console.error('failed getShowsWithStreamingService', dbError);
   }
   return undefined;
 };
@@ -1038,7 +1255,26 @@ export const getStats = async (year: number) => {
       ORDER BY day
     `, y);
 
-    return { yearSummary, byMonth, topShows, byNetwork, byType, byDecade, byDay };
+    // by the service each show is on today, shows without one are grouped under a null slug
+    const byService = await db.all<
+      { slug: string | null; name: string | null; color: string | null; textColor: string | null; shows_count: number; episodes_count: number; minutes: number }[]
+    >(`
+      SELECT
+        streaming_services.slug, streaming_services.name, streaming_services.color, streaming_services.text_color as textColor,
+        COUNT(DISTINCT shows.id) as shows_count,
+        COUNT(episodes.id) as episodes_count,
+        SUM(COALESCE(episodes.runtime, 0)) as minutes
+      FROM episodes
+      INNER JOIN shows ON episodes.show_id = shows.id
+      LEFT JOIN streaming_services ON streaming_services.slug = shows.streaming_service
+      WHERE episodes.watched_status = 'WATCHED'
+        AND episodes.watched_at IS NOT NULL
+        AND strftime('%Y', episodes.watched_at) = ?
+      GROUP BY streaming_services.slug
+      ORDER BY streaming_services.slug IS NULL, episodes_count DESC
+    `, y);
+
+    return { yearSummary, byMonth, topShows, byNetwork, byType, byDecade, byDay, byService };
   } catch (dbError) {
     console.error('failed getStats', dbError);
   }

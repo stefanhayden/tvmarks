@@ -1,0 +1,15 @@
+<form method="post" action="/show/{{show.id}}/service" class="service-picker" {{#if hidden}}hidden{{/if}}>
+  <button type="button" class="service-picker__scroll" aria-label="Previous services"
+          onclick="const row = this.parentNode.querySelector('.service-picker__row'); row.scrollBy({ left: -row.clientWidth, behavior: 'smooth' })">
+    &lsaquo;
+  </button>
+  <div class="service-picker__row">
+    {{#each services}}
+      <button name="service" value="{{this.slug}}" class="service-badge" style="background: {{this.color}}; color: {{this.textColor}};" title="{{#eq this.slug "none"}}No subscription, I own it{{else}}Watching on {{this.name}}{{/eq}}">{{this.name}}</button>
+    {{/each}}
+  </div>
+  <button type="button" class="service-picker__scroll" aria-label="More services"
+          onclick="const row = this.parentNode.querySelector('.service-picker__row'); row.scrollBy({ left: row.clientWidth, behavior: 'smooth' })">
+    &rsaquo;
+  </button>
+</form>

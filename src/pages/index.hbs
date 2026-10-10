@@ -35,10 +35,29 @@
     {{/if}}
   {{/unless}}
 
+  {{#each subscriptionNotices}}
+    <div class="subscription-notice" role="status">
+      {{> service_badge service=this.service}}
+      <div class="subscription-notice__text">
+        <strong>You're no longer using {{this.service.name}}.</strong>
+        {{#if this.show_name}}
+          You're caught up on <a href="/show/{{this.show_id}}">{{this.show_name}}</a> and nothing else is mid-season there.
+        {{else}}
+          Nothing is mid-season there.
+        {{/if}}
+        Time to <a href="/subscriptions">unsubscribe</a>?
+      </div>
+      <form method="post" action="/subscriptions/notice/{{this.service.slug}}/dismiss">
+        <button class="subscription-notice__dismiss" title="Dismiss" aria-label="Dismiss {{this.service.name}} reminder">&times;</button>
+      </form>
+    </div>
+  {{/each}}
+
   {{#if (or showsToWatch showsUpToDate showsNotStarted showsCompleted showsAbandoned)}}
     <div style="float: right">
       <a href="/upcoming">Upcoming</a> | 
-      <a href="/watched">Watched</a>
+      <a href="/watched">Watched</a> | 
+      <a href="/subscriptions">Subscriptions</a>
     </div>
   {{/if}}
 

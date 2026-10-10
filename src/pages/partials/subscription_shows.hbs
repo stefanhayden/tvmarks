@@ -1,0 +1,12 @@
+<div class="subscription-shows">
+  {{#if label}}
+    <div class="subscription-shows__label">{{label}}</div>
+  {{/if}}
+  <div class="subscription-shows__posters">
+    {{#each shows}}
+      <a href="/show/{{this.id}}" title="{{this.name}}">
+        <img src="{{{this.image}}}" alt="{{this.name}}" loading="lazy" />
+      </a>
+    {{/each}}
+  </div>
+</div>

@@ -1,0 +1,88 @@
+{{#if error}}
+  <p class="error">
+    {{error}}
+  </p>
+{{else}}
+  <div class="subscriptions-page">
+    {{#if (or needed notNeeded)}}
+      <div class="stats-summary-grid">
+        <div class="stats-card stats-card--4">
+          <span class="stats-card__number">{{needed.length}}</span>
+          <span class="stats-card__label">{{pluralize needed.length "subscription" "subscriptions"}} in use</span>
+        </div>
+        <div class="stats-card stats-card--5">
+          <span class="stats-card__number">{{notNeeded.length}}</span>
+          <span class="stats-card__label">not needed right now</span>
+        </div>
+        {{#if unassigned}}
+          <div class="stats-card stats-card--2">
+            <span class="stats-card__number">{{unassigned.length}}</span>
+            <span class="stats-card__label">{{pluralize unassigned.length "show" "shows"}} without a service</span>
+          </div>
+        {{/if}}
+      </div>
+    {{else}}
+      <p>
+        No streaming services set yet. Open a show you are watching and pick the service you watch it on.
+      </p>
+    {{/if}}
+
+    {{#if needed}}
+      <section>
+        <h2>Keep</h2>
+        <div class="subscription-grid">
+          {{#each needed}}
+            <div class="subscription-card">
+              <div class="subscription-card__header" style="background: {{this.service.color}}; color: {{this.service.textColor}};">
+                <span class="subscription-card__name">{{this.service.name}}</span>
+                <span class="subscription-card__status">in use</span>
+              </div>
+              <div class="subscription-card__body">
+                {{#if this.watching}}
+                  {{> subscription_shows label="Watching" shows=this.watching}}
+                {{/if}}
+                {{#if this.upToDate}}
+                  {{> subscription_shows label="Up to date, next episode soon" shows=this.upToDate}}
+                {{/if}}
+              </div>
+            </div>
+          {{/each}}
+        </div>
+      </section>
+    {{/if}}
+
+    {{#if notNeeded}}
+      <section>
+        <h2>Not needed right now</h2>
+        <div class="subscription-grid">
+          {{#each notNeeded}}
+            <div class="subscription-card subscription-card--idle">
+              <div class="subscription-card__header" style="background: {{this.service.color}}; color: {{this.service.textColor}};">
+                <span class="subscription-card__name">{{this.service.name}}</span>
+                <span class="subscription-card__status">can cancel</span>
+              </div>
+              <div class="subscription-card__body">
+                {{#if this.betweenSeasons}}
+                  {{> subscription_shows label="Between seasons" shows=this.betweenSeasons}}
+                {{/if}}
+                {{#if this.idle}}
+                  {{> subscription_shows label="Nothing in progress" shows=this.idle}}
+                {{/if}}
+              </div>
+            </div>
+          {{/each}}
+        </div>
+      </section>
+    {{/if}}
+
+    {{#if unassigned}}
+      <section>
+        <h2>No service set</h2>
+        <p class="subscriptions-page__hint">
+          You are part way through a season of these, but they don't have a streaming service yet.
+        </p>
+        {{> subscription_shows shows=unassigned}}
+      </section>
+    {{/if}}
+  </div>
+{{/if}}
