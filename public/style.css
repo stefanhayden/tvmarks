@@ -967,6 +967,26 @@ a.bookmark-date {
   min-width: 3px;
 }
 
+.stats-service-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+}
+.stats-service-row__badge {
+  flex: 0 0 9rem;
+}
+.stats-service-row__unset {
+  font-size: 0.8rem;
+  color: var(--color-dimmed);
+}
+.stats-service-row .stats-show-row__info {
+  flex: 1;
+  min-width: 0;
+}
+.stats-show-row__bar--muted {
+  background: #c9c2e8;
+}
 .stats-show-row__count {
   font-size: 0.7rem;
   color: var(--color-dimmed);

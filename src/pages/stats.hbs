@@ -145,6 +145,33 @@
 
     </div>
 
+    {{#if services}}
+    <section class='stats-section'>
+      <h2>Streaming services</h2>
+      <div class='stats-shows-list'>
+        {{#each services}}
+          <div class='stats-service-row'>
+            <div class='stats-service-row__badge'>
+              {{#if slug}}
+                {{> service_badge service=this}}
+              {{else}}
+                <span class='stats-service-row__unset'>No service set</span>
+              {{/if}}
+            </div>
+            <div class='stats-show-row__info'>
+              <div class='stats-show-row__bar-wrap'>
+                <div class='stats-show-row__bar {{#unless slug}}stats-show-row__bar--muted{{/unless}}' style='width: {{percent}}%'></div>
+              </div>
+              <span class='stats-show-row__count'>
+                {{episodes_count}} {{pluralize episodes_count "episode" "episodes"}} · {{hours}}h · {{shows_count}} {{pluralize shows_count "show" "shows"}} · {{#if share}}{{share}}%{{else}}under 1%{{/if}} of the year
+              </span>
+            </div>
+          </div>
+        {{/each}}
+      </div>
+    </section>
+    {{/if}}
+
     <section class='stats-section'>
       <h2>Most watched shows this year</h2>
       {{#if topShows}}

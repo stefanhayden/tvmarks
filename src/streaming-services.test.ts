@@ -124,3 +124,30 @@ test('services can be added and removed, built in ones cannot be removed', async
   expect(await tvDb.getStreamingService('my-service')).toBeUndefined();
   expect((await tvDb.getShow(1)).streaming_service).toBeNull();
 });
+
+test('stats count the episodes watched this year on each service', async () => {
+  await tvDb.init(':memory:');
+  const year = new Date().getFullYear();
+  let episodeId = 1;
+  const seed = async (id: number, service: string | null, watched: number) => {
+    await tvDb.createShow({ id, name: `Show ${id}` } as tvDb.Show);
+    await tvDb.setShowStreamingService(id, service);
+    for (let i = 0; i < watched; i++) {
+      const id_ = episodeId++;
+      await tvDb.createEpisode({ id: id_, show_id: id, season: 1, number: i + 1, runtime: 60 } as Parameters<typeof tvDb.createEpisode>[0]);
+      await tvDb.updateEpisodeWatchStatus(id_, 'WATCHED');
+    }
+  };
+  await seed(1, 'hulu', 1);
+  await seed(2, 'netflix', 2);
+  await seed(3, 'netflix', 1);
+  await seed(4, null, 5);
+
+  const { byService } = await tvDb.getStats(year);
+  // most watched first, shows without a service last
+  expect(byService.map((s) => [s.slug, s.shows_count, s.episodes_count, s.minutes])).toEqual([
+    ['netflix', 2, 3, 180],
+    ['hulu', 1, 1, 60],
+    [null, 1, 5, 300],
+  ]);
+});

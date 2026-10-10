@@ -256,7 +256,7 @@ router.get<{}, {}, {}, { year?: string }>('/stats', async (req, res) => {
     return res.render('stats', { title: '', error: 'Could not load stats.' });
   }
 
-  const { yearSummary, byMonth, topShows, byNetwork, byType, byDecade, byDay } = stats;
+  const { yearSummary, byMonth, topShows, byNetwork, byType, byDecade, byDay, byService } = stats;
 
   // Streaks
   const sortedDays: string[] = byDay.map((d: { day: string }) => d.day).sort();
@@ -322,6 +322,18 @@ router.get<{}, {}, {}, { year?: string }>('/stats', async (req, res) => {
     (d) => ({ label: d.decade ? `${d.decade}s` : 'Unknown', shows_count: d.shows_count, episodes_count: d.episodes_count }),
   );
 
+  // Streaming services, only worth showing once some of the year's shows have one
+  const totalServiceEpisodes = byService.reduce((sum, s) => sum + s.episodes_count, 0);
+  const maxServiceEpisodes = Math.max(...byService.filter((s) => s.slug).map((s) => s.episodes_count), 1);
+  const services = byService.some((s) => s.slug)
+    ? byService.map((s) => ({
+        ...s,
+        hours: Math.round((s.minutes || 0) / 60),
+        share: Math.round((s.episodes_count / totalServiceEpisodes) * 100),
+        percent: Math.min(Math.round((s.episodes_count / maxServiceEpisodes) * 100), 100),
+      }))
+    : [];
+
   const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const currentMonth = year === currentYear ? new Date().getMonth() + 1 : 12;
 
@@ -367,6 +379,7 @@ router.get<{}, {}, {}, { year?: string }>('/stats', async (req, res) => {
       percent: Math.round((s.episodes_watched / maxShowEpisodes) * 100),
     })),
     byNetwork,
+    services,
     byType,
     byDecade: byDecadeFormatted,
     longestStreak,

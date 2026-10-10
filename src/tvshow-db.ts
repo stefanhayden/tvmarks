@@ -1255,7 +1255,26 @@ export const getStats = async (year: number) => {
       ORDER BY day
     `, y);
 
-    return { yearSummary, byMonth, topShows, byNetwork, byType, byDecade, byDay };
+    // by the service each show is on today, shows without one are grouped under a null slug
+    const byService = await db.all<
+      { slug: string | null; name: string | null; color: string | null; textColor: string | null; shows_count: number; episodes_count: number; minutes: number }[]
+    >(`
+      SELECT
+        streaming_services.slug, streaming_services.name, streaming_services.color, streaming_services.text_color as textColor,
+        COUNT(DISTINCT shows.id) as shows_count,
+        COUNT(episodes.id) as episodes_count,
+        SUM(COALESCE(episodes.runtime, 0)) as minutes
+      FROM episodes
+      INNER JOIN shows ON episodes.show_id = shows.id
+      LEFT JOIN streaming_services ON streaming_services.slug = shows.streaming_service
+      WHERE episodes.watched_status = 'WATCHED'
+        AND episodes.watched_at IS NOT NULL
+        AND strftime('%Y', episodes.watched_at) = ?
+      GROUP BY streaming_services.slug
+      ORDER BY streaming_services.slug IS NULL, episodes_count DESC
+    `, y);
+
+    return { yearSummary, byMonth, topShows, byNetwork, byType, byDecade, byDay, byService };
   } catch (dbError) {
     console.error('failed getStats', dbError);
   }
