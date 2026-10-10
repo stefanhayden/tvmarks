@@ -3,6 +3,8 @@ import { data, actorInfo, calculateDaysUntilAirDate, localDateString } from '../
 import { isAuthenticated } from '../session-auth';
 import { refreshShowData, refreshWatchNext } from './admin';
 import * as tvDb from '../tvshow-db';
+import { groupShowsBySubscription } from '../streaming-services';
+import { getCurrentSubscriptionNotices } from '../subscription-notices';
 
 const router = express.Router();
 export default router;
@@ -19,12 +21,14 @@ router.get<{}, {}, {}, { raw?: boolean }, {}>('/', async (req, res) => {
   const limit = 8;
   const limitShowsToWatch = 24;
 
-  const [showsToWatch, showsAbandoned, showsUpToDate, showsCompleted, showsNotStarted] = await Promise.all([
+  const [showsToWatch, showsAbandoned, showsUpToDate, showsCompleted, showsNotStarted, subscriptionNotices] = await Promise.all([
     tvDb.getShowsToWatch(limitShowsToWatch),
     tvDb.getShowsAbandoned(limit),
     tvDb.getShowsUpToDate(limit),
     tvDb.getShowsCompleted(limit),
     tvDb.getShowsNotStarted(limit),
+    // reminders to unsubscribe are only for the owner
+    'loggedIn' in req.session && req.session.loggedIn ? getCurrentSubscriptionNotices() : [],
   ]);
 
   const foundShows =
@@ -34,6 +38,7 @@ router.get<{}, {}, {}, { raw?: boolean }, {}>('/', async (req, res) => {
     ...params,
     limit,
     foundShows,
+    subscriptionNotices,
     showsNotStarted,
     seeAllShowsNotStarted: showsNotStarted ? showsNotStarted.length === limit : false,
     showsCompleted,
@@ -213,6 +218,32 @@ router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number }>('/wat
   params.pagination = pagination;
 
   return req.query.raw ? res.send(params) : res.render('watched', params);
+});
+
+router.get<{}, {}, {}, { raw?: boolean }>('/subscriptions', async (req, res) => {
+  const [watching, upToDate, others, inProgressShowIds] = await Promise.all([
+    tvDb.getShowsToWatch(-1),
+    tvDb.getShowsUpToDate(-1),
+    tvDb.getShowsWithStreamingService(),
+    tvDb.getShowIdsInProgress(),
+  ]);
+
+  if (!watching || !upToDate || !others || !inProgressShowIds) {
+    return res.render('subscriptions', { title: 'Subscriptions', error: data.errorMessage });
+  }
+
+  const params = {
+    title: 'Subscriptions',
+    ...groupShowsBySubscription({ watching, upToDate, others }, new Set(inProgressShowIds)),
+  };
+
+  return req.query.raw ? res.send(params) : res.render('subscriptions', params);
+});
+
+router.post('/subscriptions/notice/:service/dismiss', isAuthenticated, async (req, res) => {
+  await tvDb.deleteSubscriptionNotice(String(req.params.service));
+
+  res.redirect('/');
 });
 
 router.get<{}, {}, {}, { year?: string }>('/stats', async (req, res) => {

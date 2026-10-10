@@ -4,6 +4,27 @@
   </p>
 {{else}}
 
+  {{#if streamingService}}
+    <div class="show-service">
+      <div class="show-service__current">
+        {{> service_badge service=streamingService}}
+        {{#if @root.loggedIn}}
+          <button type="button" class="show-service__edit" title="Change streaming service"
+                  onclick="const picker = this.closest('.show-service').querySelector('.service-picker'); picker.hidden = !picker.hidden">
+            edit
+          </button>
+        {{/if}}
+      </div>
+      {{#if @root.loggedIn}}
+        {{> service_picker show=show services=streamingServices hidden=true clearable=true}}
+      {{/if}}
+    </div>
+  {{else if @root.loggedIn}}
+    <div class="show-service">
+      {{> service_picker show=show services=streamingServices}}
+    </div>
+  {{/if}}
+
   <div class="bookmarks">
     {{> show_tvshow tvshow=show}}
   </div>

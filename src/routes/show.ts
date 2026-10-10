@@ -6,6 +6,8 @@ import { broadcastMessage, createEpisodeNoteObject, createNoteObject } from '../
 import { refreshShowEpisodesData } from './admin';
 import * as apDb from '../activity-pub-db';
 import * as tvDb from '../tvshow-db';
+import { streamingServices, getStreamingService } from '../streaming-services';
+import { addSubscriptionNoticeIfUnused } from '../subscription-notices';
 
 const router = express.Router();
 export default router;
@@ -36,6 +38,8 @@ router.get('/:showId', async (req, res) => {
     blocked?: unknown;
     seasons?: Seasons[];
     activityUrl?: string;
+    streamingServices?: unknown;
+    streamingService?: unknown;
   } = {};
   const now = new Date();
 
@@ -46,6 +50,8 @@ router.get('/:showId', async (req, res) => {
   }
 
   params.show = show;
+  params.streamingServices = streamingServices;
+  params.streamingService = getStreamingService(show.streaming_service);
 
   if (show.image) {
     params.openGraph = {
@@ -175,6 +181,7 @@ router.post('/:showId/episode/:episodeId/status', async (req, res) => {
   const allEps = allEpsWithNulls.filter((ep) => ep.number !== null);
 
   const updatedShow = await tvDb.updateShow(req.params.showId, getEpisodeStatusUpdatedValues(allEps));
+  if (status === 'WATCHED') await addSubscriptionNoticeIfUnused(req.params.showId);
 
   if (status) {
     // watched ep
@@ -268,6 +275,7 @@ router.post('/:showId/season/:seasonId/status', async (req, res) => {
   const allEps = allEpsWithNulls.filter((ep) => ep.number !== null);
 
   await tvDb.updateShow(req.params.showId, getEpisodeStatusUpdatedValues(allEps));
+  if (status === 'WATCHED') await addSubscriptionNoticeIfUnused(req.params.showId);
 
   res.redirect(301, `/show/${req.params.showId}#season${req.params.seasonId}`);
 });
@@ -367,6 +375,16 @@ router.post('/:showId/abandon', isAuthenticated, async (req, res) => {
   await tvDb.updateShow(showId, { abandoned });
 
   res.redirect(301, `/`);
+});
+
+router.post('/:showId/service', isAuthenticated, async (req, res) => {
+  const { showId } = req.params;
+
+  // anything that isn't a known service clears it
+  const service = getStreamingService(req.body.service);
+  await tvDb.updateShow(showId, { streaming_service: service?.slug || null });
+
+  res.redirect(`/show/${showId}`);
 });
 
 router.post('/:showId/update', isAuthenticated, async (req, res) => {
