@@ -7,6 +7,9 @@
     {{#each services}}
       <button name="service" value="{{this.slug}}" class="service-badge" style="background: {{this.color}}; color: {{this.textColor}};" title="{{#eq this.slug "none"}}No subscription, I own it{{else}}Watching on {{this.name}}{{/eq}}">{{this.name}}</button>
     {{/each}}
+    {{#if auto}}
+      <button name="auto" value="1" class="service-badge service-picker__auto" title="Use the service matching the show's network, or no service if none matches">Auto</button>
+    {{/if}}
   </div>
   <button type="button" class="service-picker__scroll" aria-label="More services"
           onclick="const row = this.parentNode.querySelector('.service-picker__row'); row.scrollBy({ left: row.clientWidth, behavior: 'smooth' })">
