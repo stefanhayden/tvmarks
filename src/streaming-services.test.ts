@@ -166,7 +166,6 @@ test('a network matches the streaming service it is watched on', () => {
   expect(match('PBS')).toBeUndefined();
   expect(match('Channel 4')).toBeUndefined();
   expect(match('None')).toBeUndefined();
-  expect(match('Other')).toBeUndefined();
   expect(match('')).toBeUndefined();
   expect(match(null)).toBeUndefined();
 });
@@ -260,4 +259,10 @@ test('a service can be listed when it has no shows left to list', () => {
   const { needed, notNeeded } = groupShowsBySubscription(defaultStreamingServices, { watching: [], upToDate: [], notStarted: [] }, new Set(), ['starz', 'none']);
   expect(needed).toEqual([]);
   expect(notNeeded.map((g) => g.service.slug)).toEqual(['starz']);
+});
+
+test('there is no built in catch-all service, custom ones cover that', async () => {
+  await tvDb.init(':memory:');
+  expect(await tvDb.getStreamingService('other')).toBeUndefined();
+  expect((await tvDb.getStreamingServices()).slice(-1)[0].slug).toBe('cable');
 });
