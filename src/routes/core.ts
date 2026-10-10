@@ -235,8 +235,9 @@ router.get<{}, {}, {}, { raw?: boolean }>('/subscriptions', async (req, res) => 
     return res.render('subscriptions', { title: 'Subscriptions', error: data.errorMessage });
   }
 
-  // a show can be flagged abandoned before it is started
-  const notStarted = allNotStarted.filter((show) => !show.abandoned);
+  // Only shows that could be started today: a show added before it has aired has nothing to watch yet.
+  // A show can also be flagged abandoned before it is started.
+  const notStarted = allNotStarted.filter((show) => !show.abandoned && show.aired_episodes_count > 0);
   const groups = groupShowsBySubscription(
     services,
     { watching, upToDate, notStarted },
