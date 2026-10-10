@@ -57,7 +57,6 @@ export const defaultStreamingServices: StreamingService[] = [
   { slug: 'kanopy', name: 'Kanopy', color: '#e2231a', textColor: '#ffffff' },
   { slug: 'hoopla', name: 'Hoopla', color: '#1f7dc2', textColor: '#ffffff' },
   { slug: 'cable', name: 'Cable', color: '#3a2a6b', textColor: '#ffffff' },
-  { slug: 'other', name: 'Other', color: '#545454', textColor: '#ffffff' },
 ];
 
 // "Paramount+ with Showtime" -> "paramount-plus-with-showtime"
@@ -83,7 +82,7 @@ const networkAliases = new Map([
 
 // Never guessed from a network: choices only the viewer can make,
 // and broadcast channels that share a name with a service but could be watched anywhere.
-const neverGuessed = [NO_SERVICE, 'cable', 'other', 'pbs', 'channel-4'];
+const neverGuessed = [NO_SERVICE, 'cable', 'pbs', 'channel-4'];
 
 // The service a show is most likely watched on, going by the network it airs on.
 // A network matches when a service carries its name or it is listed above. That covers streaming networks and

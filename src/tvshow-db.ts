@@ -277,6 +277,19 @@ export const init = async (dbFile = `${dataDir}/tvshows.db`) => {
             shows_count INTEGER DEFAULT 0 -- cached, see refreshStreamingServiceCounts
           );`,
       );
+      // A built in service that has since been dropped from the defaults goes away if no show uses it.
+      // One still in use becomes a custom service, so it can be removed from the admin page.
+      const builtinSlugs = defaultStreamingServices.map(() => '?').join(',');
+      await db.run(
+        `DELETE FROM streaming_services
+          WHERE builtin = 1 AND slug NOT IN (${builtinSlugs})
+            AND NOT EXISTS (SELECT 1 FROM shows WHERE shows.streaming_service = streaming_services.slug)`,
+        ...defaultStreamingServices.map((service) => service.slug),
+      );
+      await db.run(
+        `UPDATE streaming_services SET builtin = 0 WHERE builtin = 1 AND slug NOT IN (${builtinSlugs})`,
+        ...defaultStreamingServices.map((service) => service.slug),
+      );
       for (const service of defaultStreamingServices) {
         await db.run(
           `INSERT OR IGNORE INTO streaming_services (slug, name, color, text_color, builtin) VALUES (?, ?, ?, ?, 1)`,
