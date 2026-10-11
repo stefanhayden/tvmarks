@@ -813,6 +813,35 @@ export const updateEpisodeWatchStatus = async (id: number | string, status: 'WAT
   return undefined;
 };
 
+// Moves every watched episode of a show to another year, keeping the day and time it was watched,
+// so catching up a show that was really watched long ago doesn't count towards this year's stats.
+// Returns how many episodes were moved.
+export const setShowWatchedYear = async (showId: string | number, year: number) => {
+  try {
+    const y = String(year).padStart(4, '0');
+    const result = await db.run(
+      // the modifier makes DateTime tidy up a 29th of February that doesn't exist in the new year
+      `UPDATE episodes
+        SET watched_at = COALESCE(DateTime(? || substr(watched_at, 5), '+0 days'), ? || '-01-01 00:00:00')
+        WHERE show_id = ? AND watched_status = 'WATCHED'`,
+      y,
+      y,
+      showId,
+    );
+    // the show was last watched whenever its episodes now say
+    await db.run(
+      `UPDATE shows
+        SET last_watched_date = (SELECT MAX(watched_at) FROM episodes WHERE show_id = shows.id AND watched_status = 'WATCHED' AND number IS NOT NULL)
+        WHERE id = ?`,
+      showId,
+    );
+    return result.changes;
+  } catch (dbError) {
+    console.error('failed setShowWatchedYear', dbError);
+  }
+  return undefined;
+};
+
 export const updateEpisodeNote = async (id: string, note: string) => {
   try {
     await db.run(`UPDATE episodes SET note = ? WHERE id = ?`, note, id);

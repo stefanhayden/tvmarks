@@ -38,6 +38,7 @@ router.get('/:showId', async (req, res) => {
     blocked?: unknown;
     seasons?: Seasons[];
     activityUrl?: string;
+    watchedYear?: { count: number; label: string; options: { year: number; selected: boolean }[] };
     streamingServices?: unknown;
     streamingService?: unknown;
     streamingServicePicked?: boolean;
@@ -124,6 +125,22 @@ router.get('/:showId', async (req, res) => {
   params.blocked = permissions?.blocked;
 
   params.title = show.name;
+
+  // for moving the watched episodes to the year they were really watched
+  const watchedEpisodes = episodes.filter((e) => e.isWatched);
+  if (watchedEpisodes.length > 0) {
+    const years = [...new Set(watchedEpisodes.map((e) => Number(String(e.watched_at || '').slice(0, 4))).filter(Boolean))].sort();
+    const currentYear = now.getFullYear();
+    // nobody watched it before it premiered
+    const firstYear = Math.min(Number(String(show.premiered || '').slice(0, 4)) || currentYear - 30, currentYear);
+    // the likely pick is the year before the earliest one the episodes are in now
+    const suggested = Math.max(Math.min((years[0] || currentYear) - 1, currentYear), firstYear);
+    params.watchedYear = {
+      count: watchedEpisodes.length,
+      label: years.length === 0 ? 'no year' : years.length <= 2 ? years.join(' and ') : `${years[0]}–${years[years.length - 1]}`,
+      options: Array.from({ length: currentYear - firstYear + 1 }, (_, i) => currentYear - i).map((year) => ({ year, selected: year === suggested })),
+    };
+  }
 
   // Check if requesting ActivityPub format
   if (isActivityPubRequested(req)) {
@@ -393,6 +410,18 @@ router.post('/:showId/service', isAuthenticated, async (req, res) => {
     // a service that isn't known, like one removed since the page was loaded, changes nothing
     const service = await tvDb.getStreamingService(req.body.service);
     if (service) await tvDb.setShowStreamingService(showId, service.slug);
+  }
+
+  res.redirect(`/show/${showId}`);
+});
+
+router.post('/:showId/watched-year', isAuthenticated, async (req, res) => {
+  const { showId } = req.params;
+
+  const year = Number(req.body.year);
+  // a year that has happened, and that someone could have been watching tv in
+  if (Number.isInteger(year) && year >= 1950 && year <= new Date().getFullYear()) {
+    await tvDb.setShowWatchedYear(showId, year);
   }
 
   res.redirect(`/show/${showId}`);

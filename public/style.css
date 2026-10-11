@@ -1291,3 +1291,41 @@ a.bookmark-date {
   filter: grayscale(1);
   opacity: 0.6;
 }
+
+/* Show page: move watched episodes to another year */
+.watched-year {
+  border: 1px solid;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.watched-year legend {
+  padding: 0 5px;
+}
+
+.watched-year p {
+  margin-bottom: 10px;
+}
+
+.watched-year__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.watched-year__form select {
+  font: inherit;
+  background: #ffffff;
+  border: 1px solid currentColor;
+  border-radius: 0.25rem;
+  padding: calc(0.5rem - 1px) calc(1rem - 1px);
+}
+
+.watched-year .watched-year__hint {
+  color: var(--color-dimmed);
+  font-size: 0.85rem;
+  margin-bottom: 0;
+}

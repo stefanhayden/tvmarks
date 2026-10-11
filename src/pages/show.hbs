@@ -178,6 +178,14 @@
         </form>
       {{/if}}
     
+      {{#if watchedYear}}
+        <button type="button" aria-expanded="false" aria-controls="watched-year"
+                title="Watched this a while ago? Move its watched episodes to the year you saw them."
+                onclick="const panel = document.getElementById('watched-year'); panel.hidden = !panel.hidden; this.setAttribute('aria-expanded', !panel.hidden); if (!panel.hidden) panel.scrollIntoView({ block: 'nearest' })">
+          move to past
+        </button>
+      {{/if}}
+
       <form method="post" 
             action="/show/{{show.id}}/refresh"
             onsubmit="this.querySelector('button').disabled = 'disabled'">
@@ -202,4 +210,31 @@
       </form>
     {{/if}}
   </div>
+
+  {{#if @root.loggedIn}}
+    {{#if watchedYear}}
+      <fieldset id="watched-year" class="watched-year" hidden>
+        <legend>
+          When did you watch this?
+        </legend>
+        <p>
+          {{watchedYear.count}} watched {{pluralize watchedYear.count "episode counts" "episodes count"}} towards your stats for {{watchedYear.label}}.
+          If you saw this show before you started tracking it, move them to the year you watched it.
+        </p>
+        <form method="post" action="/show/{{show.id}}/watched-year" class="watched-year__form"
+              onsubmit="this.querySelector('button').disabled = 'disabled'">
+          <label for="watched_year">Move all {{watchedYear.count}} to</label>
+          <select id="watched_year" name="year">
+            {{#each watchedYear.options}}
+              <option value="{{this.year}}" {{#if this.selected}}selected{{/if}}>{{this.year}}</option>
+            {{/each}}
+          </select>
+          <button>Move</button>
+        </form>
+        <p class="watched-year__hint">
+          Each episode keeps the day it was marked watched, only the year changes.
+        </p>
+      </fieldset>
+    {{/if}}
+  {{/if}}
 {{/if}}
