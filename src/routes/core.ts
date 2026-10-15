@@ -4,7 +4,7 @@ import { isAuthenticated } from '../session-auth';
 import { refreshShowData, refreshWatchNext } from './admin';
 import * as tvDb from '../tvshow-db';
 import { groupShowsBySubscription } from '../streaming-services';
-import { getCurrentSubscriptionNotices, getServicesWithSubscriptionNotice } from '../subscription-notices';
+import { getCurrentSubscriptionNotices } from '../subscription-notices';
 
 const router = express.Router();
 export default router;
@@ -28,7 +28,7 @@ router.get<{}, {}, {}, { raw?: boolean }, {}>('/', async (req, res) => {
     tvDb.getShowsCompleted(limit),
     tvDb.getShowsNotStarted(limit),
     // reminders to unsubscribe are only for the owner
-    'loggedIn' in req.session && req.session.loggedIn ? getCurrentSubscriptionNotices() : [],
+    'loggedIn' in req.session && req.session.loggedIn ? getCurrentSubscriptionNotices({ deleteStale: true }) : [],
   ]);
 
   const foundShows =
@@ -221,27 +221,26 @@ router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number }>('/wat
 });
 
 router.get<{}, {}, {}, { raw?: boolean }>('/subscriptions', async (req, res) => {
-  const [services, watching, upToDate, allNotStarted, inProgressShowIds, noticeServices, recentlyUsed] = await Promise.all([
+  const [services, watching, upToDate, notStarted, inProgressShowIds, notices, recentlyUsed] = await Promise.all([
     tvDb.getStreamingServices(),
     tvDb.getShowsToWatch(-1),
     tvDb.getShowsUpToDate(-1),
     tvDb.getShowsNotStarted(-1),
     tvDb.getShowIdsInProgress(),
-    getServicesWithSubscriptionNotice(),
+    // only looked at here, the homepage tidies them up
+    getCurrentSubscriptionNotices(),
     tvDb.getRecentlyUsedServices(),
   ]);
 
-  if (!services || !watching || !upToDate || !allNotStarted || !inProgressShowIds) {
+  if (!services || !watching || !upToDate || !notStarted || !inProgressShowIds) {
     return res.render('subscriptions', { title: 'Subscriptions', error: data.errorMessage });
   }
 
-  // a show can be flagged abandoned before it is started
-  const notStarted = allNotStarted.filter((show) => !show.abandoned);
   const groups = groupShowsBySubscription(
     services,
     { watching, upToDate, notStarted },
     new Set(inProgressShowIds),
-    [...(recentlyUsed || []), ...noticeServices],
+    new Set([...(recentlyUsed || []), ...notices.map((notice) => notice.slug)]),
   );
   const params = {
     title: 'Subscriptions',

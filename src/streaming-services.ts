@@ -103,7 +103,7 @@ export const createStreamingServiceMatcher = <S extends StreamingService>(servic
 // Only used to know what a new guess may replace, a guessed service otherwise counts like any other.
 export type StreamingServiceSource = 'manual' | 'network';
 
-type ServiceShow = { id: number; streaming_service?: string | null };
+type ServiceShow = { id: number; streaming_service?: string | null; abandoned?: number | boolean | null };
 
 // A subscription is needed only while one of its shows is in progress (see getShowIdsInProgress).
 // Shows between seasons or not started are listed as not needing it right now.
@@ -113,7 +113,7 @@ export const groupShowsBySubscription = <T extends ServiceShow, S extends Stream
   shows: { watching: T[]; upToDate: T[]; notStarted: T[] },
   inProgressShowIds: Set<number>,
   // services to list even with no shows left to list, because they were in use until recently
-  alwaysListed: string[] = [],
+  alwaysListed: Set<string> = new Set(),
 ) => {
   const groups = new Map(
     services
@@ -127,7 +127,8 @@ export const groupShowsBySubscription = <T extends ServiceShow, S extends Stream
     list.forEach((show) => {
       if (seen.has(show.id)) return;
       seen.add(show.id);
-      if (show.streaming_service === NO_SERVICE) return;
+      // a show can be flagged abandoned before it is started
+      if (show.abandoned || show.streaming_service === NO_SERVICE) return;
       const group = groups.get(show.streaming_service);
       if (group) group[bucket].push(show);
       else if (bucket === 'watching' || bucket === 'upToDate') unassigned.push(show);
@@ -141,7 +142,7 @@ export const groupShowsBySubscription = <T extends ServiceShow, S extends Stream
 
   const activeCount = (group: { watching: T[]; upToDate: T[] }) => group.watching.length + group.upToDate.length;
   const idleCount = (group: { betweenSeasons: T[]; notStarted: T[] }) => group.betweenSeasons.length + group.notStarted.length;
-  const used = [...groups.values()].filter((group) => activeCount(group) + idleCount(group) > 0 || alwaysListed.includes(group.service.slug));
+  const used = [...groups.values()].filter((group) => activeCount(group) + idleCount(group) > 0 || alwaysListed.has(group.service.slug));
 
   return {
     needed: used.filter((group) => activeCount(group) > 0).sort((a, b) => activeCount(b) - activeCount(a)),
