@@ -192,6 +192,9 @@
         <button>
           fetch new image
         </button>
+        {{#if imageFailed}}
+          <p class="error">The new image could not be fetched, try again later.</p>
+        {{/if}}
       </form>
     
       <form method="post" action="/admin/show/delete/{{show.id}}"
