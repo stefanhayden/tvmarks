@@ -6,14 +6,13 @@ import { stringify as csvStringify } from 'csv-stringify/sync'; // https://githu
 import { domain, actorInfo, parseJSON, account, dataDir, countAiredEpisodes } from '../util';
 import { isAuthenticated } from '../session-auth';
 import { lookupActorInfo, createFollowMessage, createUnfollowMessage, signAndSend, getInboxFromActorProfile, broadcastMessage } from '../activitypub';
-import { downloadImage } from '../download-image';
+import { downloadImage, showImagesDir } from '../download-image';
 import * as apDb from '../activity-pub-db';
 import * as tvDb from '../tvshow-db';
 import { ProviderFactory } from '../providers/provider-factory';
 import { DatabaseMapper } from '../providers/base/db-mapper';
 import { slugifyServiceName } from '../streaming-services';
 
-const imageDirectory = 'public/shows';
 
 type adminLinkType = {
   href: string;
@@ -313,13 +312,16 @@ router.post('/reset', isAuthenticated, async (req, res) => {
   await tvDb.deleteAllShows();
   await tvDb.deleteAllEpisodes();
 
-  // delete all images
-  fs.readdir(imageDirectory, (err, files) => {
-    if (err) throw err;
+  // delete all images, logging rather than throwing since the response has already been decided
+  fs.readdir(showImagesDir, (err, files) => {
+    if (err) {
+      if (err.code !== 'ENOENT') console.log('failed reading show images', err);
+      return;
+    }
 
     files.forEach((file) => {
-      fs.unlink(path.join(imageDirectory, file), (err2) => {
-        if (err2) throw err2;
+      fs.unlink(path.join(showImagesDir, file), (err2) => {
+        if (err2) console.log('failed deleting show image', err2);
       });
     });
   });
@@ -367,73 +369,98 @@ router.get('/', isAuthenticated, async (req, res) => {
   }
 });
 
-export async function fetchMissingImage(req, res, showId) {
+// show images are saved in the data dir and served at /shows/<file>
+const showImageFile = (providerShow) => `${providerShow.id}_${providerShow.url.split('/').reverse()[0]}.${providerShow.image.medium.split('.').reverse()[0]}`;
+
+function showImageExists(image?: string | null) {
+  if (!image?.startsWith('/shows/')) return false;
+  return fs.existsSync(path.join(showImagesDir, image.slice('/shows/'.length)));
+}
+
+// the one way an existing show's image is fetched, throws when the provider has none or the download fails
+async function fetchShowImage(providerShow) {
+  if (!providerShow?.image?.medium) throw new Error(`show ${providerShow?.id} has no image to fetch`);
+
+  const file = showImageFile(providerShow);
+  await downloadImage(providerShow.image.medium, file);
+  await tvDb.updateShowImage(String(providerShow.id), { image: `/shows/${file}` });
+}
+
+export async function fetchMissingImage(showId) {
   const show = await tvDb.getShow(showId);
+  if (!show) throw new Error(`show ${showId} not found`);
 
   const provider = ProviderFactory.getProvider();
-  const updatedShow = await provider.getShow(show.id);
+  await fetchShowImage(await provider.getShow(show.id));
+}
 
-  try {
-    const fileExt = updatedShow.image.medium.split('.').reverse()[0];
-    const showImagePath = `${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
-    await downloadImage(updatedShow.image.medium, showImagePath);
+// shows the provider had no image for aren't asked about again for a while, refreshes would otherwise ask every time
+const NO_IMAGE_RECHECK_MS = 24 * 60 * 60 * 1000;
+const noImageCheckedAt = new Map<string, number>();
+const imageFetchesInFlight = new Map<string, Promise<boolean>>();
 
-    return tvDb.updateShowImage(String(updatedShow.id), {
-      image: `/shows/${showImagePath}`,
-    });
-  } catch (err) {
-    console.log(err);
-    return res.status(500).send('Internal Server Error');
+// a show added before it had an image, or whose image file went missing, picks one up when it's refreshed.
+// pass the provider's show when it was already fetched to save a request. resolves to whether an image was
+// fetched and never rejects, a missing image shouldn't stop whatever else is going on
+function fetchImageIfMissing(show, providerShow?) {
+  if (!show || showImageExists(show.image)) return Promise.resolve(false);
+
+  const id = String(show.id);
+  if (Date.now() - (noImageCheckedAt.get(id) ?? 0) < NO_IMAGE_RECHECK_MS) return Promise.resolve(false);
+
+  // two refreshes of the same show share one download rather than writing the same file at once
+  let fetching = imageFetchesInFlight.get(id);
+  if (!fetching) {
+    fetching = (async () => {
+      try {
+        const updatedShow = providerShow ?? (await ProviderFactory.getProvider().getShow(show.id));
+        if (!updatedShow?.image?.medium) {
+          noImageCheckedAt.set(id, Date.now());
+          return false;
+        }
+        await fetchShowImage(updatedShow);
+        return true;
+      } catch (err) {
+        console.log(`failed fetching missing image for show ${id}`, err);
+        return false;
+      }
+    })().finally(() => imageFetchesInFlight.delete(id));
+    imageFetchesInFlight.set(id, fetching);
   }
+  return fetching;
 }
 
 router.post('/fetchMissingImage/:showId', isAuthenticated, async (req, res) => {
+  const { showId } = req.params;
   try {
-    if (!req.params.showId) {
-      throw new Error('no show id provided');
-    }
-
-    await fetchMissingImage(req, res, req.params.showId);
+    await fetchMissingImage(showId);
   } catch (err) {
     console.log(err);
-    return res.status(500).send('Internal Server Error');
+    // send them back to the show rather than stranding them on this url
+    return res.redirect(`/show/${showId}?image=failed`);
   }
-  return res.redirect(`/show/${req.params.showId}`);
+  return res.redirect(`/show/${showId}`);
 });
 
-// to to set a max images to stop request from timing out
-export async function fetchMissingImages(req, maxImages = 50) {
-  const shows = await tvDb.getAllShows();
+// a few at a time and only up to a max, to stop the request from timing out or hammering the provider
+const IMAGE_FETCH_BATCH = 5;
+
+export async function fetchMissingImages(maxImages = 50) {
+  const queue = (await tvDb.getAllShows()).filter((show) => !showImageExists(show.image));
   let fetchedImages = 0;
 
-  const showsPromises = shows.map(async (show) => {
-    // CHECK IF IMAGE EXISTS
-    if (fs.existsSync(path.join(imageDirectory, show.image))) {
-      return;
-    }
-    if (fetchedImages === maxImages) {
-      return;
-    }
+  while (queue.length > 0 && fetchedImages < maxImages) {
+    const batch = queue.splice(0, Math.min(IMAGE_FETCH_BATCH, maxImages - fetchedImages));
+    const fetched = await Promise.all(batch.map((show) => fetchImageIfMissing(show)));
+    fetchedImages += fetched.filter(Boolean).length;
+  }
 
-    const provider = ProviderFactory.getProvider();
-    const updatedShow = await provider.getShow(show.id);
-
-    const fileExt = updatedShow.image.medium.split('.').reverse()[0];
-    const showImagePath = `${updatedShow.id}_${updatedShow.url.split('/').reverse()[0]}.${fileExt}`;
-    await downloadImage(updatedShow.image.medium, showImagePath);
-
-    await tvDb.updateShowImage(String(updatedShow.id), {
-      image: `/shows/${showImagePath}`,
-    });
-    fetchedImages += 1;
-  });
-
-  await Promise.all(showsPromises);
+  return fetchedImages;
 }
 
 router.get('/fetchMissingImages', isAuthenticated, async (req, res) => {
   try {
-    await fetchMissingImages(req);
+    await fetchMissingImages();
   } catch (err) {
     console.log(err);
     return res.status(500).send('Internal Server Error');
@@ -474,6 +501,8 @@ export async function refreshShowEpisodesData(_, showId) {
   const currentEpisodes = currentEpisodesWithNulls.filter((ep) => ep.number !== null);
   const episodes_count = currentEpisodes.filter((ep) => ep.number !== null).length;
   const aired_episodes_count = countAiredEpisodes(currentEpisodes);
+
+  await fetchImageIfMissing(await tvDb.getShow(showId));
 
   return tvDb.updateShow(showId, {
     episodes_count,
@@ -532,6 +561,9 @@ export async function refreshShowData() {
     const episodes_count = currentEpisodes.filter((ep) => ep.number !== null).length;
     const aired_episodes_count = countAiredEpisodes(currentEpisodes);
     const next_episode_towatch_airdate = currentEpisodes.find((ep) => ep.watched_status !== 'WATCHED')?.airdate || null;
+
+    // not awaited, this runs on homepage loads and a slow image server shouldn't hold the page up
+    fetchImageIfMissing(show, updatedShow);
 
     console.log(`update show data for ${updatedShow.name}`);
     await tvDb.updateShow(String(updatedShow.id), {
@@ -604,10 +636,16 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
     const last_watched_date = null;
     const next_episode_towatch_airdate = episodes.find((ep) => ep.season === 1 && ep.number === 1)?.airdate || null;
 
-    const fileExt = show.image?.medium.split('.').reverse()[0];
-    const showImagePath = `${show.id}_${show.url.split('/').reverse()[0]}.${fileExt}`;
-    if (show.image) {
-      await downloadImage(show.image.medium, showImagePath);
+    let image = null;
+    if (show.image?.medium) {
+      const file = showImageFile(show);
+      // a show is still worth adding without its image, refreshing it later fetches the image
+      try {
+        await downloadImage(show.image.medium, file);
+        image = `/shows/${file}`;
+      } catch (err) {
+        console.log(`failed fetching image for new show ${show.id}`, err);
+      }
     }
     await tvDb.createShow({
       id: show.id,
@@ -630,7 +668,7 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
       network_country: show.network?.country?.name,
       network_country_code: show.network?.country?.code,
       network_country_timezone: show.network?.country?.timezone,
-      image: show.image ? `/shows/${showImagePath}` : null,
+      image,
       episodes_count,
       aired_episodes_count,
       watched_episodes_count,

@@ -38,6 +38,7 @@ router.get('/:showId', async (req, res) => {
     blocked?: unknown;
     seasons?: Seasons[];
     activityUrl?: string;
+    imageFailed?: boolean;
     streamingServices?: unknown;
     streamingService?: unknown;
     streamingServicePicked?: boolean;
@@ -144,6 +145,8 @@ router.get('/:showId', async (req, res) => {
 
   // Add ActivityPub discovery link for HTML consumers
   params.activityUrl = `https://${req.app.get('domain')}/show/${show.id}?format=json`;
+
+  params.imageFailed = isLoggedIn && req.query.image === 'failed';
 
   // Send the page options or raw JSON data if the client requested it
   return req.query.raw ? res.send(params) : res.render('show', params);
