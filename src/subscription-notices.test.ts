@@ -31,7 +31,7 @@ const seed = async (id: number, service: string | null, episodes: [number, boole
 };
 
 const stored = async () => (await tvDb.getSubscriptionNotices()).map((notice) => [notice.service, notice.show_id]);
-const shown = async () => (await getCurrentSubscriptionNotices()).map((notice) => [notice.service.slug, notice.show_id]);
+const shown = async () => (await getCurrentSubscriptionNotices({ deleteStale: true })).map((notice) => [notice.service.slug, notice.show_id]);
 
 beforeEach(async () => {
   await tvDb.init(':memory:');
@@ -116,4 +116,18 @@ test('a dismissed notice stays gone', async () => {
   await tvDb.deleteSubscriptionNotice('netflix');
 
   expect(await shown()).toEqual([]);
+});
+
+test('a notice that stopped being true is only deleted when asked to', async () => {
+  await seed(1, 'netflix', [
+    [-20, true],
+    [-10, true],
+  ]);
+  await addSubscriptionNoticeIfUnused(1);
+  await tvDb.updateShow('1', { streaming_service: 'hulu' });
+
+  expect(await getCurrentSubscriptionNotices()).toEqual([]);
+  expect(await stored()).toEqual([['netflix', 1]]);
+  expect(await shown()).toEqual([]);
+  expect(await stored()).toEqual([]);
 });

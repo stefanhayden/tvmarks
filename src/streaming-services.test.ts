@@ -8,7 +8,8 @@ test('a subscription is needed only while one of its shows is in progress', () =
   // owned media ('none') is never a subscription and never needs a service picking
   const watching = [show(1, 'netflix'), show(2, 'hulu'), show(3), show(12, 'tubi'), show(13), show(14, 'none')];
   const upToDate = [show(4, 'netflix'), show(5, 'not-a-service'), show(9, 'netflix'), show(10, 'starz'), show(11)];
-  const notStarted = [show(6, 'netflix'), show(7, 'peacock'), show(8, 'peacock'), show(15)];
+  // a show can be flagged abandoned before it is started
+  const notStarted = [show(6, 'netflix'), show(7, 'peacock'), show(8, 'peacock'), show(15), { ...show(16, 'hulu'), abandoned: 1 }];
   const inProgress = new Set([1, 2, 3, 4, 5, 6, 14]);
 
   const { needed, notNeeded, unassigned } = groupShowsBySubscription(defaultStreamingServices, { watching, upToDate, notStarted }, inProgress);
@@ -198,6 +199,13 @@ test('a service is guessed from the network until the viewer decides', async () 
   // without a service of the viewer's own, the show goes back to being guessed
   expect(await service(4)).toEqual(['netflix', 'network']);
 
+  // a show without a network has nothing to guess from, so going back to guessing leaves it with no service
+  await tvDb.createShow({ id: 5, name: 'No network' } as tvDb.Show);
+  await tvDb.setShowStreamingService(5, 'netflix');
+  await tvDb.setShowStreamingService(5, null);
+  expect(await service(5)).toEqual([null, null]);
+  await tvDb.deleteShow('5');
+
   // a guess counts like any other service
   expect((await tvDb.getStreamingService('hbo-max')).shows_count).toBe(1);
 
@@ -240,8 +248,10 @@ test('removing a custom service sends its shows back to being guessed', async ()
   expect((await tvDb.getShow(2)).streaming_service).toBe('showtime');
   await tvDb.setShowStreamingService(1, 'showtime');
   await tvDb.setShowStreamingService(3, 'showtime');
+  await tvDb.setSubscriptionNotice('showtime', 3);
 
   await tvDb.deleteStreamingService('showtime');
+  expect(await tvDb.getSubscriptionNotices()).toEqual([]);
   expect((await tvDb.getShow(1)).streaming_service).toBe('netflix');
   expect((await tvDb.getShow(2)).streaming_service).toBe('paramount-plus');
   const broadcast = await tvDb.getShow(3);
@@ -257,7 +267,7 @@ test('a service stored without a source is treated as the viewer\'s', async () =
 });
 
 test('a service can be listed when it has no shows left to list', () => {
-  const { needed, notNeeded } = groupShowsBySubscription(defaultStreamingServices, { watching: [], upToDate: [], notStarted: [] }, new Set(), ['starz', 'none']);
+  const { needed, notNeeded } = groupShowsBySubscription(defaultStreamingServices, { watching: [], upToDate: [], notStarted: [] }, new Set(), new Set(['starz', 'none']));
   expect(needed).toEqual([]);
   expect(notNeeded.map((g) => g.service.slug)).toEqual(['starz']);
 });

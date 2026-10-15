@@ -287,7 +287,8 @@ export const init = async (dbFile = `${dataDir}/tvshows.db`) => {
         );
       }
       // cheap, and picks up shows that predate guessing as well as newly added services and aliases
-      await guessStreamingServices();
+      await clearRemovedStreamingServices();
+      await guessStreamingServices({ refreshCounts: false });
       await refreshStreamingServiceCounts();
 
       // return db;
@@ -555,23 +556,38 @@ const watchSoonCondition = `
 // Shows that are keeping a streaming service in use: in Watch Next or Up To Date, and part way through a season.
 // Part way through means the season of the furthest watched episode has a later episode to watch soon,
 // so a season that hasn't been started and episodes that were skipped don't count.
-export const getShowIdsInProgress = async (service?: string) => {
-  try {
-    const result = await db.all<{ show_id: number }[]>(
-      `SELECT DISTINCT episodes.show_id FROM episodes
+const inProgressFrom = `FROM episodes
       INNER JOIN shows ON shows.id = episodes.show_id
       INNER JOIN episodes last_watched ON last_watched.id = shows.last_watched_episode_id
       WHERE
         episodes.season = last_watched.season
         AND episodes.number > last_watched.number
         AND ${watchSoonCondition}
-        AND ((${showsToWatchCondition}) OR (${showsUpToDateCondition}))
+        AND ((${showsToWatchCondition}) OR (${showsUpToDateCondition}))`;
+
+export const getShowIdsInProgress = async (service?: string) => {
+  try {
+    const result = await db.all<{ show_id: number }[]>(
+      `SELECT DISTINCT episodes.show_id ${inProgressFrom}
         AND ($service IS NULL OR shows.streaming_service = $service)`,
       { $service: service ?? null },
     );
     return result.map((row) => row.show_id);
   } catch (dbError) {
     console.error('failed getShowIdsInProgress', dbError);
+  }
+  return undefined;
+};
+
+// the services with a show in progress, see getShowIdsInProgress
+export const getServicesInProgress = async () => {
+  try {
+    const result = await db.all<{ streaming_service: string }[]>(
+      `SELECT DISTINCT shows.streaming_service ${inProgressFrom} AND shows.streaming_service IS NOT NULL`,
+    );
+    return result.map((row) => row.streaming_service);
+  } catch (dbError) {
+    console.error('failed getServicesInProgress', dbError);
   }
   return undefined;
 };
@@ -631,19 +647,34 @@ export const createStreamingService = async (service: StreamingService) => {
   return undefined;
 };
 
+// Shows and notices left on a service that no longer exists lose it, and the shows go back to being guessed.
+// Also run by init, so a delete that failed part way through is put right on the next start.
+const clearRemovedStreamingServices = async () => {
+  try {
+    const known = `SELECT slug FROM streaming_services`;
+    await db.run(`DELETE FROM subscription_notices WHERE service NOT IN (${known})`);
+    const result = await db.run(
+      `UPDATE shows SET streaming_service = NULL, streaming_service_source = NULL WHERE streaming_service IS NOT NULL AND streaming_service NOT IN (${known})`,
+    );
+    return result.changes > 0;
+  } catch (dbError) {
+    console.error('failed clearRemovedStreamingServices', dbError);
+  }
+  return false;
+};
+
 // only services added from the admin page can be removed, their shows go back to being guessed from the network
 export const deleteStreamingService = async (slug: string) => {
   try {
     const result = await db.run(`DELETE FROM streaming_services WHERE slug = ? AND builtin = 0`, slug);
     if (!result.changes) return false;
-    await db.run(`UPDATE shows SET streaming_service = NULL, streaming_service_source = NULL WHERE streaming_service = ?`, slug);
-    await guessStreamingServices();
-    await db.run(`DELETE FROM subscription_notices WHERE service = ?`, slug);
-    return true;
   } catch (dbError) {
     console.error('failed deleteStreamingService', dbError);
+    return false;
   }
-  return false;
+  // the service is gone from here on, what follows only tidies up after it
+  if (await clearRemovedStreamingServices()) await guessStreamingServices({ withoutService: true });
+  return true;
 };
 
 // shows_count is a cache of how many shows use each service, so the picker can sort without counting every time
@@ -664,6 +695,7 @@ export const refreshStreamingServiceCounts = async (slugs?: (string | null | und
 
 // The viewer's own choice, which a guess never replaces.
 // Without a service the show goes back to being guessed from its network; "None" is the choice for having no service.
+// A show without a network has nothing to guess from, so going back to a guess leaves it with no service.
 export const setShowStreamingService = async (showId: string | number, slug: string | null) => {
   try {
     const previous = await db.get<Pick<Show, 'streaming_service' | 'network_name'>>(`SELECT streaming_service, network_name FROM shows WHERE id = ?`, showId);
@@ -687,21 +719,27 @@ export const setShowStreamingService = async (showId: string | number, slug: str
 // A service with no source was stored before guesses were tracked, so it is the viewer's too.
 const guessableCondition = `(streaming_service_source = 'network' OR (streaming_service IS NULL AND streaming_service_source IS NULL))`;
 
-// Guesses the streaming service from the network for every show the viewer hasn't decided on, or for just one show.
+// Guesses the streaming service from the network for every show the viewer hasn't decided on, or for just one show,
+// or (withoutService) only for the shows that have no service at all.
 // A guessed service is treated like any other from then on, and follows the network if that changes.
 // createShow and updateShow call this when they write a network, so it only needs calling when the services change.
-const guessStreamingServices = async (showId?: string | number) => {
+// refreshCounts: false is for a caller that recounts every service itself right after.
+const guessStreamingServices = async ({
+  showId,
+  withoutService = false,
+  refreshCounts = true,
+}: { showId?: string | number; withoutService?: boolean; refreshCounts?: boolean } = {}) => {
   try {
     const services = await getStreamingServices();
     // without the services every guess would look like it no longer matches
     if (!services) return;
     const match = createStreamingServiceMatcher(services);
-
     const shows = await db.all<Pick<Show, 'id' | 'network_name' | 'streaming_service'>[]>(
       // a show without a network keeps what it has, the provider leaving the network out isn't a reason to drop a guess
       `SELECT id, network_name, streaming_service FROM shows
-        WHERE ${guessableCondition} AND network_name IS NOT NULL AND network_name != '' AND ($id IS NULL OR id = $id)`,
-      { $id: showId ?? null },
+        WHERE ${guessableCondition} AND network_name IS NOT NULL AND network_name != ''
+          AND ($id IS NULL OR id = $id) AND ($withoutService = 0 OR streaming_service IS NULL)`,
+      { $id: showId ?? null, $withoutService: withoutService ? 1 : 0 },
     );
     const changes = shows
       .map((show) => ({ id: show.id, from: show.streaming_service || null, to: match(show.network_name)?.slug || null }))
@@ -721,7 +759,7 @@ const guessStreamingServices = async (showId?: string | number) => {
         ...batch.map((change) => change.id),
       );
     }
-    if (changes.length > 0) await refreshStreamingServiceCounts(changes.flatMap((change) => [change.from, change.to]));
+    if (refreshCounts && changes.length > 0) await refreshStreamingServiceCounts(changes.flatMap((change) => [change.from, change.to]));
   } catch (dbError) {
     console.error('failed guessStreamingServices', dbError);
   }
@@ -864,7 +902,7 @@ export const createShow = async (body: Omit<Show, 'last_watched_episode_id' | 'c
         $abandoned: body.abandoned,
       },
     );
-    if (body.network_name) await guessStreamingServices(result.lastID);
+    if (body.network_name) await guessStreamingServices({ showId: result.lastID });
     return getShow(result.lastID);
   } catch (dbError) {
     console.error('failed createShow', dbError);
@@ -894,7 +932,7 @@ export const updateShow = async (id: string, body: Partial<Show>) => {
       },
     );
     // the guessed streaming service follows the network
-    if (writesNetwork && (previous?.network_name || null) !== (body.network_name || null)) await guessStreamingServices(id);
+    if (writesNetwork && (previous?.network_name || null) !== (body.network_name || null)) await guessStreamingServices({ showId: id });
 
     return await db.get<Show>('SELECT * from shows WHERE id = ?', id);
   } catch (dbError) {
