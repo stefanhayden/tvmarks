@@ -221,25 +221,27 @@ router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number }>('/wat
 });
 
 router.get<{}, {}, {}, { raw?: boolean }>('/subscriptions', async (req, res) => {
-  const [services, watching, upToDate, notStarted, inProgressShowIds, notices, recentlyUsed] = await Promise.all([
+  const [services, watching, upToDate, notStarted, inProgress, recentlyUsed] = await Promise.all([
     tvDb.getStreamingServices(),
     tvDb.getShowsToWatch(-1),
     tvDb.getShowsUpToDate(-1),
     tvDb.getShowsNotStarted(-1),
-    tvDb.getShowIdsInProgress(),
-    // only looked at here, the homepage tidies them up
-    getCurrentSubscriptionNotices(),
+    tvDb.getShowsInProgress(),
     tvDb.getRecentlyUsedServices(),
   ]);
 
-  if (!services || !watching || !upToDate || !notStarted || !inProgressShowIds) {
+  if (!services || !watching || !upToDate || !notStarted || !inProgress) {
     return res.render('subscriptions', { title: 'Subscriptions', error: data.errorMessage });
   }
+
+  // reminders to unsubscribe are only for the owner, and only looked at here, the homepage tidies them up
+  const isLoggedIn = 'loggedIn' in req.session && req.session.loggedIn;
+  const notices = isLoggedIn ? await getCurrentSubscriptionNotices({ services, inProgress }) : [];
 
   const groups = groupShowsBySubscription(
     services,
     { watching, upToDate, notStarted },
-    new Set(inProgressShowIds),
+    new Set(inProgress.map((show) => show.show_id)),
     new Set([...(recentlyUsed || []), ...notices.map((notice) => notice.slug)]),
   );
   const params = {
