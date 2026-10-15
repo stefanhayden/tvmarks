@@ -277,6 +277,22 @@ export const init = async (dbFile = `${dataDir}/tvshows.db`) => {
             shows_count INTEGER DEFAULT 0 -- cached, see refreshStreamingServiceCounts
           );`,
       );
+      // A removed service takes its notices with it and its shows go back to having none, in the same statement as the delete.
+      // A show can only be put on a service that exists, so one removed at the same moment can't be left behind on a show.
+      await db.run(
+        `CREATE TRIGGER IF NOT EXISTS streaming_service_removed AFTER DELETE ON streaming_services
+          BEGIN
+            DELETE FROM subscription_notices WHERE service = OLD.slug;
+            UPDATE shows SET streaming_service = NULL, streaming_service_source = NULL WHERE streaming_service = OLD.slug;
+          END;`,
+      );
+      await db.run(
+        `CREATE TRIGGER IF NOT EXISTS show_streaming_service_exists BEFORE UPDATE OF streaming_service ON shows
+          WHEN NEW.streaming_service IS NOT NULL AND NOT EXISTS (SELECT 1 FROM streaming_services WHERE slug = NEW.streaming_service)
+          BEGIN
+            SELECT RAISE(ABORT, 'unknown streaming service');
+          END;`,
+      );
       for (const service of defaultStreamingServices) {
         await db.run(
           `INSERT OR IGNORE INTO streaming_services (slug, name, color, text_color, builtin) VALUES (?, ?, ?, ?, 1)`,
@@ -286,8 +302,8 @@ export const init = async (dbFile = `${dataDir}/tvshows.db`) => {
           service.textColor,
         );
       }
-      // cheap, and picks up shows that predate guessing as well as newly added services and aliases
       await clearRemovedStreamingServices();
+      // cheap, and picks up shows that predate guessing as well as newly added services and aliases
       await guessStreamingServices({ refreshCounts: false });
       await refreshStreamingServiceCounts();
 
@@ -565,32 +581,22 @@ const inProgressFrom = `FROM episodes
         AND ${watchSoonCondition}
         AND ((${showsToWatchCondition}) OR (${showsUpToDateCondition}))`;
 
-export const getShowIdsInProgress = async (service?: string) => {
+export type ShowInProgress = { show_id: number; streaming_service: string | null };
+
+export const getShowsInProgress = async (service?: string) => {
   try {
-    const result = await db.all<{ show_id: number }[]>(
-      `SELECT DISTINCT episodes.show_id ${inProgressFrom}
+    return await db.all<ShowInProgress[]>(
+      `SELECT DISTINCT episodes.show_id, shows.streaming_service ${inProgressFrom}
         AND ($service IS NULL OR shows.streaming_service = $service)`,
       { $service: service ?? null },
     );
-    return result.map((row) => row.show_id);
   } catch (dbError) {
-    console.error('failed getShowIdsInProgress', dbError);
+    console.error('failed getShowsInProgress', dbError);
   }
   return undefined;
 };
 
-// the services with a show in progress, see getShowIdsInProgress
-export const getServicesInProgress = async () => {
-  try {
-    const result = await db.all<{ streaming_service: string }[]>(
-      `SELECT DISTINCT shows.streaming_service ${inProgressFrom} AND shows.streaming_service IS NOT NULL`,
-    );
-    return result.map((row) => row.streaming_service);
-  } catch (dbError) {
-    console.error('failed getServicesInProgress', dbError);
-  }
-  return undefined;
-};
+export const getShowIdsInProgress = async (service?: string) => (await getShowsInProgress(service))?.map((row) => row.show_id);
 
 // unwatched episodes of a show, in any season, that have aired or will air soon
 export const getEpisodesToWatchSoonCount = async (showId: string | number) => {
@@ -647,33 +653,39 @@ export const createStreamingService = async (service: StreamingService) => {
   return undefined;
 };
 
-// Shows and notices left on a service that no longer exists lose it, and the shows go back to being guessed.
-// Also run by init, so a delete that failed part way through is put right on the next start.
+// The triggers in init keep services that no longer exist off shows and notices,
+// so this only finds ones left from before they did. Those shows go back to being guessed, picked or not,
+// so it is logged: a slug renamed in defaultStreamingServices would end up here.
 const clearRemovedStreamingServices = async () => {
   try {
     const known = `SELECT slug FROM streaming_services`;
-    await db.run(`DELETE FROM subscription_notices WHERE service NOT IN (${known})`);
-    const result = await db.run(
-      `UPDATE shows SET streaming_service = NULL, streaming_service_source = NULL WHERE streaming_service IS NOT NULL AND streaming_service NOT IN (${known})`,
+    const removed = await db.all<{ streaming_service: string; count: number }[]>(
+      `SELECT streaming_service, count(id) as count FROM shows WHERE streaming_service IS NOT NULL AND streaming_service NOT IN (${known}) GROUP BY streaming_service`,
     );
-    return result.changes > 0;
+    for (const { streaming_service, count } of removed) {
+      console.warn(`Streaming service "${streaming_service}" no longer exists, cleared it from ${count} show(s)`);
+    }
+    await db.run(`DELETE FROM subscription_notices WHERE service NOT IN (${known})`);
+    await db.run(`UPDATE shows SET streaming_service = NULL, streaming_service_source = NULL WHERE streaming_service IS NOT NULL AND streaming_service NOT IN (${known})`);
   } catch (dbError) {
     console.error('failed clearRemovedStreamingServices', dbError);
   }
-  return false;
 };
 
 // only services added from the admin page can be removed, their shows go back to being guessed from the network
 export const deleteStreamingService = async (slug: string) => {
+  let showIds: number[];
   try {
+    showIds = (await db.all<{ id: number }[]>(`SELECT id FROM shows WHERE streaming_service = ?`, slug)).map((row) => row.id);
+    // the streaming_service_removed trigger clears the service from its shows and notices along with it
     const result = await db.run(`DELETE FROM streaming_services WHERE slug = ? AND builtin = 0`, slug);
     if (!result.changes) return false;
   } catch (dbError) {
     console.error('failed deleteStreamingService', dbError);
     return false;
   }
-  // the service is gone from here on, what follows only tidies up after it
-  if (await clearRemovedStreamingServices()) await guessStreamingServices({ withoutService: true });
+  // the service is gone from here on, a failed guess only leaves its shows without one
+  if (showIds.length > 0) await guessStreamingServices({ showIds });
   return true;
 };
 
@@ -719,16 +731,15 @@ export const setShowStreamingService = async (showId: string | number, slug: str
 // A service with no source was stored before guesses were tracked, so it is the viewer's too.
 const guessableCondition = `(streaming_service_source = 'network' OR (streaming_service IS NULL AND streaming_service_source IS NULL))`;
 
-// Guesses the streaming service from the network for every show the viewer hasn't decided on, or for just one show,
-// or (withoutService) only for the shows that have no service at all.
+// Guesses the streaming service from the network for every show the viewer hasn't decided on, or for just one show or a few.
 // A guessed service is treated like any other from then on, and follows the network if that changes.
 // createShow and updateShow call this when they write a network, so it only needs calling when the services change.
 // refreshCounts: false is for a caller that recounts every service itself right after.
 const guessStreamingServices = async ({
   showId,
-  withoutService = false,
+  showIds = showId === undefined ? undefined : [showId],
   refreshCounts = true,
-}: { showId?: string | number; withoutService?: boolean; refreshCounts?: boolean } = {}) => {
+}: { showId?: string | number; showIds?: (string | number)[]; refreshCounts?: boolean } = {}) => {
   try {
     const services = await getStreamingServices();
     // without the services every guess would look like it no longer matches
@@ -738,8 +749,8 @@ const guessStreamingServices = async ({
       // a show without a network keeps what it has, the provider leaving the network out isn't a reason to drop a guess
       `SELECT id, network_name, streaming_service FROM shows
         WHERE ${guessableCondition} AND network_name IS NOT NULL AND network_name != ''
-          AND ($id IS NULL OR id = $id) AND ($withoutService = 0 OR streaming_service IS NULL)`,
-      { $id: showId ?? null, $withoutService: withoutService ? 1 : 0 },
+          AND ($ids IS NULL OR id IN (SELECT value FROM json_each($ids)))`,
+      { $ids: showIds ? JSON.stringify(showIds.map(Number)) : null },
     );
     const changes = shows
       .map((show) => ({ id: show.id, from: show.streaming_service || null, to: match(show.network_name)?.slug || null }))
@@ -782,10 +793,24 @@ export const getRecentlyUsedServices = async () => {
   return undefined;
 };
 
+export type SubscriptionNotice = {
+  service: string;
+  show_id: number;
+  show_name: string | null;
+  created_at: string;
+  // what the notice's show is up to now, null when the show is gone
+  show_service: string | null;
+  show_watched_episodes_count: number | null;
+  show_to_watch_soon_count: number | null;
+};
+
 export const getSubscriptionNotices = async () => {
   try {
-    return await db.all<{ service: string; show_id: number; show_name: string | null; created_at: string }[]>(
-      `SELECT subscription_notices.*, shows.name as show_name
+    return await db.all<SubscriptionNotice[]>(
+      `SELECT subscription_notices.*, shows.name as show_name,
+          shows.streaming_service as show_service,
+          shows.watched_episodes_count as show_watched_episodes_count,
+          CASE WHEN shows.id IS NULL THEN NULL ELSE (SELECT count(id) FROM episodes WHERE show_id = shows.id AND ${watchSoonCondition}) END as show_to_watch_soon_count
         FROM subscription_notices
         LEFT JOIN shows ON shows.id = subscription_notices.show_id
         ORDER BY subscription_notices.created_at DESC`,

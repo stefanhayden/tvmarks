@@ -122,6 +122,11 @@ test('services can be added and removed, built in ones cannot be removed', async
   expect(await tvDb.deleteStreamingService('my-service')).toBe(true);
   expect(await tvDb.getStreamingService('my-service')).toBeUndefined();
   expect((await tvDb.getShow(1)).streaming_service).toBeNull();
+
+  // like a pick sent while the service was being removed
+  await tvDb.setShowStreamingService(1, 'my-service');
+  await tvDb.updateShow('1', { streaming_service: 'my-service' });
+  expect((await tvDb.getShow(1)).streaming_service).toBeNull();
 });
 
 test('stats count the episodes watched this year on each service', async () => {

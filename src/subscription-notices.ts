@@ -28,30 +28,34 @@ export const addSubscriptionNoticeIfUnused = async (showId: string | number) => 
   }
 };
 
+// What checking the notices needs, for a caller that has it loaded already.
+type Loaded = { services?: tvDb.StoredStreamingService[]; inProgress?: tvDb.ShowInProgress[] };
+
 // Every stored notice, with whether it stopped being true since it was left:
 // the service is in use again, or its show moved to another service, was deleted, or has something to watch.
-const checkSubscriptionNotices = async () => {
-  const notices = (await tvDb.getSubscriptionNotices()) || [];
+// Throws when something couldn't be loaded, so a notice is never thought stale because of a failed query.
+const checkSubscriptionNotices = async (loaded: Loaded = {}) => {
+  const notices = await tvDb.getSubscriptionNotices();
+  if (!notices) throw new Error('could not load the notices');
   if (notices.length === 0) return [];
-  const [services, inUse] = await Promise.all([tvDb.getStreamingServices(), tvDb.getServicesInProgress()]);
-  if (!services || !inUse) throw new Error('could not load the services');
+  const [services, inProgress] = await Promise.all([loaded.services || tvDb.getStreamingServices(), loaded.inProgress || tvDb.getShowsInProgress()]);
+  if (!services || !inProgress) throw new Error('could not load the services');
   const bySlug = new Map(services.map((service) => [service.slug, service]));
-  return Promise.all(
-    notices.map(async (notice) => {
-      const service = bySlug.get(notice.service);
-      const show = await tvDb.getShow(notice.show_id);
-
-      const stale = !service || !show || show.streaming_service !== service.slug || inUse.includes(service.slug) || (await hasSomethingToWatch(show)) === true;
-      return { ...notice, slug: notice.service, service, stale };
-    }),
-  );
+  const inUse = new Set(inProgress.map((show) => show.streaming_service));
+  return notices.map((notice) => {
+    const service = bySlug.get(notice.service);
+    // the show_ columns are null when the show is gone
+    const somethingToWatch = !notice.show_watched_episodes_count || (notice.show_to_watch_soon_count ?? 0) > 0;
+    const stale = !service || notice.show_service !== service.slug || inUse.has(service.slug) || somethingToWatch;
+    return { ...notice, slug: notice.service, service, stale };
+  });
 };
 
 // The notices to show. With deleteStale, ones that stopped being true are also deleted:
 // only the owner's visits should change anything, the notices are theirs.
-export const getCurrentSubscriptionNotices = async ({ deleteStale = false } = {}) => {
+export const getCurrentSubscriptionNotices = async ({ deleteStale = false, ...loaded }: { deleteStale?: boolean } & Loaded = {}) => {
   try {
-    const notices = await checkSubscriptionNotices();
+    const notices = await checkSubscriptionNotices(loaded);
     if (deleteStale) await Promise.all(notices.filter((notice) => notice.stale).map((notice) => tvDb.deleteSubscriptionNotice(notice.slug)));
     return notices.filter((notice) => !notice.stale);
   } catch (error) {
