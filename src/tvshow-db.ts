@@ -9,7 +9,7 @@ import fs from 'fs';
 import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import { stripHtml } from 'string-strip-html';
-import { timeSince, account, domain, dataDir } from './util';
+import { timeSince, account, domain, dataDir, getEpisodeStatusUpdatedValues } from './util';
 import { createStreamingServiceMatcher, defaultStreamingServices, StreamingService, StreamingServiceSource } from './streaming-services';
 
 export type Show = {
@@ -306,6 +306,8 @@ export const init = async (dbFile = `${dataDir}/tvshows.db`) => {
       // cheap, and picks up shows that predate guessing as well as newly added services and aliases
       await guessStreamingServices({ refreshCounts: false });
       await refreshStreamingServiceCounts();
+      await db.run('CREATE INDEX IF NOT EXISTS episodes_show_season_number ON episodes(show_id, season, number)');
+      await removeDuplicateEpisodes();
 
       // return db;
     } catch (dbError) {
@@ -1124,6 +1126,103 @@ export const deleteEpisode = async (id) => {
   } catch (dbError) {
     console.error('failed deleteEpisode', dbError);
   }
+};
+
+// The provider sometimes swaps an episode for one with a new id, usually a placeholder like "TBA" once the real episode is announced.
+// Left alone the old row lingers as an unwatched duplicate, which looks like a watched episode came unwatched,
+// so its watch and note move to the episode that replaced it. The replacement has to have been added after it,
+// an episode renumbered into its place was already there and shouldn't inherit its watch.
+// A watched episode with no replacement is kept so no watch is lost.
+const retireStaleEpisodes = async (stale: Episode[]) => {
+  const staleIds = stale.map((ep) => ep.id);
+  const removed: Episode[] = [];
+
+  for (const ep of stale) {
+    const replacement = await db.get<Episode>(
+      `SELECT * FROM episodes WHERE show_id = ? AND season = ? AND number = ? AND DateTime(created_at) > DateTime(?)
+        AND id NOT IN (${staleIds.map(() => '?').join(',')})
+        ORDER BY updated_at DESC, id DESC LIMIT 1`,
+      ep.show_id,
+      ep.season,
+      ep.number,
+      ep.created_at,
+      ...staleIds,
+    );
+    if (!replacement && ep.watched_status === 'WATCHED') continue;
+
+    if (replacement) {
+      if (ep.watched_status === 'WATCHED' && replacement.watched_status !== 'WATCHED') {
+        await db.run('UPDATE episodes SET watched_status = ?, watched_at = ? WHERE id = ?', ep.watched_status, ep.watched_at, replacement.id);
+      }
+      if (ep.note && ep.note !== replacement.note) {
+        const note = replacement.note ? `${replacement.note}\n\n${ep.note}` : ep.note;
+        await db.run('UPDATE episodes SET note = ? WHERE id = ?', note, replacement.id);
+      }
+    }
+    await db.run('DELETE from episodes WHERE id = ?', ep.id);
+    removed.push(ep);
+  }
+
+  for (const showId of new Set(removed.map((ep) => ep.show_id))) {
+    const episodes = await db.all<Episode[]>('SELECT * FROM episodes WHERE show_id = ? AND number IS NOT NULL ORDER BY season, number ASC', showId);
+    const stats: Partial<Show> = getEpisodeStatusUpdatedValues(episodes);
+    // only the episode list changed, not whether the show was given up on
+    delete stats.abandoned;
+    await updateShow(String(showId), { ...stats, episodes_count: episodes.length });
+  }
+  return removed;
+};
+
+const logRemovedEpisodes = (message: string, removed: Episode[]) => {
+  if (removed.length > 0) console.log(message, removed.map((ep) => `show ${ep.show_id} s${ep.season}e${ep.number} ${ep.id}`));
+};
+
+// Episodes of a show the provider no longer lists, limited to the seasons that were fetched when given.
+// Episodes updated since startedAt are left alone, they came from a refresh that ran alongside this one.
+// Specials are left alone as a season fetch may not include them.
+export const removeEpisodesMissingFromProvider = async (
+  showId: number | string,
+  providerEpisodeIds: number[],
+  { seasons, startedAt }: { seasons?: number[]; startedAt?: string } = {},
+) => {
+  try {
+    const known = new Set(providerEpisodeIds);
+    const episodes = await db.all<Episode[]>(
+      `SELECT * FROM episodes WHERE show_id = $showId AND number IS NOT NULL AND ($startedAt IS NULL OR DateTime(updated_at) < DateTime($startedAt))`,
+      { $showId: showId, $startedAt: startedAt ?? null },
+    );
+    const stale = episodes.filter((ep) => !known.has(ep.id) && (!seasons || seasons.includes(ep.season)));
+    if (stale.length === 0) return 0;
+
+    const removed = await retireStaleEpisodes(stale);
+    logRemovedEpisodes(`removed episodes no longer listed for show ${showId}`, removed);
+    return removed.length;
+  } catch (dbError) {
+    console.error('failed removeEpisodesMissingFromProvider', dbError);
+  }
+  return 0;
+};
+
+// Duplicates already left behind by refreshes. The replacement is the copy added and refreshed most recently;
+// requiring a gap means copies refreshed together, which the provider still lists, are never removed.
+export const removeDuplicateEpisodes = async () => {
+  try {
+    const stale = await db.all<Episode[]>(
+      `SELECT * FROM episodes e WHERE e.number IS NOT NULL AND EXISTS (
+        SELECT 1 FROM episodes newer WHERE newer.show_id = e.show_id AND newer.season = e.season AND newer.number = e.number
+          AND DateTime(newer.created_at) > DateTime(e.created_at)
+          AND DateTime(newer.updated_at) > DateTime(e.updated_at, '+1 hour')
+      )`,
+    );
+    if (stale.length === 0) return 0;
+
+    const removed = await retireStaleEpisodes(stale);
+    logRemovedEpisodes('removed duplicate episodes', removed);
+    return removed.length;
+  } catch (dbError) {
+    console.error('failed removeDuplicateEpisodes', dbError);
+  }
+  return 0;
 };
 
 export const deleteEpisodesByShow = async (showId) => {

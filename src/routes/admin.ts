@@ -480,6 +480,7 @@ export async function refreshWatchNext() {
 
 export async function refreshShowEpisodesData(_, showId) {
   // update data
+  const startedAt = new Date().toISOString();
   const provider = ProviderFactory.getProvider();
   const updatedEpisodes = await provider.getEpisodes(showId, true);
 
@@ -496,6 +497,14 @@ export async function refreshShowEpisodesData(_, showId) {
   });
 
   await Promise.all(epPromises);
+
+  if (updatedEpisodes.length > 0) {
+    await tvDb.removeEpisodesMissingFromProvider(
+      showId,
+      updatedEpisodes.map((episode) => episode.id),
+      { startedAt },
+    );
+  }
 
   const currentEpisodesWithNulls = await tvDb.getEpisodesByShowId(showId);
   const currentEpisodes = currentEpisodesWithNulls.filter((ep) => ep.number !== null);
@@ -518,6 +527,7 @@ export async function refreshShowData() {
   );
   const showPromises = shows.map(async (show) => {
     // update data
+    const startedAt = new Date().toISOString();
     const provider = ProviderFactory.getProvider();
     const updatedShow = await provider.getShow(show.id);
     const showSeasons = await provider.getSeasons(show.id);
@@ -530,29 +540,37 @@ export async function refreshShowData() {
     }
 
     // filter out any seasons we don't find (like our check for new seasons)
-    const seasonIds = seasonNumbers.map((number) => showSeasons.find((s) => s.number === number)?.id).filter((f) => !!f);
+    const seasons = seasonNumbers.map((number) => showSeasons.find((s) => s.number === number)).filter((f) => !!f);
 
-    const eps = (
-      await Promise.all(
-        seasonIds.map(async (seasonId) =>
-          provider.getSeasonEpisodes(seasonId).catch((e) => {
-            console.log(`failed getting season from tzmaze: ${seasonId}`, e);
-            return [];
-          }),
-        ),
-      )
-    ).flat();
+    const fetchedSeasons = await Promise.all(
+      seasons.map(async (season) => ({
+        number: season.number,
+        episodes: await provider.getSeasonEpisodes(season.id).catch((e) => {
+          console.log(`failed getting season from tzmaze: ${season.id}`, e);
+          return null;
+        }),
+      })),
+    );
+    const eps = fetchedSeasons.flatMap((season) => season.episodes || []);
 
+    // any episode already stored, not only recent ones, an undated episode would otherwise fail to insert and never update
+    const storedEpisodeIds = new Set((await tvDb.getEpisodesByShowId(show.id)).map((e) => e.id));
     const epPromises = eps.map(async (episode) => {
-      const found = currentEpisodesToUpdate.find((e) => e.id === episode.id);
       const data = DatabaseMapper.toEpisode(episode, show.id);
-      if (found) {
+      if (storedEpisodeIds.has(episode.id)) {
         return tvDb.updateEpisode(episode.id, data);
       }
       return tvDb.createEpisode(data);
     });
 
     await Promise.all(epPromises);
+
+    // only seasons that were fetched, a failed or empty fetch says nothing about which episodes are gone
+    await tvDb.removeEpisodesMissingFromProvider(
+      show.id,
+      eps.map((episode) => episode.id),
+      { seasons: fetchedSeasons.filter((season) => season.episodes?.length > 0).map((season) => season.number), startedAt },
+    );
 
     // updated episodes
     const currentEpisodesWithNulls = await tvDb.getEpisodesByShowId(show.id);
