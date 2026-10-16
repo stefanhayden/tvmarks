@@ -196,6 +196,36 @@ export function countAiredEpisodes(episodes: { number?: number | null; airstamp?
   return episodes.filter((ep) => ep.number !== null && isEpisodeAired(ep.airstamp, referenceDate)).length;
 }
 
+// show stats that follow from its numbered episodes
+export const getEpisodeStatusUpdatedValues = (allEps) => {
+  const aired_episodes_count = countAiredEpisodes(allEps);
+  const watchedEps = allEps.filter((ep) => ep.watched_status === 'WATCHED');
+  const watched_episodes_count = watchedEps.length;
+
+  // reversed to make it easy to find last watched episode
+  const allEpsReversed = [...allEps].reverse();
+
+  const last_watched_episode_index = allEpsReversed.findIndex((ep) => ep.watched_status === 'WATCHED');
+  const last_watched_episode = allEpsReversed[last_watched_episode_index];
+  const last_watched_episode_id = last_watched_episode?.id || null;
+
+  // most recent watch, not the furthest episode - rewatching earlier episodes still counts as activity
+  const last_watched_date = watchedEps.reduce((latest, ep) => (ep.watched_at && (!latest || ep.watched_at > latest) ? ep.watched_at : latest), null);
+
+  const next_episode_towatch =
+    allEpsReversed.find((ep, index) => last_watched_episode_index - 1 === index) || allEpsReversed.find((ep) => ep.watched_status !== 'WATCHED');
+  const next_episode_towatch_airdate = next_episode_towatch?.airstamp || null;
+
+  return {
+    aired_episodes_count,
+    watched_episodes_count,
+    last_watched_date,
+    last_watched_episode_id,
+    next_episode_towatch_airdate,
+    abandoned: 0,
+  };
+};
+
 export function simpleLogger(req, res, next) {
   // middleware function
   const currentDatetime = new Date();
