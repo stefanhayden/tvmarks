@@ -22,7 +22,8 @@ describe('episode routes', () => {
 
   const request = (path: string, init: RequestInit = {}) => fetch(`${baseUrl}${path}`, { redirect: 'manual', ...init });
   const post = (path: string, body: Record<string, string> = {}) =>
-    request(path, { method: 'POST', body: new URLSearchParams(body), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+    // a string, the tests run in jsdom whose URLSearchParams some node versions' fetch won't take
+    request(path, { method: 'POST', body: new URLSearchParams(body).toString(), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
 
   beforeAll(async () => {
     await tvDb.init(':memory:');
