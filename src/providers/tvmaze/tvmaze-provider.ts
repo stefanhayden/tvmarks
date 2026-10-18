@@ -12,6 +12,9 @@ import {
 import { TVMazeMapper } from './tvmaze-mapper';
 import { ProviderError } from '../base/provider-errors';
 
+// node-tvmaze's requests have no timeout, a stalled connection would otherwise hang whatever is waiting on it
+const DEFAULT_TIMEOUT_MS = 10 * 1000;
+
 export class TVMazeProvider implements ITVDataProvider {
   readonly providerName = 'TVMaze';
   readonly providerVersion = '1.0.0';
@@ -24,9 +27,20 @@ export class TVMazeProvider implements ITVDataProvider {
     this.mapper = new TVMazeMapper();
   }
 
+  // the request itself isn't cancelled, node-tvmaze has no way to, it's only no longer waited on
+  // any, like what node-tvmaze resolves to, it has no types
+  private withTimeout(request: Promise<any>): Promise<any> {
+    const ms = this.config.timeout ?? DEFAULT_TIMEOUT_MS;
+    let timer: ReturnType<typeof setTimeout>;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`timed out after ${ms}ms`)), ms);
+    });
+    return Promise.race([request, timeout]).finally(() => clearTimeout(timer));
+  }
+
   async search(query: string): Promise<SearchResult[]> {
     try {
-      const results = await tvMaze.search(query);
+      const results = await this.withTimeout(tvMaze.search(query));
       return results.map((result) => this.mapper.toSearchResult(result));
     } catch (error: any) {
       throw new ProviderError(`TVMaze search failed: ${error.message}`, error);
@@ -35,7 +49,7 @@ export class TVMazeProvider implements ITVDataProvider {
 
   async getShow(id: number | string): Promise<ProviderShow> {
     try {
-      const show = await tvMaze.show(Number(id));
+      const show = await this.withTimeout(tvMaze.show(Number(id)));
       return this.mapper.toProviderShow(show);
     } catch (error: any) {
       throw new ProviderError(
@@ -47,7 +61,7 @@ export class TVMazeProvider implements ITVDataProvider {
 
   async getSeasons(showId: number | string): Promise<ProviderSeason[]> {
     try {
-      const seasons = await tvMaze.seasons(Number(showId));
+      const seasons = await this.withTimeout(tvMaze.seasons(Number(showId)));
       return seasons.map((season) => this.mapper.toProviderSeason(season));
     } catch (error: any) {
       throw new ProviderError(
@@ -62,7 +76,7 @@ export class TVMazeProvider implements ITVDataProvider {
     includeSpecials = false
   ): Promise<ProviderEpisode[]> {
     try {
-      const episodes = await tvMaze.episodes(Number(showId), includeSpecials);
+      const episodes = await this.withTimeout(tvMaze.episodes(Number(showId), includeSpecials));
       return episodes.map((episode) => this.mapper.toProviderEpisode(episode));
     } catch (error: any) {
       throw new ProviderError(
@@ -76,7 +90,7 @@ export class TVMazeProvider implements ITVDataProvider {
     seasonId: number | string
   ): Promise<ProviderEpisode[]> {
     try {
-      const episodes = await tvMaze.seasonEpisodes(Number(seasonId));
+      const episodes = await this.withTimeout(tvMaze.seasonEpisodes(Number(seasonId)));
       return episodes.map((episode) => this.mapper.toProviderEpisode(episode));
     } catch (error: any) {
       throw new ProviderError(

@@ -13,13 +13,15 @@ router.get<{}, {}, {}, { raw?: boolean }, {}>('/', async (req, res) => {
   let params = {};
 
   if ('loggedIn' in req.session && req.session.loggedIn) {
-    // params.showDataRefreshed = await refreshShowData(req, res);
+    // not awaited, the provider can be slow or stall and the page shouldn't wait on it. the page shows what's
+    // already stored and what this refresh finds shows up on the next load
+    refreshShowData().catch((err) => console.log('failed refreshing shows for the homepage', err));
+
     // the page shows what's already stored when a refresh fails, that's better than no page
     try {
-      await refreshShowData();
       await refreshWatchNext();
     } catch (err) {
-      console.log('failed refreshing shows for the homepage', err);
+      console.log('failed refreshing watch next for the homepage', err);
     }
   }
 
