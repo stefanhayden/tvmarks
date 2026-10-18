@@ -41,6 +41,7 @@ router.get('/:showId', async (req, res) => {
     seasons?: Seasons[];
     activityUrl?: string;
     imageFailed?: boolean;
+    refreshFailed?: boolean;
     streamingServices?: unknown;
     streamingService?: unknown;
     streamingServicePicked?: boolean;
@@ -149,6 +150,7 @@ router.get('/:showId', async (req, res) => {
   params.activityUrl = `https://${req.app.get('domain')}/show/${show.id}?format=json`;
 
   params.imageFailed = isLoggedIn && req.query.image === 'failed';
+  params.refreshFailed = isLoggedIn && req.query.refresh === 'failed';
 
   // Send the page options or raw JSON data if the client requested it
   return req.query.raw ? res.send(params) : res.render('show', params);
@@ -158,6 +160,9 @@ router.post('/:showId/episode/:episodeId/status', async (req, res) => {
   const status = req.body.status === 'WATCHED' ? 'WATCHED' : null;
 
   const updatedEp = await tvDb.updateEpisodeWatchStatus(req.params.episodeId, status);
+  // like an episode a refresh removed while its page was open
+  if (!updatedEp) return res.redirect(301, `/show/${req.params.showId}`);
+
   const allEpsWithNulls = await tvDb.getEpisodesByShowId(req.params.showId);
 
   const allEps = allEpsWithNulls.filter((ep) => ep.number !== null);
@@ -199,6 +204,7 @@ router.post('/:showId/episode/:episodeId/status', async (req, res) => {
 router.post('/:showId/episode/:episodeId/update', async (req, res) => {
   const { note } = req.body;
   const updatedEp = await tvDb.updateEpisodeNote(req.params.episodeId, note);
+  if (!updatedEp) return res.redirect(301, `/show/${req.params.showId}`);
 
   const addedShow = await tvDb.getShow(req.params.showId);
   const id = `show-${addedShow.id}-episode-${updatedEp.id}`;
@@ -286,16 +292,22 @@ router.get('/:showId/episode/:episodeId', async (req, res) => {
     };
   }
 
-  const episode = await tvDb.getEpisode(req.params.episodeId).then((e) => {
-    const daysUntill = Math.round((new Date().getTime() - new Date(e.airstamp).getTime()) / (24 * 60 * 60 * 1000));
-    return {
-      ...e,
-      isWatched: e.watched_status === 'WATCHED',
-      not_aired: !isEpisodeAired(e.airstamp),
-      days_untill: daysUntill < 0 ? Math.abs(daysUntill) : 0,
-      show,
-    };
-  });
+  const storedEpisode = await tvDb.getEpisode(req.params.episodeId);
+  // like an episode a refresh removed because the provider replaced it, or one of another show
+  if (!storedEpisode || storedEpisode.show_id !== show.id) {
+    // a federated server needs to hear the note is gone, not get the show page
+    if (isActivityPubRequested(req)) return res.status(404).json({ error: 'Not Found' });
+    return res.redirect(`/show/${show.id}`);
+  }
+
+  const daysUntill = Math.round((new Date().getTime() - new Date(storedEpisode.airstamp).getTime()) / (24 * 60 * 60 * 1000));
+  const episode = {
+    ...storedEpisode,
+    isWatched: storedEpisode.watched_status === 'WATCHED',
+    not_aired: !isEpisodeAired(storedEpisode.airstamp),
+    days_untill: daysUntill < 0 ? Math.abs(daysUntill) : 0,
+    show,
+  };
   params.hideTitle = true;
   params.episode = episode;
 
@@ -387,7 +399,12 @@ router.post('/:showId/update', isAuthenticated, async (req, res) => {
 router.post('/:showId/refresh', isAuthenticated, async (req, res) => {
   const { showId } = req.params;
 
-  await refreshShowEpisodesData(req, showId);
+  try {
+    await refreshShowEpisodesData(req, showId);
+  } catch (err) {
+    console.log(`failed refreshing show ${showId}`, err);
+    return res.redirect(301, `/show/${showId}?refresh=failed`);
+  }
 
   res.redirect(301, `/show/${showId}`);
 });
