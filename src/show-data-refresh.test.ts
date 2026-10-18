@@ -7,7 +7,7 @@ import coreRoutes from './routes/core';
 import { ProviderFactory } from './providers/provider-factory';
 import { ProviderError } from './providers/base/provider-errors';
 
-const mocked = vi.hoisted(() => ({ refreshFails: false, unsavableShowIds: new Set<string>() }));
+const mocked = vi.hoisted(() => ({ refreshFails: false, refreshHangs: false, unsavableShowIds: new Set<string>() }));
 
 vi.mock('./tvshow-db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./tvshow-db')>();
@@ -16,6 +16,7 @@ vi.mock('./tvshow-db', async (importOriginal) => {
     // shows are only picked for refresh hours after their last update, which a freshly created show never is
     getAllInProgressShows: async () => {
       if (mocked.refreshFails) throw new Error('database is locked');
+      if (mocked.refreshHangs) return new Promise(() => {});
       return actual.getAllShows();
     },
     // the db helpers log and resolve to nothing when a write fails
@@ -137,6 +138,7 @@ describe('homepage', () => {
 
   afterAll(() => {
     mocked.refreshFails = false;
+    mocked.refreshHangs = false;
     server.close();
   });
 
@@ -145,5 +147,13 @@ describe('homepage', () => {
     const res = await fetch(`${baseUrl}/?raw=1`);
     expect(res.status).toBe(200);
     expect((await res.json()).isLoggedIn).toBe(true);
+    mocked.refreshFails = false;
+  });
+
+  // a page that waited on the refresh would never answer, and fail on the test's timeout
+  test("doesn't wait on a refresh that never finishes", { timeout: 2000 }, async () => {
+    mocked.refreshHangs = true;
+    const res = await fetch(`${baseUrl}/?raw=1`);
+    expect(res.status).toBe(200);
   });
 });
