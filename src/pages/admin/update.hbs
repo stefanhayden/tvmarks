@@ -21,6 +21,9 @@
 <form action="/admin/update_show_data" onsubmit="this.querySelector('button').disabled = true">
   <input type="hidden" name="force" value="true" />
   <button>get new data</button>
+  {{#if refreshFailedCount}}
+    <p class="error">{{refreshFailedCount}} of the shows could not be updated, try again later.</p>
+  {{/if}}
 </form>
 
 <br />

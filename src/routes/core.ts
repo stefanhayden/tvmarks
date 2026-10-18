@@ -14,8 +14,13 @@ router.get<{}, {}, {}, { raw?: boolean }, {}>('/', async (req, res) => {
 
   if ('loggedIn' in req.session && req.session.loggedIn) {
     // params.showDataRefreshed = await refreshShowData(req, res);
-    await refreshShowData();
-    await refreshWatchNext();
+    // the page shows what's already stored when a refresh fails, that's better than no page
+    try {
+      await refreshShowData();
+      await refreshWatchNext();
+    } catch (err) {
+      console.log('failed refreshing shows for the homepage', err);
+    }
   }
 
   const limit = 8;
