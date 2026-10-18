@@ -498,9 +498,11 @@ export async function refreshShowEpisodesData(_, showId) {
     return tvDb.createEpisode(data);
   });
 
-  await Promise.all(epPromises);
+  const savedEpisodes = await Promise.all(epPromises);
+  const unsavedCount = savedEpisodes.filter((saved) => saved === undefined).length;
 
-  if (updatedEpisodes.length > 0) {
+  // the counts below are still saved for the episodes that were, then the failure is reported
+  if (unsavedCount === 0 && updatedEpisodes.length > 0) {
     await tvDb.removeEpisodesMissingFromProvider(
       showId,
       updatedEpisodes.map((episode) => episode.id),
@@ -515,10 +517,13 @@ export async function refreshShowEpisodesData(_, showId) {
 
   await fetchImageIfMissing(await tvDb.getShow(showId));
 
-  return tvDb.updateShow(showId, {
+  const updatedShow = await tvDb.updateShow(showId, {
     episodes_count,
     aired_episodes_count,
   });
+  if (unsavedCount > 0) throw new Error(`failed saving ${unsavedCount} episodes of show ${showId}`);
+  if (!updatedShow) throw new Error(`failed saving show ${showId}`);
+  return updatedShow;
 }
 
 // the counts come from the stored episodes, so they're right even when a refresh failed after changing some.
@@ -617,6 +622,31 @@ async function refreshShow(show) {
   });
 }
 
+const showRefreshesInFlight = new Map<string, Promise<boolean>>();
+
+// two homepage loads at once share a show's refresh, rather than both writing and removing its episodes.
+// resolves to whether the show was refreshed and never rejects
+function refreshShowOnce(show) {
+  const id = String(show.id);
+  let refreshing = showRefreshesInFlight.get(id);
+  if (!refreshing) {
+    refreshing = (async () => {
+      try {
+        await refreshShow(show);
+        return true;
+      } catch (err) {
+        console.log(`failed refreshing show ${id}`, err);
+        // fix up counts for any episodes that did change, and let the other shows have a turn before this one is
+        // tried again, a show the provider keeps failing on would otherwise take a spot on every homepage load
+        await updateShowWithEpisodeCounts(show.id).catch((e) => console.log(`failed saving show ${id} after refresh failed`, e));
+        return false;
+      }
+    })().finally(() => showRefreshesInFlight.delete(id));
+    showRefreshesInFlight.set(id, refreshing);
+  }
+  return refreshing;
+}
+
 export async function refreshShowData() {
   const shows = ((await tvDb.getAllInProgressShows()) || []).slice(0, 5);
   console.log(
@@ -625,20 +655,7 @@ export async function refreshShowData() {
   );
 
   // one show failing, like the provider dropping a connection, shouldn't stop the rest or the homepage from loading
-  const refreshedShows = await Promise.all(
-    shows.map(async (show) => {
-      try {
-        await refreshShow(show);
-        return true;
-      } catch (err) {
-        console.log(`failed refreshing show ${show.id}`, err);
-        // fix up counts for any episodes that did change, and let the other shows have a turn before this one is
-        // tried again, a show the provider keeps failing on would otherwise take a spot on every homepage load
-        await updateShowWithEpisodeCounts(show.id).catch((e) => console.log(`failed saving show ${show.id} after refresh failed`, e));
-        return false;
-      }
-    }),
-  );
+  const refreshedShows = await Promise.all(shows.map((show) => refreshShowOnce(show)));
 
   return {
     refreshed: shows.filter((_, i) => refreshedShows[i]),

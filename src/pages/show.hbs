@@ -184,6 +184,9 @@
         <button title="last refreshed: {{show.updated_at}}">
           refresh show data
         </button>
+        {{#if refreshFailed}}
+          <p class="error">The show data could not be refreshed, try again later.</p>
+        {{/if}}
       </form>
     
       <form method="post" 

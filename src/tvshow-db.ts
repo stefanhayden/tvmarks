@@ -1113,7 +1113,9 @@ export const updateEpisode = async (id, body) => {
       },
     );
 
-    return await db.get<Show>('SELECT * from shows WHERE id = ?', id);
+    // null rather than undefined when the episode is gone, like one a refresh running at the same time removed,
+    // there was nothing to save so the save didn't fail
+    return (await db.get<Episode>('SELECT * from episodes WHERE id = ?', id)) ?? null;
   } catch (dbError) {
     console.error('failed to update', id, body, dbError);
   }
