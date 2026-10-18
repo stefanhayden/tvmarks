@@ -156,7 +156,7 @@ router.get('/:showId', async (req, res) => {
   return req.query.raw ? res.send(params) : res.render('show', params);
 });
 
-router.post('/:showId/episode/:episodeId/status', async (req, res) => {
+router.post('/:showId/episode/:episodeId/status', isAuthenticated, async (req, res) => {
   const status = req.body.status === 'WATCHED' ? 'WATCHED' : null;
 
   const updatedEp = await tvDb.updateEpisodeWatchStatus(req.params.episodeId, status);
@@ -201,7 +201,7 @@ router.post('/:showId/episode/:episodeId/status', async (req, res) => {
   }
 });
 
-router.post('/:showId/episode/:episodeId/update', async (req, res) => {
+router.post('/:showId/episode/:episodeId/update', isAuthenticated, async (req, res) => {
   const { note } = req.body;
   const updatedEp = await tvDb.updateEpisodeNote(req.params.episodeId, note);
   if (!updatedEp) return res.redirect(301, `/show/${req.params.showId}`);
@@ -230,7 +230,7 @@ router.post('/:showId/episode/:episodeId/update', async (req, res) => {
   return res.redirect(301, `/show/${req.params.showId}/episode/${req.params.episodeId}`);
 });
 
-router.post('/:showId/episode/:episodeId/delete', async (req, res) => {
+router.post('/:showId/episode/:episodeId/delete', isAuthenticated, async (req, res) => {
   await tvDb.deleteEpisode(req.params.episodeId);
 
   const allEpsWithNulls = await tvDb.getEpisodesByShowId(req.params.showId);
@@ -246,7 +246,7 @@ router.post('/:showId/episode/:episodeId/delete', async (req, res) => {
   return res.redirect(301, `/show/${req.params.showId}`);
 });
 
-router.post('/:showId/season/:seasonId/status', async (req, res) => {
+router.post('/:showId/season/:seasonId/status', isAuthenticated, async (req, res) => {
   const status = req.body.status === 'WATCHED' ? 'WATCHED' : null;
   const allSeasonEps = await tvDb.getEpisodesByShowId(req.params.showId);
 

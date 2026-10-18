@@ -18,6 +18,7 @@ vi.mock('./admin', () => ({
 describe('episode routes', () => {
   let server;
   let baseUrl;
+  let loggedIn = true;
 
   const request = (path: string, init: RequestInit = {}) => fetch(`${baseUrl}${path}`, { redirect: 'manual', ...init });
   const post = (path: string, body: Record<string, string> = {}) =>
@@ -35,7 +36,7 @@ describe('episode routes', () => {
     const app = express();
     app.use(express.urlencoded({ extended: true }));
     app.use((req, _res, next) => {
-      (req as any).session = { loggedIn: true };
+      (req as any).session = { loggedIn };
       next();
     });
     app.use('/show', showRoutes);
@@ -45,6 +46,30 @@ describe('episode routes', () => {
 
   afterAll(() => {
     server.close();
+  });
+
+  describe('logged out', () => {
+    beforeAll(() => {
+      loggedIn = false;
+    });
+    afterAll(() => {
+      loggedIn = true;
+    });
+
+    test.each([
+      ['/show/5/episode/500/status', { status: 'WATCHED' }],
+      ['/show/5/episode/500/update', { note: 'not mine' }],
+      ['/show/5/episode/500/delete', {}],
+      ['/show/5/season/1/status', { status: 'WATCHED' }],
+    ])('POST %s is sent to log in and changes nothing', async (path, body) => {
+      const res = await post(path, body);
+      expect(res.status).toBe(302);
+      expect(res.headers.get('location')).toBe(`/login?sendTo=${encodeURIComponent(path)}`);
+
+      const episode = await tvDb.getEpisode(500);
+      expect(episode.watched_status).toBeNull();
+      expect(episode.note).toBeNull();
+    });
   });
 
   test("an episode that doesn't exist sends you to the show", async () => {
