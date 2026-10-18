@@ -35,9 +35,11 @@ router.get('/update', isAuthenticated, async (req, res) => {
     title?: string;
     adminLinks: adminLinkType[];
     currentPath: string;
+    refreshFailedCount?: number;
   };
   params.adminLinks = ADMIN_LINKS;
   params.currentPath = req.originalUrl;
+  params.refreshFailedCount = Number(req.query.refresh_failed) || 0;
 
   return res.render('admin/update', params);
 });
@@ -519,114 +521,150 @@ export async function refreshShowEpisodesData(_, showId) {
   });
 }
 
+// the counts come from the stored episodes, so they're right even when a refresh failed after changing some.
+// like any show update this also moves the show to the back of the refresh queue
+async function updateShowWithEpisodeCounts(showId, data = {}) {
+  const currentEpisodes = (await tvDb.getEpisodesByShowId(showId)).filter((ep) => ep.number !== null);
+
+  const updated = await tvDb.updateShow(String(showId), {
+    ...data,
+    episodes_count: currentEpisodes.length,
+    aired_episodes_count: countAiredEpisodes(currentEpisodes),
+    next_episode_towatch_airdate: currentEpisodes.find((ep) => ep.watched_status !== 'WATCHED')?.airdate || null,
+  });
+  // db helpers log and resolve to nothing rather than throwing
+  if (!updated) throw new Error(`failed saving show ${showId}`);
+  return updated;
+}
+
+async function refreshShow(show) {
+  const startedAt = new Date().toISOString();
+  const provider = ProviderFactory.getProvider();
+  const updatedShow = await provider.getShow(show.id);
+  // like a season's episodes below, the show's own data is still worth saving when its seasons can't be fetched
+  const showSeasons = await provider.getSeasons(show.id).catch((e) => {
+    console.log(`failed getting seasons from tvmaze: ${show.id}`, e);
+    return [];
+  });
+
+  // episodes to update
+  const currentEpisodesToUpdate = await tvDb.getRecentEpisodesByShowId(show.id);
+  const seasonNumbers: number[] = [...new Set<number>(currentEpisodesToUpdate.map((e) => e.season))];
+  if (seasonNumbers.length > 0) {
+    seasonNumbers.push(seasonNumbers.slice(-1)[0] + 1); // check for new seasons
+  }
+
+  // filter out any seasons we don't find (like our check for new seasons)
+  const seasons = seasonNumbers.map((number) => showSeasons.find((s) => s.number === number)).filter((f) => !!f);
+
+  const fetchedSeasons = await Promise.all(
+    seasons.map(async (season) => ({
+      number: season.number,
+      episodes: await provider.getSeasonEpisodes(season.id).catch((e) => {
+        console.log(`failed getting season from tzmaze: ${season.id}`, e);
+        return null;
+      }),
+    })),
+  );
+  const eps = fetchedSeasons.flatMap((season) => season.episodes || []);
+
+  // any episode already stored, not only recent ones, an undated episode would otherwise fail to insert and never update
+  const storedEpisodeIds = new Set((await tvDb.getEpisodesByShowId(show.id)).map((e) => e.id));
+  const epPromises = eps.map(async (episode) => {
+    const data = DatabaseMapper.toEpisode(episode, show.id);
+    if (storedEpisodeIds.has(episode.id)) {
+      return tvDb.updateEpisode(episode.id, data);
+    }
+    return tvDb.createEpisode(data);
+  });
+
+  const savedEpisodes = await Promise.all(epPromises);
+  const unsavedCount = savedEpisodes.filter((saved) => saved === undefined).length;
+  if (unsavedCount > 0) throw new Error(`failed saving ${unsavedCount} episodes of show ${show.id}`);
+
+  // only seasons that were fetched, a failed or empty fetch says nothing about which episodes are gone
+  await tvDb.removeEpisodesMissingFromProvider(
+    show.id,
+    eps.map((episode) => episode.id),
+    { seasons: fetchedSeasons.filter((season) => season.episodes?.length > 0).map((season) => season.number), startedAt },
+  );
+
+  // not awaited, this runs on homepage loads and a slow image server shouldn't hold the page up
+  fetchImageIfMissing(show, updatedShow);
+
+  console.log(`update show data for ${updatedShow.name}`);
+  await updateShowWithEpisodeCounts(updatedShow.id, {
+    id: updatedShow.id,
+    tvrage_id: updatedShow.externals?.tvrage,
+    thetvdb_id: updatedShow.externals?.thetvdb,
+    imdb_id: updatedShow.externals?.imdb,
+    url: updatedShow.url,
+    summary: updatedShow.summary,
+    name: updatedShow.name,
+    type: updatedShow.type,
+    language: updatedShow.language,
+    status: updatedShow.status,
+    runtime: updatedShow.runtime,
+    averageRuntime: updatedShow.averageRuntime,
+    premiered: updatedShow.premiered,
+    ended: updatedShow.ended,
+    officialSite: updatedShow.officialSite,
+    network_name: updatedShow.network?.name,
+    network_country: updatedShow.network?.country?.name,
+    network_country_code: updatedShow.network?.country?.code,
+    network_country_timezone: updatedShow.network?.country?.timezone,
+    // image: image,
+  });
+}
+
 export async function refreshShowData() {
   const shows = ((await tvDb.getAllInProgressShows()) || []).slice(0, 5);
   console.log(
     'refresh shows: ',
     shows.map((s) => s.name),
   );
-  const showPromises = shows.map(async (show) => {
-    // update data
-    const startedAt = new Date().toISOString();
-    const provider = ProviderFactory.getProvider();
-    const updatedShow = await provider.getShow(show.id);
-    const showSeasons = await provider.getSeasons(show.id);
 
-    // episodes to update
-    const currentEpisodesToUpdate = await tvDb.getRecentEpisodesByShowId(show.id);
-    const seasonNumbers: number[] = [...new Set<number>(currentEpisodesToUpdate.map((e) => e.season))];
-    if (seasonNumbers.length > 0) {
-      seasonNumbers.push(seasonNumbers.slice(-1)[0] + 1); // check for new seasons
-    }
-
-    // filter out any seasons we don't find (like our check for new seasons)
-    const seasons = seasonNumbers.map((number) => showSeasons.find((s) => s.number === number)).filter((f) => !!f);
-
-    const fetchedSeasons = await Promise.all(
-      seasons.map(async (season) => ({
-        number: season.number,
-        episodes: await provider.getSeasonEpisodes(season.id).catch((e) => {
-          console.log(`failed getting season from tzmaze: ${season.id}`, e);
-          return null;
-        }),
-      })),
-    );
-    const eps = fetchedSeasons.flatMap((season) => season.episodes || []);
-
-    // any episode already stored, not only recent ones, an undated episode would otherwise fail to insert and never update
-    const storedEpisodeIds = new Set((await tvDb.getEpisodesByShowId(show.id)).map((e) => e.id));
-    const epPromises = eps.map(async (episode) => {
-      const data = DatabaseMapper.toEpisode(episode, show.id);
-      if (storedEpisodeIds.has(episode.id)) {
-        return tvDb.updateEpisode(episode.id, data);
+  // one show failing, like the provider dropping a connection, shouldn't stop the rest or the homepage from loading
+  const refreshedShows = await Promise.all(
+    shows.map(async (show) => {
+      try {
+        await refreshShow(show);
+        return true;
+      } catch (err) {
+        console.log(`failed refreshing show ${show.id}`, err);
+        // fix up counts for any episodes that did change, and let the other shows have a turn before this one is
+        // tried again, a show the provider keeps failing on would otherwise take a spot on every homepage load
+        await updateShowWithEpisodeCounts(show.id).catch((e) => console.log(`failed saving show ${show.id} after refresh failed`, e));
+        return false;
       }
-      return tvDb.createEpisode(data);
-    });
+    }),
+  );
 
-    await Promise.all(epPromises);
-
-    // only seasons that were fetched, a failed or empty fetch says nothing about which episodes are gone
-    await tvDb.removeEpisodesMissingFromProvider(
-      show.id,
-      eps.map((episode) => episode.id),
-      { seasons: fetchedSeasons.filter((season) => season.episodes?.length > 0).map((season) => season.number), startedAt },
-    );
-
-    // updated episodes
-    const currentEpisodesWithNulls = await tvDb.getEpisodesByShowId(show.id);
-    const currentEpisodes = currentEpisodesWithNulls.filter((ep) => ep.number !== null);
-
-    const episodes_count = currentEpisodes.filter((ep) => ep.number !== null).length;
-    const aired_episodes_count = countAiredEpisodes(currentEpisodes);
-    const next_episode_towatch_airdate = currentEpisodes.find((ep) => ep.watched_status !== 'WATCHED')?.airdate || null;
-
-    // not awaited, this runs on homepage loads and a slow image server shouldn't hold the page up
-    fetchImageIfMissing(show, updatedShow);
-
-    console.log(`update show data for ${updatedShow.name}`);
-    await tvDb.updateShow(String(updatedShow.id), {
-      id: updatedShow.id,
-      tvrage_id: updatedShow.externals?.tvrage,
-      thetvdb_id: updatedShow.externals?.thetvdb,
-      imdb_id: updatedShow.externals?.imdb,
-      url: updatedShow.url,
-      summary: updatedShow.summary,
-      name: updatedShow.name,
-      type: updatedShow.type,
-      language: updatedShow.language,
-      status: updatedShow.status,
-      runtime: updatedShow.runtime,
-      averageRuntime: updatedShow.averageRuntime,
-      premiered: updatedShow.premiered,
-      ended: updatedShow.ended,
-      officialSite: updatedShow.officialSite,
-      network_name: updatedShow.network?.name,
-      network_country: updatedShow.network?.country?.name,
-      network_country_code: updatedShow.network?.country?.code,
-      network_country_timezone: updatedShow.network?.country?.timezone,
-      // image: image,
-      episodes_count,
-      aired_episodes_count,
-      next_episode_towatch_airdate,
-    });
-  });
-
-  await Promise.all(showPromises);
-
-  return shows;
+  return {
+    refreshed: shows.filter((_, i) => refreshedShows[i]),
+    failed: shows.filter((_, i) => !refreshedShows[i]),
+  };
 }
 
 router.get('/update_show_data', isAuthenticated, async (req, res) => {
-  let shows = [];
+  let refreshed = [];
+  let failed = [];
   try {
-    shows = await refreshShowData();
+    ({ refreshed, failed } = await refreshShowData());
   } catch (err) {
     console.log(err);
     return res.status(500).send('Internal Server Error');
   }
-  return req.query.raw
-    ? res.json({ success: true, updatedCount: shows.length, shows: shows.map((show) => show.name) })
-    : res.redirect('/admin/update');
+  if (req.query.raw) {
+    return res.json({
+      success: failed.length === 0,
+      updatedCount: refreshed.length,
+      shows: refreshed.map((show) => show.name),
+      failedCount: failed.length,
+      failedShows: failed.map((show) => show.name),
+    });
+  }
+  return res.redirect(failed.length > 0 ? `/admin/update?refresh_failed=${failed.length}` : '/admin/update');
 });
 
 router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
