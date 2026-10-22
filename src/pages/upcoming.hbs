@@ -1,15 +1,18 @@
+<div class="page-header">
+  <h1>{{title}}</h1>
+  <a href="{{toggleHiddenUrl}}" class="page-header__toggle" title="Abandoned shows, and later seasons of shows you haven't started">
+    {{#if showHidden}}Hide{{else}}Show{{/if}} abandoned &amp; not started
+  </a>
+</div>
 {{#if error}}
   <p class="error">
     {{error}}
   </p>
 {{else}}
-  <p style="text-align: right;">
-    <a href="{{toggleAbandonedUrl}}">{{#if showAbandoned}}hide{{else}}show{{/if}} abandoned shows</a>
-  </p>
   {{#if episodes}}
     <div style="margin-bottom: 50px">
-      {{#each episodes}}
-        {{> upcoming_episode episode=this}}
+      {{#each showDays}}
+        {{> upcoming_episode showDay=this}}
       {{/each}}
     </div>
 

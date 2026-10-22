@@ -147,7 +147,7 @@ export function replaceEmptyText(currentValue: string, defaultValue: string) {
   return currentValue;
 }
 
-const configuredTimezoneOffset = () => Number(process.env.TIMEZONE_OFFSET) || 0;
+export const configuredTimezoneOffset = () => Number(process.env.TIMEZONE_OFFSET) || 0;
 
 // YYYY-MM-DD of the given instant in the configured timezone (TIMEZONE_OFFSET hours from UTC)
 export function localDateString(date: Date, timezoneOffset = configuredTimezoneOffset()): string {
@@ -184,6 +184,65 @@ export function formatDate(dateString: string | null | undefined): string {
   return `${MONTHS[date.getMonth()]} ${day}${suffix}, ${date.getFullYear()}`;
 }
 
+// "Jan 22, 2027", short enough for a badge
+export function formatShortDate(dateString: string | null | undefined): string {
+  const date = formatDate(dateString);
+  if (!date) return '';
+  const [month, day, year] = date.split(' ');
+  return `${month.slice(0, 3)} ${parseInt(day, 10)}, ${year}`;
+}
+
+// "2005 – 2013", "2019 – now" while it's still running, or just the year
+export function yearRange(premiered?: string | null, ended?: string | null, status?: string | null): string {
+  const start = premiered?.slice(0, 4);
+  const end = ended?.slice(0, 4);
+  if (!start) return '';
+  if (end) return end === start ? start : `${start} – ${end}`;
+  return status === 'Running' ? `${start} – now` : start;
+}
+
+// one word as a hashtag holds it: what isn't a letter, combining mark, number or _ taken out, and not starting with a mark
+export const cleanHashtag = (word: string) =>
+  String(word || '')
+    .normalize('NFC')
+    .replace(/[^\p{L}\p{M}\p{N}_]/gu, '')
+    .replace(/^\p{M}+/u, '');
+
+// hashtags typed as "#scifi #rewatch" or "scifi, rewatch", cleaned to what Mastodon accepts: letters with their combining
+// marks (the vowel signs of हिन्दी, an accent typed separately), numbers and _, not only numbers. Repeats are dropped whatever
+// their case, keeping the first spelling
+export function parseHashtags(input: string | null | undefined): string[] {
+  const seen = new Set<string>();
+  return String(input || '')
+    .split(/[\s,]+/)
+    .map(cleanHashtag)
+    .filter((tag) => {
+      const key = tag.toLowerCase();
+      if (!tag || /^\p{N}+$/u.test(tag) || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+// TVMaze's genres, and its show types that say something about a show, to suggest as hashtags for a show being added.
+// "Scripted" and the like describe most shows so aren't worth a tag
+const TAGGED_SHOW_TYPES = ['Animation', 'Documentary', 'Reality'];
+export function suggestedHashtags(genres: string[] | null | undefined, type?: string | null): string[] {
+  return parseHashtags([...(genres || []), ...(TAGGED_SHOW_TYPES.includes(type) ? [type] : [])].join(' '));
+}
+
+// hashtags are stored as words separated by spaces, without the #, so parseHashtags reads them back
+export const storedHashtags = (tags: string[]): string | null => (tags.length ? tags.join(' ') : null);
+export const hasHashtag = (stored: string | null | undefined, tag: string) =>
+  parseHashtags(stored).some((t) => t.toLowerCase() === tag.toLowerCase());
+
+// "#scifi #rewatch", for a field to edit them in
+export const hashtagText = (tags: string[]) => tags.map((tag) => `#${tag}`).join(' ');
+
+// an episode's post carries its show's hashtags and its own
+export const episodeHashtags = (show: { tags?: string | null }, episode: { tags?: string | null }) =>
+  parseHashtags(`${show.tags || ''} ${episode.tags || ''}`);
+
 // episodes with no airstamp are treated as not aired
 export function isEpisodeAired(airstamp: string | null | undefined, referenceDate?: Date): boolean {
   if (!airstamp) return false;
@@ -194,6 +253,30 @@ export function isEpisodeAired(airstamp: string | null | undefined, referenceDat
 // specials (no episode number) are not counted
 export function countAiredEpisodes(episodes: { number?: number | null; airstamp?: string | null }[], referenceDate?: Date): number {
   return episodes.filter((ep) => ep.number !== null && isEpisodeAired(ep.airstamp, referenceDate)).length;
+}
+
+// one entry per show per air day, so a show dropping several episodes at once reads as one card. a group sits
+// where its first episode was, and its episodes keep their order
+export function groupEpisodesByShowAndDay<T extends { show_id: number; airs_on: string }>(episodes: T[]): { first: T; episodes: T[] }[] {
+  const groups = new Map<string, { first: T; episodes: T[] }>();
+  for (const episode of episodes) {
+    const key = `${episode.show_id}|${episode.airs_on}`;
+    const group = groups.get(key);
+    if (group) group.episodes.push(episode);
+    else groups.set(key, { first: episode, episodes: [episode] });
+  }
+  return [...groups.values()];
+}
+
+// "S2 | E1 – E8" for a run of episodes, specials (no number) only show their season
+export function episodeRange(episodes: { season: number; number?: number | null }[]): string {
+  const label = (ep: { season: number; number?: number | null }) => `S${ep.season}${ep.number ? ` | E${ep.number}` : ''}`;
+  const numbered = episodes.filter((ep) => ep.number);
+  const first = numbered[0] || episodes[0];
+  const last = numbered[numbered.length - 1] || episodes[episodes.length - 1];
+  if (!first) return '';
+  if (first === last || !first.number || !last.number) return label(first);
+  return first.season === last.season ? `${label(first)} – E${last.number}` : `${label(first)} – ${label(last)}`;
 }
 
 // show stats that follow from its numbered episodes

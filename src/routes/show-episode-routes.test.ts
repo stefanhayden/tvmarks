@@ -3,10 +3,19 @@ import express from 'express';
 import type { AddressInfo } from 'net';
 import * as tvDb from '../tvshow-db';
 import showRoutes from './show';
+import * as apDb from '../activity-pub-db';
+import { broadcastMessage } from '../activitypub';
 
 vi.mock('../activity-pub-db', () => ({
   getPermissions: vi.fn(async () => undefined),
   setPermissions: vi.fn(async () => undefined),
+  getGuidForId: vi.fn(async () => undefined),
+  getMessage: vi.fn(async () => undefined),
+}));
+
+vi.mock('../activitypub', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../activitypub')>()),
+  broadcastMessage: vi.fn(),
 }));
 
 vi.mock('./admin', () => ({
@@ -106,5 +115,90 @@ describe('episode routes', () => {
     const res = await post('/show/1/refresh');
     expect(res.status).toBe(301);
     expect(res.headers.get('location')).toBe('/show/1?refresh=failed');
+  });
+
+  describe('hashtags', () => {
+    test("saving a show's details keeps its hashtags", async () => {
+      await post('/show/1/update', { note: 'love it', tags: '#scifi, #Rewatch #scifi' });
+      expect(await tvDb.getShow(1)).toMatchObject({ note: 'love it', tags: 'scifi Rewatch' });
+    });
+
+    test('clearing the hashtags removes them', async () => {
+      await post('/show/1/update', { note: 'love it', tags: '' });
+      expect((await tvDb.getShow(1)).tags).toBeNull();
+    });
+
+    test("a show added before the site federated has no post to update", async () => {
+      vi.mocked(broadcastMessage).mockClear();
+      await post('/show/1/update', { note: 'love it', tags: '#scifi' });
+      expect(broadcastMessage).not.toHaveBeenCalled();
+    });
+
+    test("saving a show's details updates the post from when it was added", async () => {
+      vi.mocked(broadcastMessage).mockClear();
+      vi.mocked(apDb.getGuidForId).mockResolvedValueOnce('abc');
+      await post('/show/1/update', { note: 'love it', tags: '#scifi #comfy' });
+      expect(broadcastMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'show-1', description: 'love it', tags: ['scifi', 'comfy'] }),
+        'update',
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    test("saving a show's details without changing them sends nothing", async () => {
+      vi.mocked(broadcastMessage).mockClear();
+      vi.mocked(apDb.getGuidForId).mockResolvedValue('abc');
+      await post('/show/1/update', { note: 'love it', tags: '#scifi #comfy' });
+      vi.mocked(apDb.getGuidForId).mockResolvedValue(undefined);
+      expect(broadcastMessage).not.toHaveBeenCalled();
+    });
+
+    test("a show save that doesn't send hashtags leaves them alone", async () => {
+      await post('/show/1/update', { note: 'still love it' });
+      expect(await tvDb.getShow(1)).toMatchObject({ note: 'still love it', tags: 'scifi comfy' });
+    });
+
+    test("an episode save that doesn't send hashtags leaves them alone", async () => {
+      await tvDb.updateEpisodeDetails(500, { tags: 'keep' });
+      await post('/show/5/episode/500/update', { note: 'a note' });
+      expect(await tvDb.getEpisode(500)).toMatchObject({ note: 'a note', tags: 'keep' });
+    });
+
+    test("saving another show's episode under this show changes nothing and posts nothing", async () => {
+      vi.mocked(broadcastMessage).mockClear();
+      const res = await post('/show/1/episode/500/update', { note: 'wrong show', tags: 'wrong' });
+      expect(res.headers.get('location')).toBe('/show/1');
+      expect(await tvDb.getEpisode(500)).not.toMatchObject({ note: 'wrong show' });
+      expect(broadcastMessage).not.toHaveBeenCalled();
+    });
+
+    test("a posted episode fetched by a federated server reads as it was posted", async () => {
+      const posted = { content: '<p>as posted</p>', contentMap: { EN: '<p>as posted</p>' }, tag: [{ type: 'Hashtag', name: '#scifi' }] };
+      vi.mocked(apDb.getGuidForId).mockResolvedValueOnce('abc');
+      vi.mocked(apDb.getMessage).mockResolvedValueOnce({ message: JSON.stringify(posted) });
+      const note = await (await request('/show/5/episode/500?format=json')).json();
+      expect(note).toMatchObject({ ...posted, id: expect.stringContaining('/show/5/episode/500') });
+    });
+
+    test("saving an episode's details keeps its hashtags", async () => {
+      await post('/show/5/episode/500/update', { note: '', tags: 'finale' });
+      expect((await tvDb.getEpisode(500)).tags).toBe('finale');
+    });
+
+    test("a watched episode's post carries its show's hashtags and its own", async () => {
+      await post('/show/5/update', { note: '', tags: '#scifi' });
+      vi.mocked(broadcastMessage).mockClear();
+      await post('/show/5/episode/500/status', { status: 'WATCHED' });
+      expect(broadcastMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'show-5-episode-500', tags: ['scifi', 'finale'] }),
+        'create',
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+      );
+    });
   });
 });

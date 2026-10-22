@@ -19,7 +19,10 @@ export interface SearchResult {
   };
   summary?: string;
   premiered?: string;
+  ended?: string;
   status?: string;
+  genres?: string[];
+  type?: string; // "Scripted", "Animation", "Reality"...
   score?: number;
 }
 

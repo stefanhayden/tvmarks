@@ -1,23 +1,19 @@
-<div class="search">
-  <form action="/admin" onsubmit="this.querySelector('button').disabled = true">
-    <div class="form-group" style="display: flex; gap: 10px; align-items: center;">
-      <label for="query" class="visually-hidden">
-        Query Shows
-      </label>
-      <input id="query" name="query" value="{{this.query}}" style="flex: 1;" />
-      <button>Search tv</button>
-    </div>
-    <small>powered by <a href="https://www.tvmaze.com">tvmaze</a></small>
-  </form>
-</div>
+<form class="search-form" action="/admin" onsubmit="this.querySelector('button').disabled = true">
+  <label for="query" class="visually-hidden">
+    Search for a show
+  </label>
+  <input id="query" name="query" type="search" value="{{this.query}}" placeholder="Search for a show" {{#unless this.query}}autofocus{{/unless}} />
+  <button>Search</button>
+</form>
+<p class="search-form__credit">powered by <a href="https://www.tvmaze.com">TVMaze</a></p>
 {{#if error}}
   <p class="error">
     {{error}}
   </p>
 {{else}}
-  <div class="bookmarks">
+  <div class="search-results">
     {{#each searchTv }}
-      {{> search_tvshow tvshow=this.show existsLocally=this.existsLocally }}
+      {{> search_tvshow tvshow=this.show years=this.years suggestedTags=this.suggestedTags existsLocally=this.existsLocally }}
     {{/each}}
   </div>
 {{/if}}

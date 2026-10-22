@@ -18,7 +18,7 @@ const addEpisode = async (id: number, showId: number, season: number, number: nu
     watched_status: watched ? 'WATCHED' : null,
     watched_at: watched ? watchedAt : null,
   } as Parameters<typeof tvDb.createEpisode>[0]);
-  if (note) await tvDb.updateEpisodeNote(String(id), note);
+  if (note) await tvDb.updateEpisodeDetails(id, { note });
 };
 
 const episodeIds = async (showId: number) => (await tvDb.getEpisodesByShowId(showId)).map((ep) => ep.id).sort();
@@ -49,6 +49,7 @@ describe('removeEpisodesMissingFromProvider', () => {
     await addEpisode(101, 1, 1, 1, true);
     await addEpisode(102, 1, 1, 2); // placeholder
     await addEpisode(103, 1, 1, 3, true, 'placeholder note'); // placeholder that got watched
+    await tvDb.updateEpisodeDetails(103, { tags: 'premiere comfy' });
     await addEpisode(104, 1, 1, 4, true); // watched, gone, nothing replaced it
     await addEpisode(105, 1, 1, 5); // unwatched, gone
     await addEpisode(106, 1, 1, 6, true); // watched, gone, and a later episode was renumbered into its place
@@ -60,6 +61,7 @@ describe('removeEpisodesMissingFromProvider', () => {
 
     await addEpisode(112, 1, 1, 2); // replacements
     await addEpisode(113, 1, 1, 3, false, 'real note');
+    await tvDb.updateEpisodeDetails(113, { tags: 'Comfy' });
     await addEpisode(108, 1, 1, 8); // added by a refresh running alongside
 
     await tvDb.removeEpisodesMissingFromProvider(1, [101, 107, 112, 113], {
@@ -74,8 +76,13 @@ describe('removeEpisodesMissingFromProvider', () => {
     expect(await episodeIds(1)).toEqual([101, 104, 106, 107, 108, 112, 113, 150, 201]);
   });
 
-  test('moves the watch and note to the replacement', async () => {
-    expect(await tvDb.getEpisode(113)).toMatchObject({ watched_status: 'WATCHED', watched_at: watchedAt, note: 'real note\n\nplaceholder note' });
+  test('moves the watch, note and hashtags to the replacement', async () => {
+    expect(await tvDb.getEpisode(113)).toMatchObject({
+      watched_status: 'WATCHED',
+      watched_at: watchedAt,
+      note: 'real note\n\nplaceholder note',
+      tags: 'Comfy premiere',
+    });
     expect((await tvDb.getEpisode(112)).watched_status).toBeNull();
   });
 

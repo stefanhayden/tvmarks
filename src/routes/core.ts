@@ -1,5 +1,6 @@
 import express from 'express';
-import { data, actorInfo, calculateDaysUntilAirDate, localDateString } from '../util';
+import { data, actorInfo, calculateDaysUntilAirDate, groupEpisodesByShowAndDay, episodeRange, cleanHashtag } from '../util';
+import { showHashtag } from '../activitypub';
 import { isAuthenticated } from '../session-auth';
 import { refreshShowData, refreshWatchNext } from './admin';
 import * as tvDb from '../tvshow-db';
@@ -128,59 +129,76 @@ router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number; abandon
   const offset = Math.max(Number(req.query?.offset) || 0, 0);
   const currentPage = Math.floor(offset / limit) + 1;
 
-  const showAbandoned = ['1', 'true'].includes(String([req.query?.abandoned].flat().pop()));
+  // abandoned shows and later seasons of shows you haven't started are hidden unless asked for
+  const showHidden = ['1', 'true'].includes(String([req.query?.abandoned].flat().pop()));
 
-  const episodes = await tvDb.getUpcomingEpisodes(limit, offset, showAbandoned);
+  const episodes = await tvDb.getUpcomingEpisodes(limit, offset, showHidden);
 
   // Calculate days until air date for each episode
-  const episodesWithDays = episodes?.map((episode) => {
-    // airdate is the broadcaster's calendar date, the same one the show page lists
-    const airsOn = episode.airdate || localDateString(new Date(episode.airstamp));
-    return {
-      ...episode,
-      airs_on: airsOn,
-      // a broadcaster far enough behind us can still be on "yesterday" when the episode airs
-      days_until: Math.max(calculateDaysUntilAirDate(airsOn), 0),
-    };
-  });
+  // airs_on, the day the page groups by, comes from the query, which pages by it
+  const episodesWithDays = episodes?.map((episode) => ({
+    ...episode,
+    // a broadcaster far enough behind us can still be on "yesterday" when the episode airs
+    days_until: Math.max(calculateDaysUntilAirDate(episode.airs_on), 0),
+  }));
 
-  // keep the page size and the abandoned toggle when following links
-  const linkQuery = (abandoned: boolean) => {
+  // keep the page size and the hidden shows toggle when following links
+  const linkQuery = (hidden: boolean) => {
     const query = new URLSearchParams();
     if (req.query?.limit) query.set('limit', String(limit));
-    if (abandoned) query.set('abandoned', '1');
+    if (hidden) query.set('abandoned', '1');
     return query.toString();
   };
-  const toggleQuery = linkQuery(!showAbandoned);
+  const toggleQuery = linkQuery(!showHidden);
+
+  const showDays = episodesWithDays
+    ? groupEpisodesByShowAndDay(episodesWithDays).map(({ first, episodes: showEpisodes }) => ({
+        show_id: first.show_id,
+        show_name: first.show_name,
+        show_image: first.show_image,
+        show_abandoned: first.show_abandoned,
+        show_started: first.show_started,
+        airs_on: first.airs_on,
+        days_until: first.days_until,
+        episodes: showEpisodes,
+        episode_count: showEpisodes.length,
+        episode_range: episodeRange(showEpisodes),
+      }))
+    : undefined;
 
   const params: {
     episodes: any;
+    showDays: any;
     offset: number;
     limit: number;
-    showAbandoned: boolean;
-    toggleAbandonedUrl: string;
+    showHidden: boolean;
+    toggleHiddenUrl: string;
     error?: string;
     title?: string;
+    hideTitle?: boolean;
     pagination?: Pagination;
   } = {
     episodes: episodesWithDays,
+    showDays,
     offset,
     limit,
-    showAbandoned,
-    toggleAbandonedUrl: toggleQuery ? `/upcoming?${toggleQuery}` : '/upcoming',
+    showHidden,
+    toggleHiddenUrl: toggleQuery ? `/upcoming?${toggleQuery}` : '/upcoming',
   };
 
   if (!episodes) params.error = data.errorMessage;
 
   params.title = 'Upcoming Episodes';
+  params.hideTitle = true;
   const pagination: Pagination = {
     url: '/upcoming',
-    query: linkQuery(showAbandoned) || undefined,
+    query: linkQuery(showHidden) || undefined,
     currentPage,
     offset,
     limit,
     hasPreviousPage: currentPage > 1,
-    hasNextPage: episodes?.length === limit,
+    // a page holds limit show days
+    hasNextPage: showDays?.length === limit,
     nextOffset: Math.min(offset + limit),
     previousOffset: Math.max(offset - limit, 0),
   };
@@ -461,4 +479,30 @@ router.get('/manifest', async (req, res) => {
       },
     ],
   });
+});
+
+router.get<{ tag: string }, {}, {}, { raw?: boolean }>('/tagged/:tag', async (req, res) => {
+  const tag = cleanHashtag(req.params.tag);
+  if (!tag) return res.redirect('/');
+  // a hashtag can't hold what was taken out, like the - of /tagged/sci-fi, so the address names the tag it is
+  if (tag !== req.params.tag) return res.redirect(301, `/tagged/${encodeURIComponent(tag)}`);
+
+  const [shows, episodes] = await Promise.all([tvDb.getShowsTagged(tag), tvDb.getEpisodesTagged(tag)]);
+
+  // every post is also tagged #tvmarks and with its show, which earlier posts linked here
+  if (!shows?.length && !episodes?.length) {
+    if (tag.toLowerCase() === 'tvmarks') return res.redirect('/');
+    const show = (await tvDb.getShowsWithUrlEnding(tag))?.find(({ url }) => showHashtag(url)?.toLowerCase() === tag.toLowerCase());
+    if (show) return res.redirect(`/show/${show.id}`);
+  }
+
+  const params = {
+    title: `#${tag}`,
+    tag,
+    shows,
+    episodes,
+    error: !shows || !episodes ? data.errorMessage : undefined,
+  };
+
+  return req.query.raw ? res.send(params) : res.render('tagged', params);
 });

@@ -1,8 +1,7 @@
 import express from 'express';
-import escapeHTML from 'escape-html';
-import { account, domain, isEpisodeAired, countAiredEpisodes, getEpisodeStatusUpdatedValues } from '../util';
+import { account, domain, isEpisodeAired, countAiredEpisodes, getEpisodeStatusUpdatedValues, parseHashtags, storedHashtags, parseJSON } from '../util';
 import { isAuthenticated } from '../session-auth';
-import { broadcastMessage, createEpisodeNoteObject, createNoteObject } from '../activitypub';
+import { broadcastMessage, createEpisodeNoteObject, createNoteObject, episodePostData, showPostData } from '../activitypub';
 import { refreshShowEpisodesData } from './admin';
 import * as apDb from '../activity-pub-db';
 import * as tvDb from '../tvshow-db';
@@ -138,6 +137,7 @@ router.get('/:showId', async (req, res) => {
         path: `show/${show.id}`,
         url: show.url || `https://${req.app.get('domain')}/show/${show.id}`,
         name: show.name,
+        tags: parseHashtags(show.tags),
       },
       account,
       domain,
@@ -172,17 +172,8 @@ router.post('/:showId/episode/:episodeId/status', isAuthenticated, async (req, r
 
   if (status) {
     // watched ep
-    const data = {
-      id: `show-${updatedShow.id}-episode-${updatedEp.id}`,
-      path: `show/${updatedShow.id}`,
-      url: updatedShow.url,
-      description: updatedEp.note || '',
-      title: `<a href="https://${domain}/show/${updatedShow.id}" rel="nofollow noopener noreferrer">${escapeHTML(updatedShow.name)}</a>: Watched s${
-        updatedEp.season
-      }e${updatedEp.number}`,
-    };
     const quote = `https://${domain}/show/${updatedShow.id}/episode/${updatedEp.id}`;
-    broadcastMessage(data, 'create', apDb, account, domain, quote);
+    broadcastMessage(episodePostData(updatedShow, updatedEp, domain), 'create', apDb, account, domain, quote);
   } else {
     const quote = `https://${domain}/show/${updatedShow.id}/episode/${updatedEp.id}`;
     // unwatched episode
@@ -202,24 +193,23 @@ router.post('/:showId/episode/:episodeId/status', isAuthenticated, async (req, r
 });
 
 router.post('/:showId/episode/:episodeId/update', isAuthenticated, async (req, res) => {
-  const { note } = req.body;
-  const updatedEp = await tvDb.updateEpisodeNote(req.params.episodeId, note);
-  if (!updatedEp) return res.redirect(301, `/show/${req.params.showId}`);
+  const before = await tvDb.getEpisode(req.params.episodeId);
+  // gone, or another show's episode, whose post this show's name and link would be wrong for
+  if (!before || String(before.show_id) !== req.params.showId) return res.redirect(301, `/show/${req.params.showId}`);
+
+  const updatedEp = await tvDb.updateEpisodeDetails(req.params.episodeId, {
+    note: req.body.note,
+    // a save that doesn't send hashtags, like one from before episodes had them, leaves them alone
+    ...('tags' in req.body && { tags: storedHashtags(parseHashtags(req.body.tags)) }),
+  });
+  if (!updatedEp) return res.redirect(301, `/show/${req.params.showId}/episode/${req.params.episodeId}`);
 
   const addedShow = await tvDb.getShow(req.params.showId);
   const id = `show-${addedShow.id}-episode-${updatedEp.id}`;
-  if (updatedEp.watched_status === 'WATCHED') {
-    const data = {
-      id,
-      path: `show/${addedShow.id}`,
-      url: addedShow.url,
-      description: req.body.note || '',
-      title: `<a href="https://${domain}/show/${addedShow.id}" rel="nofollow noopener noreferrer">${escapeHTML(addedShow.name)}</a>: Watched s${
-        updatedEp.season
-      }e${updatedEp.number}`,
-    };
+  const changed = before?.note !== updatedEp.note || before?.tags !== updatedEp.tags;
+  if (changed && updatedEp.watched_status === 'WATCHED') {
     const quote = `https://${domain}/show/${addedShow.id}/episode/${updatedEp.id}`;
-    broadcastMessage(data, 'update', apDb, account, domain, quote);
+    broadcastMessage(episodePostData(addedShow, updatedEp, domain), 'update', apDb, account, domain, quote);
   }
 
   await apDb.setPermissions(id, req.body.allowed || '', req.body.blocked || '');
@@ -326,6 +316,11 @@ router.get('/:showId/episode/:episodeId', async (req, res) => {
   // Check if requesting ActivityPub format
   if (isActivityPubRequested(req)) {
     const noteObject = createEpisodeNoteObject(episode, show, account, domain);
+    // once posted it reads as it was posted, the show's hashtags may have changed since
+    const guid = await apDb.getGuidForId(`show-${show.id}-episode-${episode.id}`);
+    const message = guid && (await apDb.getMessage(guid))?.message;
+    const posted = message && parseJSON(message);
+    if (posted?.content) Object.assign(noteObject, { content: posted.content, contentMap: posted.contentMap, tag: posted.tag });
     res.set('Content-Type', 'application/activity+json');
     return res.json(noteObject);
   }
@@ -389,9 +384,18 @@ router.post('/:showId/service', isAuthenticated, async (req, res) => {
 router.post('/:showId/update', isAuthenticated, async (req, res) => {
   const { showId } = req.params;
 
-  await tvDb.updateShowNote(showId, { note: req.body.note });
+  const before = await tvDb.getShow(showId);
+  const show = await tvDb.updateShow(showId, {
+    note: req.body.note,
+    // a save that doesn't send hashtags, like one from before shows had them, leaves them alone
+    ...('tags' in req.body && { tags: storedHashtags(parseHashtags(req.body.tags)) }),
+  });
+  const changed = show && (before?.note !== show.note || before?.tags !== show.tags);
 
-  // TODO - update fediverse post
+  // the post from when the show was added, a show added before the site federated has none to update
+  if (changed && (await apDb.getGuidForId(`show-${showId}`))) {
+    broadcastMessage(showPostData(show, domain), 'update', apDb, account, domain);
+  }
 
   res.redirect(301, `/show/${showId}`);
 });

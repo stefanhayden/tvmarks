@@ -5,7 +5,7 @@ import { create } from 'express-handlebars';
 import escapeHTML from 'escape-html';
 import helpers from 'handlebars-helpers';
 
-import { domain, account, simpleLogger, actorInfo, replaceEmptyText, dataDir, formatDate } from './src/util';
+import { domain, account, simpleLogger, actorInfo, replaceEmptyText, dataDir, formatDate, formatShortDate, parseHashtags, hashtagText } from './src/util';
 import session, { isAuthenticated } from './src/session-auth.js';
 import * as apDb from './src/activity-pub-db.js';
 import * as tvDb from './src/tvshow-db.js';
@@ -120,6 +120,11 @@ const hbs = create({
       return replaceEmptyText(item.title, item.url);
     },
     formatDate,
+    formatShortDate,
+    // stored hashtags as a list to link, or as "#scifi #rewatch" to edit
+    // given more than one, like a show's and an episode's, they're combined the way the episode's post combines them
+    hashtags: (...args) => parseHashtags(args.slice(0, -1).filter((stored) => typeof stored === 'string').join(' ')),
+    hashtagText: (stored) => hashtagText(parseHashtags(stored)),
   },
   partialsDir: './src/pages/partials',
   extname: '.hbs',

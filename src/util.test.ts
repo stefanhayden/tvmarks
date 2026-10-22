@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateDaysUntilAirDate, localDateString, formatDate, isEpisodeAired, countAiredEpisodes } from './util';
+import { calculateDaysUntilAirDate, localDateString, formatDate, formatShortDate, yearRange, parseHashtags, hasHashtag, episodeHashtags, suggestedHashtags, isEpisodeAired, countAiredEpisodes, groupEpisodesByShowAndDay, episodeRange } from './util';
 
 describe('calculateDaysUntilAirDate', () => {
   it('should return 0 for an episode airing today', () => {
@@ -152,5 +152,144 @@ describe('countAiredEpisodes', () => {
   it('should not count an episode airing later the same day', () => {
     // the old refresh code swapped the airstamp hour for the current hour, counting this as aired
     expect(countAiredEpisodes([{ number: 1, airstamp: '2026-04-09T23:00:00+00:00' }], now)).toBe(0);
+  });
+});
+
+describe('groupEpisodesByShowAndDay', () => {
+  const ep = (id: number, show_id: number, airs_on: string) => ({ id, show_id, airs_on });
+
+  it('groups a show airing several episodes on one day', () => {
+    const groups = groupEpisodesByShowAndDay([ep(1, 1, '2026-03-01'), ep(2, 1, '2026-03-01'), ep(3, 2, '2026-03-01')]);
+    expect(groups.map((g) => g.episodes.map((e) => e.id))).toEqual([[1, 2], [3]]);
+  });
+
+  it('keeps the same show on different days apart', () => {
+    const groups = groupEpisodesByShowAndDay([ep(1, 1, '2026-03-01'), ep(2, 1, '2026-03-02')]);
+    expect(groups.map((g) => g.episodes.map((e) => e.id))).toEqual([[1], [2]]);
+  });
+
+  it('pulls in a same day episode with another show airing in between', () => {
+    const groups = groupEpisodesByShowAndDay([ep(1, 1, '2026-03-01'), ep(2, 2, '2026-03-01'), ep(3, 1, '2026-03-01')]);
+    expect(groups.map((g) => g.episodes.map((e) => e.id))).toEqual([[1, 3], [2]]);
+    expect(groups[0].first.id).toBe(1);
+  });
+});
+
+describe('episodeRange', () => {
+  it('shows the first and last episode of a season', () => {
+    expect(episodeRange([{ season: 2, number: 1 }, { season: 2, number: 2 }, { season: 2, number: 8 }])).toBe('S2 | E1 – E8');
+  });
+
+  it('names both seasons when the run crosses one', () => {
+    expect(episodeRange([{ season: 1, number: 10 }, { season: 2, number: 1 }])).toBe('S1 | E10 – S2 | E1');
+  });
+
+  it('leaves specials out of the range', () => {
+    expect(episodeRange([{ season: 3, number: null }, { season: 3, number: 4 }, { season: 3, number: 5 }])).toBe('S3 | E4 – E5');
+  });
+
+  it('shows just the season for specials', () => {
+    expect(episodeRange([{ season: 3, number: null }, { season: 3, number: null }])).toBe('S3');
+  });
+});
+
+describe('formatShortDate', () => {
+  it('abbreviates the month and drops the day suffix', () => {
+    expect(formatShortDate('2027-01-22')).toBe('Jan 22, 2027');
+    expect(formatShortDate('2026-05-01')).toBe('May 1, 2026');
+  });
+
+  it('returns an empty string for a missing or bad date', () => {
+    expect(formatShortDate(null)).toBe('');
+    expect(formatShortDate('')).toBe('');
+    expect(formatShortDate('2026-02-31')).toBe('');
+  });
+});
+
+describe('yearRange', () => {
+  it('spans the years a show ran', () => {
+    expect(yearRange('2005-03-24', '2013-05-16', 'Ended')).toBe('2005 – 2013');
+  });
+
+  it('leaves the end open while a show is running', () => {
+    expect(yearRange('2019-01-01', null, 'Running')).toBe('2019 – now');
+  });
+
+  it('shows one year for a show that started and ended in it', () => {
+    expect(yearRange('2020-02-01', '2020-11-01', 'Ended')).toBe('2020');
+  });
+
+  it('shows the start year when the end is unknown', () => {
+    expect(yearRange('2027-01-22', null, 'In Development')).toBe('2027');
+  });
+
+  it('is empty without a premiere date', () => {
+    expect(yearRange(null, null, 'In Development')).toBe('');
+  });
+});
+
+describe('parseHashtags', () => {
+  it('reads tags with or without #, split by spaces or commas', () => {
+    expect(parseHashtags('#scifi #rewatch')).toEqual(['scifi', 'rewatch']);
+    expect(parseHashtags('scifi, rewatch,comfy')).toEqual(['scifi', 'rewatch', 'comfy']);
+  });
+
+  it('drops characters a hashtag cannot hold', () => {
+    expect(parseHashtags('#sci-fi #best!show')).toEqual(['scifi', 'bestshow']);
+  });
+
+  it('keeps letters from any language and underscores', () => {
+    expect(parseHashtags('#télé #ドラマ #slow_burn')).toEqual(['télé', 'ドラマ', 'slow_burn']);
+  });
+
+  it('keeps the combining marks some scripts are written with', () => {
+    expect(parseHashtags('#हिन्दी')).toEqual(['हिन्दी']);
+    // an accent typed as its own character comes out as the one accented letter
+    expect(parseHashtags('#te\u0301le\u0301')).toEqual(['télé']);
+  });
+
+  it("doesn't start a hashtag with a mark", () => {
+    expect(parseHashtags('#\u0301abc')).toEqual(['abc']);
+  });
+
+  it('drops tags that are only numbers, and repeats in any case', () => {
+    expect(parseHashtags('#2024 #SciFi #scifi #s2')).toEqual(['SciFi', 's2']);
+  });
+
+  it('is empty for nothing', () => {
+    expect(parseHashtags('')).toEqual([]);
+    expect(parseHashtags(null)).toEqual([]);
+    expect(parseHashtags(' # , ')).toEqual([]);
+  });
+});
+
+describe('hasHashtag', () => {
+  it('matches a stored tag in any case', () => {
+    expect(hasHashtag('scifi Rewatch', 'rewatch')).toBe(true);
+    expect(hasHashtag('scifi rewatch', 'sci')).toBe(false);
+    expect(hasHashtag(null, 'scifi')).toBe(false);
+  });
+});
+
+describe('episodeHashtags', () => {
+  it('puts the show tags first and leaves out repeats', () => {
+    expect(episodeHashtags({ tags: 'scifi rewatch' }, { tags: 'Finale scifi' })).toEqual(['scifi', 'rewatch', 'Finale']);
+    expect(episodeHashtags({ tags: null }, { tags: null })).toEqual([]);
+  });
+});
+
+describe('suggestedHashtags', () => {
+  it("turns a show's genres into hashtags", () => {
+    expect(suggestedHashtags(['Drama', 'Science-Fiction', 'Thriller'], 'Scripted')).toEqual(['Drama', 'ScienceFiction', 'Thriller']);
+  });
+
+  it('adds the show type only when it says something', () => {
+    expect(suggestedHashtags(['Comedy'], 'Animation')).toEqual(['Comedy', 'Animation']);
+    expect(suggestedHashtags([], 'Reality')).toEqual(['Reality']);
+    expect(suggestedHashtags(['Comedy'], 'Game Show')).toEqual(['Comedy']);
+  });
+
+  it('is empty without genres', () => {
+    expect(suggestedHashtags(undefined, undefined)).toEqual([]);
   });
 });

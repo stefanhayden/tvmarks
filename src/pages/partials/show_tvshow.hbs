@@ -12,13 +12,22 @@
   <img src="{{tvshow.image}}" />
   <br />
   <br />
-  <div class="subhead">
-    <span class="bookmark-domain">
-      {{#if tvshow.network_name}}
-        {{tvshow.network_name}} ({{tvshow.network_country_code}})
-      {{/if}}
-    </span>
+  <div class="subhead show-meta">
+    {{#if tvshow.status}}
+      <span class="show-status" data-status="{{tvshow.status}}">{{tvshow.status}}</span>
+    {{/if}}
+    {{#if tvshow.network_name}}
+      {{! streaming services are global on TVMaze, so they have no country }}
+      <span>{{tvshow.network_name}}{{#if tvshow.network_country_code}} ({{tvshow.network_country_code}}){{/if}}</span>
+    {{/if}}
+    {{#if tvshow.url}}
+      <a href="{{tvshow.url}}" target="_blank" rel="noopener">TVMaze</a>
+    {{/if}}
+    {{#if tvshow.imdb_id}}
+      <a href="https://www.imdb.com/title/{{tvshow.imdb_id}}/" target="_blank" rel="noopener">IMDb</a>
+    {{/if}}
   </div>
+  {{> hashtags stored=tvshow.tags}}
   <div class="description">
     {{{tvshow.summary}}}
   </div>
