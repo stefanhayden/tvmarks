@@ -184,6 +184,14 @@ export function formatDate(dateString: string | null | undefined): string {
   return `${MONTHS[date.getMonth()]} ${day}${suffix}, ${date.getFullYear()}`;
 }
 
+// "Jan 22, 2027", short enough for a badge
+export function formatShortDate(dateString: string | null | undefined): string {
+  const date = formatDate(dateString);
+  if (!date) return '';
+  const [month, day, year] = date.split(' ');
+  return `${month.slice(0, 3)} ${parseInt(day, 10)}, ${year}`;
+}
+
 // episodes with no airstamp are treated as not aired
 export function isEpisodeAired(airstamp: string | null | undefined, referenceDate?: Date): boolean {
   if (!airstamp) return false;
@@ -194,6 +202,30 @@ export function isEpisodeAired(airstamp: string | null | undefined, referenceDat
 // specials (no episode number) are not counted
 export function countAiredEpisodes(episodes: { number?: number | null; airstamp?: string | null }[], referenceDate?: Date): number {
   return episodes.filter((ep) => ep.number !== null && isEpisodeAired(ep.airstamp, referenceDate)).length;
+}
+
+// one entry per show per air day, so a show dropping several episodes at once reads as one card. a group sits
+// where its first episode was, and its episodes keep their order
+export function groupEpisodesByShowAndDay<T extends { show_id: number; airs_on: string }>(episodes: T[]): { first: T; episodes: T[] }[] {
+  const groups = new Map<string, { first: T; episodes: T[] }>();
+  for (const episode of episodes) {
+    const key = `${episode.show_id}|${episode.airs_on}`;
+    const group = groups.get(key);
+    if (group) group.episodes.push(episode);
+    else groups.set(key, { first: episode, episodes: [episode] });
+  }
+  return [...groups.values()];
+}
+
+// "S2 | E1 – E8" for a run of episodes, specials (no number) only show their season
+export function episodeRange(episodes: { season: number; number?: number | null }[]): string {
+  const label = (ep: { season: number; number?: number | null }) => `S${ep.season}${ep.number ? ` | E${ep.number}` : ''}`;
+  const numbered = episodes.filter((ep) => ep.number);
+  const first = numbered[0] || episodes[0];
+  const last = numbered[numbered.length - 1] || episodes[episodes.length - 1];
+  if (!first) return '';
+  if (first === last || !first.number || !last.number) return label(first);
+  return first.season === last.season ? `${label(first)} – E${last.number}` : `${label(first)} – ${label(last)}`;
 }
 
 // show stats that follow from its numbered episodes

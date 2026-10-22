@@ -1,5 +1,5 @@
 import express from 'express';
-import { data, actorInfo, calculateDaysUntilAirDate, localDateString } from '../util';
+import { data, actorInfo, calculateDaysUntilAirDate, localDateString, groupEpisodesByShowAndDay, episodeRange } from '../util';
 import { isAuthenticated } from '../session-auth';
 import { refreshShowData, refreshWatchNext } from './admin';
 import * as tvDb from '../tvshow-db';
@@ -128,9 +128,10 @@ router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number; abandon
   const offset = Math.max(Number(req.query?.offset) || 0, 0);
   const currentPage = Math.floor(offset / limit) + 1;
 
-  const showAbandoned = ['1', 'true'].includes(String([req.query?.abandoned].flat().pop()));
+  // abandoned shows and later seasons of shows you haven't started are hidden unless asked for
+  const showHidden = ['1', 'true'].includes(String([req.query?.abandoned].flat().pop()));
 
-  const episodes = await tvDb.getUpcomingEpisodes(limit, offset, showAbandoned);
+  const episodes = await tvDb.getUpcomingEpisodes(limit, offset, showHidden);
 
   // Calculate days until air date for each episode
   const episodesWithDays = episodes?.map((episode) => {
@@ -144,38 +145,57 @@ router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number; abandon
     };
   });
 
-  // keep the page size and the abandoned toggle when following links
-  const linkQuery = (abandoned: boolean) => {
+  // keep the page size and the hidden shows toggle when following links
+  const linkQuery = (hidden: boolean) => {
     const query = new URLSearchParams();
     if (req.query?.limit) query.set('limit', String(limit));
-    if (abandoned) query.set('abandoned', '1');
+    if (hidden) query.set('abandoned', '1');
     return query.toString();
   };
-  const toggleQuery = linkQuery(!showAbandoned);
+  const toggleQuery = linkQuery(!showHidden);
+
+  const showDays = episodesWithDays
+    ? groupEpisodesByShowAndDay(episodesWithDays).map(({ first, episodes: showEpisodes }) => ({
+        show_id: first.show_id,
+        show_name: first.show_name,
+        show_image: first.show_image,
+        show_abandoned: first.show_abandoned,
+        show_started: first.show_started,
+        airs_on: first.airs_on,
+        days_until: first.days_until,
+        episodes: showEpisodes,
+        episode_count: showEpisodes.length,
+        episode_range: episodeRange(showEpisodes),
+      }))
+    : undefined;
 
   const params: {
     episodes: any;
+    showDays: any;
     offset: number;
     limit: number;
-    showAbandoned: boolean;
-    toggleAbandonedUrl: string;
+    showHidden: boolean;
+    toggleHiddenUrl: string;
     error?: string;
     title?: string;
+    hideTitle?: boolean;
     pagination?: Pagination;
   } = {
     episodes: episodesWithDays,
+    showDays,
     offset,
     limit,
-    showAbandoned,
-    toggleAbandonedUrl: toggleQuery ? `/upcoming?${toggleQuery}` : '/upcoming',
+    showHidden,
+    toggleHiddenUrl: toggleQuery ? `/upcoming?${toggleQuery}` : '/upcoming',
   };
 
   if (!episodes) params.error = data.errorMessage;
 
   params.title = 'Upcoming Episodes';
+  params.hideTitle = true;
   const pagination: Pagination = {
     url: '/upcoming',
-    query: linkQuery(showAbandoned) || undefined,
+    query: linkQuery(showHidden) || undefined,
     currentPage,
     offset,
     limit,

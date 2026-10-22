@@ -1,40 +1,55 @@
-<div data-id="{{episode.id}}" style="display: flex; gap: 15px; border-bottom: 1px solid; padding: 15px 5px; margin-bottom: 10px;">
+<div data-show-id="{{showDay.show_id}}" style="display: flex; gap: 15px; border-bottom: 1px solid; padding: 15px 5px; margin-bottom: 10px;">
   <div style="flex-shrink: 0;">
-    <a href="/show/{{episode.show_id}}">
+    <a href="/show/{{showDay.show_id}}">
       <img
-        src="{{episode.show_image}}"
+        src="{{showDay.show_image}}"
         style="width: 80px; height: 113px; object-fit: cover; display: block;"
-        alt="{{episode.show_name}}"
+        alt="{{showDay.show_name}}"
       />
     </a>
   </div>
   <div style="flex-grow: 1;">
     <div style="margin-bottom: 5px;">
       <strong>
-        <a href="/show/{{episode.show_id}}">{{episode.show_name}}</a>
+        <a href="/show/{{showDay.show_id}}">{{showDay.show_name}}</a>
       </strong>
-      {{#if episode.show_abandoned}}
+      {{#if showDay.show_abandoned}}
         <span style="color: rgba(0, 0, 0, 0.5);">(abandoned)</span>
+      {{else}}
+        {{^if showDay.show_started}}
+          <span style="color: rgba(0, 0, 0, 0.5);">(not started)</span>
+        {{/if}}
       {{/if}}
     </div>
-    <div style="margin-bottom: 5px;">
-      S{{episode.season}} {{#if episode.number}}| E{{episode.number}}{{/if}}
-    </div>
-    <div style="margin-bottom: 5px;">
-      <a href="/show/{{episode.show_id}}/episode/{{episode.id}}">
-        {{episode.name}}
-      </a>
-    </div>
+    {{#eq showDay.episode_count 1}}
+      {{#each showDay.episodes}}
+        <div data-id="{{this.id}}" style="margin-bottom: 5px;">
+          S{{this.season}} {{#if this.number}}| E{{this.number}}{{/if}}
+        </div>
+        <div style="margin-bottom: 5px;">
+          <a href="/show/{{this.show_id}}/episode/{{this.id}}">
+            {{this.name}}
+          </a>
+        </div>
+      {{/each}}
+    {{else}}
+      <div style="margin-bottom: 5px;">
+        {{showDay.episode_range}}
+      </div>
+      <div style="margin-bottom: 5px;">
+        <span class="episode-count-badge">{{showDay.episode_count}} episodes</span>
+      </div>
+    {{/eq}}
     <div style="color: rgba(0, 0, 0, 0.5); font-size: 1.2em;">
-      Airs: {{formatDate episode.airs_on}}
+      Airs: {{formatDate showDay.airs_on}}
     </div>
   </div>
   <div style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 80px;">
     <div style="font-size: 3em; font-weight: bold; line-height: 1; color: rgba(0, 0, 0, 0.7);">
-      {{episode.days_until}}
+      {{showDay.days_until}}
     </div>
     <div style="font-size: 0.9em; color: rgba(0, 0, 0, 0.5); text-align: center;">
-      {{pluralize episode.days_until "day"}}
+      {{pluralize showDay.days_until "day"}}
     </div>
   </div>
 </div>

@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "start": "npm run build && node ./dist/server.js",
-    "watch": "nodemon --ignore public/ --ignore dist/ --exec 'npm run build && node ./dist/server.js'",
+    "watch": "nodemon --watch src --watch server.ts --ext ts,json --ignore '*.test.ts' --exec 'npm run build && node ./dist/server.js'",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest",

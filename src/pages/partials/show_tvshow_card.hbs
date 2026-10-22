@@ -1,14 +1,35 @@
 <div class="tv-show-card patternBackground">
-  <a href="/show/{{tvshow.id}}" style="display: block;">
+  <a
+    href="/show/{{tvshow.id}}"
+    style="display: block; position: relative;"
+    aria-label="{{tvshow.name}} - watched {{tvshow.watched_episodes_count}} of {{tvshow.aired_episodes_count}} aired episodes"
+  >
+    {{! shows through when the poster is missing or hasn't been downloaded yet }}
+    <span
+      class="tv-show-card__placeholder"
+      aria-hidden="true"
+      title="{{tvshow.name}} - watched {{tvshow.watched_episodes_count}} of {{tvshow.aired_episodes_count}} aired episodes"
+    >{{tvshow.name}}</span>
     <img 
       src="{{{tvshow.image}}}"
-      style="display:block; width: 100%; aspect-ratio: 0.711864406779661"
+      onerror="this.style.visibility = 'hidden'"
+      style="display:block; position: relative; width: 100%; aspect-ratio: 0.711864406779661"
       title="{{tvshow.name}} - watched {{tvshow.watched_episodes_count}} of {{tvshow.aired_episodes_count}} aired episodes"
       alt="{{tvshow.name}} - watched {{tvshow.watched_episodes_count}} of {{tvshow.aired_episodes_count}} aired episodes"
     />
+    {{#eq tvshow.aired_episodes_count 0}}
+      <span
+        class="tv-show-card__premiere"
+        title="{{#if tvshow.premiered}}Premieres {{formatDate tvshow.premiered}}{{else}}No premiere date announced yet{{/if}}, no episodes have aired"
+      >{{#if tvshow.premiered}}{{formatShortDate tvshow.premiered}}{{else}}TBA{{/if}}</span>
+    {{/eq}}
   </a>
-  <div style="height: 10px; background-color: cornsilk;">
-    <div style="height: 10px; background-color: yellow; width: {{toCssPercent tvshow.watched_episodes_count tvshow.aired_episodes_count}}%">
-     </div>
-  </div>
+  {{#eq tvshow.aired_episodes_count 0}}
+    <div class="tv-show-card__unaired-bar"></div>
+  {{else}}
+    <div style="height: 10px; background-color: cornsilk;">
+      <div style="height: 10px; background-color: yellow; width: {{toCssPercent tvshow.watched_episodes_count tvshow.aired_episodes_count}}%">
+       </div>
+    </div>
+  {{/eq}}
 </div>

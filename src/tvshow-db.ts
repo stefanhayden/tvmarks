@@ -535,21 +535,28 @@ export const getRecentEpisodesByShowId = async (showId) => {
   return undefined;
 };
 
-export const getUpcomingEpisodes = async (limit = 24, offset = 0, includeAbandoned = false) => {
+export const getUpcomingEpisodes = async (limit = 24, offset = 0, includeHidden = false) => {
+  const showStarted = `EXISTS (SELECT 1 FROM episodes watched WHERE watched.show_id = shows.id AND watched.watched_status = 'WATCHED')`;
   try {
     const result = await db.all(
       `SELECT
         episodes.*,
         shows.name as show_name,
         shows.image as show_image,
-        shows.abandoned as show_abandoned
+        shows.abandoned as show_abandoned,
+        ${showStarted} as show_started
       FROM episodes
       INNER JOIN shows ON episodes.show_id = shows.id
       WHERE
         episodes.airstamp IS NOT NULL
         AND episodes.airstamp != ''
         AND DateTime(episodes.airstamp) > DateTime('now')
-        ${includeAbandoned ? '' : 'AND shows.abandoned IS NOT 1'}
+        ${
+          includeHidden
+            ? ''
+            : // a later season of a show you never started isn't coming up for you, a premiere still is
+              `AND shows.abandoned IS NOT 1 AND (COALESCE(episodes.season, 1) <= 1 OR ${showStarted})`
+        }
       ORDER BY episodes.airstamp ASC
       LIMIT ? OFFSET ?`,
       limit,

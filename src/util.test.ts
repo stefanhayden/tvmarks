@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateDaysUntilAirDate, localDateString, formatDate, isEpisodeAired, countAiredEpisodes } from './util';
+import { calculateDaysUntilAirDate, localDateString, formatDate, formatShortDate, isEpisodeAired, countAiredEpisodes, groupEpisodesByShowAndDay, episodeRange } from './util';
 
 describe('calculateDaysUntilAirDate', () => {
   it('should return 0 for an episode airing today', () => {
@@ -152,5 +152,56 @@ describe('countAiredEpisodes', () => {
   it('should not count an episode airing later the same day', () => {
     // the old refresh code swapped the airstamp hour for the current hour, counting this as aired
     expect(countAiredEpisodes([{ number: 1, airstamp: '2026-04-09T23:00:00+00:00' }], now)).toBe(0);
+  });
+});
+
+describe('groupEpisodesByShowAndDay', () => {
+  const ep = (id: number, show_id: number, airs_on: string) => ({ id, show_id, airs_on });
+
+  it('groups a show airing several episodes on one day', () => {
+    const groups = groupEpisodesByShowAndDay([ep(1, 1, '2026-03-01'), ep(2, 1, '2026-03-01'), ep(3, 2, '2026-03-01')]);
+    expect(groups.map((g) => g.episodes.map((e) => e.id))).toEqual([[1, 2], [3]]);
+  });
+
+  it('keeps the same show on different days apart', () => {
+    const groups = groupEpisodesByShowAndDay([ep(1, 1, '2026-03-01'), ep(2, 1, '2026-03-02')]);
+    expect(groups.map((g) => g.episodes.map((e) => e.id))).toEqual([[1], [2]]);
+  });
+
+  it('pulls in a same day episode with another show airing in between', () => {
+    const groups = groupEpisodesByShowAndDay([ep(1, 1, '2026-03-01'), ep(2, 2, '2026-03-01'), ep(3, 1, '2026-03-01')]);
+    expect(groups.map((g) => g.episodes.map((e) => e.id))).toEqual([[1, 3], [2]]);
+    expect(groups[0].first.id).toBe(1);
+  });
+});
+
+describe('episodeRange', () => {
+  it('shows the first and last episode of a season', () => {
+    expect(episodeRange([{ season: 2, number: 1 }, { season: 2, number: 2 }, { season: 2, number: 8 }])).toBe('S2 | E1 – E8');
+  });
+
+  it('names both seasons when the run crosses one', () => {
+    expect(episodeRange([{ season: 1, number: 10 }, { season: 2, number: 1 }])).toBe('S1 | E10 – S2 | E1');
+  });
+
+  it('leaves specials out of the range', () => {
+    expect(episodeRange([{ season: 3, number: null }, { season: 3, number: 4 }, { season: 3, number: 5 }])).toBe('S3 | E4 – E5');
+  });
+
+  it('shows just the season for specials', () => {
+    expect(episodeRange([{ season: 3, number: null }, { season: 3, number: null }])).toBe('S3');
+  });
+});
+
+describe('formatShortDate', () => {
+  it('abbreviates the month and drops the day suffix', () => {
+    expect(formatShortDate('2027-01-22')).toBe('Jan 22, 2027');
+    expect(formatShortDate('2026-05-01')).toBe('May 1, 2026');
+  });
+
+  it('returns an empty string for a missing or bad date', () => {
+    expect(formatShortDate(null)).toBe('');
+    expect(formatShortDate('')).toBe('');
+    expect(formatShortDate('2026-02-31')).toBe('');
   });
 });

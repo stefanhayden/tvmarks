@@ -72,6 +72,9 @@
           {{> show_tvshow_card tvshow=this}}
         {{/each}}
       </div>
+      {{#if seeAllShowsToWatch}}
+        <a href="/shows/watch-next" class="see-all-bottom">See all Watch Next</a>
+      {{/if}}
     </div>
   {{/if}}
 
@@ -86,6 +89,9 @@
           {{> show_tvshow_card tvshow=this}}
         {{/each}}
       </div>
+      {{#if seeAllShowsUpToDate}}
+        <a href="/shows/up-to-date" class="see-all-bottom">See all Up To Date</a>
+      {{/if}}
     </div>
   {{/if}}
 
@@ -100,6 +106,9 @@
           {{> show_tvshow_card tvshow=this}}
         {{/each}}
       </div>
+      {{#if seeAllShowsNotStarted}}
+        <a href="/shows/not-started" class="see-all-bottom">See all Not Started</a>
+      {{/if}}
     </div>
   {{/if}}
 
@@ -114,6 +123,9 @@
           {{> show_tvshow_card tvshow=this}}
         {{/each}}
       </div>
+      {{#if seeAllShowsAbandoned}}
+        <a href="/shows/abandoned" class="see-all-bottom">See all Abandoned</a>
+      {{/if}}
     </div>
   {{/if}}
 
@@ -127,5 +139,8 @@
         {{> show_tvshow_card tvshow=this}}
       {{/each}}
     </div>
+    {{#if seeAllShowsCompleted}}
+      <a href="/shows/completed" class="see-all-bottom">See all Completed</a>
+    {{/if}}
   {{/if}}
 {{/if}}

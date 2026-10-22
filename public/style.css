@@ -304,6 +304,48 @@ p.error a {
   line-height: 2rem;
 }
 
+.show-status {
+  display: inline-block;
+  margin-right: 0.4em;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  color: #3f3f3f;
+  background: #ececec;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.show-status[data-status='Running'] {
+  color: #14532d;
+  background: #d3f5e0;
+}
+
+.show-status[data-status='To Be Determined'] {
+  color: #6b4100;
+  background: #ffefc2;
+}
+
+.show-status[data-status='In Development'] {
+  color: var(--color-accent);
+  background: #ede8ff;
+}
+
+/* the badge stands on its own, no dot after it */
+.show-meta > .show-status + *::before {
+  content: none;
+}
+
+/* inline-block so the dot doesn't pick up a link's underline */
+.show-meta > * + *::before {
+  content: '·';
+  display: inline-block;
+  padding-right: 0.4em;
+  color: var(--color-dimmed);
+}
+
 .bookmark .subhead,
 .bookmark .bottom,
 .bookmark .tags a {
@@ -635,7 +677,45 @@ a.bookmark-date {
 }
 
 .tv-show-card {
-  flex-grow: 1; max-width: 230px; min-width: 190px;
+  /* start every card at a poster's width, a card whose poster is missing would otherwise start wider and wrap the row early */
+  flex: 1 1 210px; max-width: 230px; min-width: 190px;
+}
+
+.tv-show-card__placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  text-align: center;
+  text-wrap: balance;
+  font-size: 1.4rem;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--color-accent);
+}
+
+/* a show that hasn't aired an episode yet */
+.tv-show-card__premiere {
+  position: absolute;
+  z-index: 1;
+  top: 8px;
+  left: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  background: var(--color-accent);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.tv-show-card__unaired-bar {
+  height: 10px;
+  background: repeating-linear-gradient(-45deg, #ede8ff 0 6px, #d9d0ff 6px 12px);
 }
 
 @media screen and (max-width: 990px) {
@@ -1290,4 +1370,70 @@ a.bookmark-date {
 .subscription-card--idle .subscription-shows__posters img {
   filter: grayscale(1);
   opacity: 0.6;
+}
+
+.episode-count-badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  background: var(--color-accent);
+  color: #fff;
+  vertical-align: middle;
+}
+
+/* a page title with a small control beside it */
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin: 0 0 2rem;
+}
+
+.page-header h1 {
+  margin: 0;
+}
+
+.page-header__toggle {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--color-accent);
+  background: #ede8ff;
+  padding: 0.35rem 0.8rem;
+  border-radius: 99px;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.page-header__toggle:hover {
+  background: #d9d0ff;
+}
+
+/* on a phone the sections are one long column, so repeat their "see all" link where the section ends */
+.see-all-bottom {
+  display: none;
+}
+
+@media (max-width: 599px) {
+  .see-all-bottom {
+    display: block;
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    text-align: center;
+    font-weight: 600;
+    color: var(--color-accent);
+    background: #ede8ff;
+    border-radius: 99px;
+    text-decoration: none;
+  }
+
+  .see-all-bottom:hover {
+    background: #d9d0ff;
+  }
 }
