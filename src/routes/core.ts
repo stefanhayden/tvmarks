@@ -1,5 +1,6 @@
 import express from 'express';
-import { data, actorInfo, calculateDaysUntilAirDate, localDateString, groupEpisodesByShowAndDay, episodeRange } from '../util';
+import { data, actorInfo, calculateDaysUntilAirDate, groupEpisodesByShowAndDay, episodeRange, cleanHashtag } from '../util';
+import { showHashtag } from '../activitypub';
 import { isAuthenticated } from '../session-auth';
 import { refreshShowData, refreshWatchNext } from './admin';
 import * as tvDb from '../tvshow-db';
@@ -134,16 +135,12 @@ router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number; abandon
   const episodes = await tvDb.getUpcomingEpisodes(limit, offset, showHidden);
 
   // Calculate days until air date for each episode
-  const episodesWithDays = episodes?.map((episode) => {
-    // airdate is the broadcaster's calendar date, the same one the show page lists
-    const airsOn = episode.airdate || localDateString(new Date(episode.airstamp));
-    return {
-      ...episode,
-      airs_on: airsOn,
-      // a broadcaster far enough behind us can still be on "yesterday" when the episode airs
-      days_until: Math.max(calculateDaysUntilAirDate(airsOn), 0),
-    };
-  });
+  // airs_on, the day the page groups by, comes from the query, which pages by it
+  const episodesWithDays = episodes?.map((episode) => ({
+    ...episode,
+    // a broadcaster far enough behind us can still be on "yesterday" when the episode airs
+    days_until: Math.max(calculateDaysUntilAirDate(episode.airs_on), 0),
+  }));
 
   // keep the page size and the hidden shows toggle when following links
   const linkQuery = (hidden: boolean) => {
@@ -200,7 +197,8 @@ router.get<{}, {}, {}, { raw?: boolean; limit?: number; offset?: number; abandon
     offset,
     limit,
     hasPreviousPage: currentPage > 1,
-    hasNextPage: episodes?.length === limit,
+    // a page holds limit show days
+    hasNextPage: showDays?.length === limit,
     nextOffset: Math.min(offset + limit),
     previousOffset: Math.max(offset - limit, 0),
   };
@@ -481,4 +479,30 @@ router.get('/manifest', async (req, res) => {
       },
     ],
   });
+});
+
+router.get<{ tag: string }, {}, {}, { raw?: boolean }>('/tagged/:tag', async (req, res) => {
+  const tag = cleanHashtag(req.params.tag);
+  if (!tag) return res.redirect('/');
+  // a hashtag can't hold what was taken out, like the - of /tagged/sci-fi, so the address names the tag it is
+  if (tag !== req.params.tag) return res.redirect(301, `/tagged/${encodeURIComponent(tag)}`);
+
+  const [shows, episodes] = await Promise.all([tvDb.getShowsTagged(tag), tvDb.getEpisodesTagged(tag)]);
+
+  // every post is also tagged #tvmarks and with its show, which earlier posts linked here
+  if (!shows?.length && !episodes?.length) {
+    if (tag.toLowerCase() === 'tvmarks') return res.redirect('/');
+    const show = (await tvDb.getShowsWithUrlEnding(tag))?.find(({ url }) => showHashtag(url)?.toLowerCase() === tag.toLowerCase());
+    if (show) return res.redirect(`/show/${show.id}`);
+  }
+
+  const params = {
+    title: `#${tag}`,
+    tag,
+    shows,
+    episodes,
+    error: !shows || !episodes ? data.errorMessage : undefined,
+  };
+
+  return req.query.raw ? res.send(params) : res.render('tagged', params);
 });

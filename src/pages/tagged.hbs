@@ -3,10 +3,31 @@
     {{error}}
   </p>
 {{else}}
-  <div class="bookmarks">
-    {{#each bookmarks }}
-      {{> show_bookmark bookmark=this tagged=true }}
-    {{/each}}
-  </div>
-  {{> pagination url="" pageInfo=pageInfo }}
+  {{#if shows}}
+    <h2>Shows</h2>
+    <div style="display:flex; flex-wrap: wrap; gap: 0.5em; margin-bottom: 50px;">
+      {{#each shows}}
+        {{> show_tvshow_card tvshow=this}}
+      {{/each}}
+    </div>
+  {{/if}}
+
+  {{#if episodes}}
+    <h2>Episodes</h2>
+    <ul class="tagged-episodes">
+      {{#each episodes}}
+        <li>
+          <a href="/show/{{this.show_id}}/episode/{{this.id}}">
+            <strong>{{this.show_name}}</strong>
+            S{{this.season}}{{#if this.number}} | E{{this.number}}{{/if}}
+            {{#if this.name}}&middot; {{this.name}}{{/if}}
+          </a>
+        </li>
+      {{/each}}
+    </ul>
+  {{/if}}
+
+  {{#unless (or shows.length episodes.length)}}
+    <p>Nothing is tagged #{{tag}} yet.</p>
+  {{/unless}}
 {{/if}}

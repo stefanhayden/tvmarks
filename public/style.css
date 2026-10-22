@@ -1079,12 +1079,178 @@ a.bookmark-date {
   font-size: 0.9rem;
 }
 
-/* Show search results */
-.search-result-card {
+/* Show search */
+.search-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.search-form input {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  font-size: 1.1rem;
+  padding: 0.65rem 1.1rem;
+  border: 2px solid var(--color-accent);
+  border-radius: 99px;
+}
+
+.search-form input:focus {
+  outline: 3px solid #d9d0ff;
+  outline-offset: 1px;
+}
+
+.search-form button {
+  font-weight: 700;
+  padding: 0.65rem 1.4rem;
+  border: 0;
+  border-radius: 99px;
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.search-form button:hover {
+  filter: brightness(1.25);
+}
+
+.search-form__credit {
+  font-size: 0.8rem;
+  color: var(--color-dimmed);
+  margin: 0 0 1.5rem 1.1rem;
+}
+
+.search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 3rem;
+}
+
+.search-result {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+  padding: 1rem;
+  background: #fff8fd;
   border-radius: 12px;
-  border: 1px solid #ddd;
-  padding: 1.25rem;
-  margin-bottom: 1rem;
+  box-shadow: 0 0 0 1px rgba(41, 20, 160, 0.18);
+}
+
+.search-result__poster {
+  flex: 0 0 100px;
+  display: block;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.search-result__poster img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 0.711864406779661;
+  object-fit: cover;
+}
+
+.search-result__no-poster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 0.711864406779661;
+  padding: 0.5rem;
+  box-sizing: border-box;
+  text-align: center;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  color: var(--color-accent);
+  background: #ede8ff;
+}
+
+.search-result__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-result__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.3rem;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.search-result__title a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.search-result__title a:hover {
+  text-decoration: underline;
+}
+
+.search-result__meta {
+  font-size: 0.875rem;
+  line-height: 1.75rem;
+  color: var(--color-dimmed);
+}
+
+/* three lines is enough to tell shows apart, the full summary is on the show's page */
+.search-result__summary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  margin-top: 0.4rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--color-dimmed);
+}
+
+.search-result__summary p {
+  display: inline;
+  margin: 0;
+}
+
+/* spaced from whatever is above it, a show may have no summary */
+.search-result__body > .search-result-action,
+.search-result__add {
+  margin-top: 0.75rem;
+}
+
+.search-result__add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0;
+}
+
+.search-result__note summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--color-link);
+}
+
+.search-result__note[open] {
+  flex-basis: 100%;
+  order: -1;
+}
+
+.search-result__note textarea {
+  width: 100%;
+  height: 5rem;
+  margin-top: 0.5rem;
+}
+
+.search-result__tags {
+  flex: 1 1 12rem;
+  min-width: 0;
+  max-width: 24rem;
+  font-size: 0.875rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 99px;
+  border-color: rgba(41, 20, 160, 0.35);
+  color: var(--color-accent);
+  background: #fff;
 }
 
 .search-result-action {
@@ -1104,6 +1270,31 @@ a.bookmark-date {
 
 .search-result-action--exists:hover {
   background: #d9d0ff;
+}
+
+button.search-result-action--add {
+  border: 0;
+  background: var(--color-accent);
+  color: #fff;
+}
+
+button.search-result-action--add:hover {
+  filter: brightness(1.25);
+}
+
+@media (max-width: 599px) {
+  .search-result {
+    gap: 0.9rem;
+    padding: 0.85rem;
+  }
+
+  .search-result__poster {
+    flex-basis: 72px;
+  }
+
+  .search-result__title {
+    font-size: 1.1rem;
+  }
 }
 
 /* Streaming services */
@@ -1436,4 +1627,42 @@ a.bookmark-date {
   .see-all-bottom:hover {
     background: #d9d0ff;
   }
+}
+
+/* hashtags given to a show or episode, linking to everything else with them */
+.hashtags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0.75rem;
+}
+
+.hashtag {
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.35rem 0.6rem;
+  border-radius: 99px;
+  color: var(--color-accent);
+  background: #ede8ff;
+  text-decoration: none;
+}
+
+.hashtag:hover {
+  background: #d9d0ff;
+}
+
+.tagged-episodes {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 3rem;
+}
+
+.tagged-episodes li {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(41, 20, 160, 0.18);
+}
+
+.tagged-episodes a {
+  text-decoration: none;
 }

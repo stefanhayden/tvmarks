@@ -85,4 +85,38 @@ describe('getUpcomingEpisodes', () => {
       expect(ids).toContain(3);
     });
   });
+
+  describe('paging', () => {
+    // noon UTC three weeks out, so episodes a few hours apart are on the same day whenever the tests run
+    const noon = new Date();
+    noon.setUTCDate(noon.getUTCDate() + 21);
+    noon.setUTCHours(12, 0, 0, 0);
+    const at = (hours: number) => new Date(noon.getTime() + hours * 36e5).toISOString().replace(/\.\d+Z$/, '+00:00');
+
+    beforeAll(async () => {
+      // a season dropped at once, a few hours after another show's episode on the same day
+      await tvDb.createShow({ id: 20, name: 'dropped', abandoned: 0 } as tvDb.Show);
+      for (const id of [201, 202, 203]) await tvDb.createEpisode(episode(id, 20, at(2)));
+      await tvDb.createShow({ id: 21, name: 'weekly', abandoned: 0 } as tvDb.Show);
+      await tvDb.createEpisode(episode(211, 21, at(0)));
+      // no airdate, so its day comes from its airstamp
+      await tvDb.createEpisode({ ...episode(212, 21, at(1)), airdate: '' });
+    });
+
+    test("counts show days, so a show's episodes on one day stay together", async () => {
+      const all = await tvDb.getUpcomingEpisodes(100, 0);
+      const days = [...new Set(all.map((e) => `${e.show_id} ${e.airs_on}`))];
+      const page = days.findIndex((day) => day.startsWith('20 '));
+
+      const episodes = await tvDb.getUpcomingEpisodes(1, page);
+      expect(episodes.map((e) => e.id)).toEqual([201, 202, 203]);
+    });
+
+    test('works out the day of an episode with no airdate from when it airs', async () => {
+      const episodes = await tvDb.getUpcomingEpisodes(100, 0);
+      const weekly = episodes.filter((e) => e.show_id === 21);
+      expect(weekly.map((e) => e.id)).toEqual([211, 212]);
+      expect(new Set(weekly.map((e) => e.airs_on)).size).toBe(1);
+    });
+  });
 });

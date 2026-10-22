@@ -14,10 +14,13 @@ export class TVMazeMapper {
       name: result.show.name,
       url: result.show.url,
       image: result.show.image,
-      network: result.show.network,
+      network: result.show.network ?? result.show.webChannel,
       summary: result.show.summary,
       premiered: result.show.premiered,
+      ended: result.show.ended,
       status: result.show.status,
+      genres: result.show.genres,
+      type: result.show.type,
       score: result.score,
     };
   }

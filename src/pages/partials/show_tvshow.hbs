@@ -27,6 +27,7 @@
       <a href="https://www.imdb.com/title/{{tvshow.imdb_id}}/" target="_blank" rel="noopener">IMDb</a>
     {{/if}}
   </div>
+  {{> hashtags stored=tvshow.tags}}
   <div class="description">
     {{{tvshow.summary}}}
   </div>

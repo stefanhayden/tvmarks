@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateDaysUntilAirDate, localDateString, formatDate, formatShortDate, isEpisodeAired, countAiredEpisodes, groupEpisodesByShowAndDay, episodeRange } from './util';
+import { calculateDaysUntilAirDate, localDateString, formatDate, formatShortDate, yearRange, parseHashtags, hasHashtag, episodeHashtags, suggestedHashtags, isEpisodeAired, countAiredEpisodes, groupEpisodesByShowAndDay, episodeRange } from './util';
 
 describe('calculateDaysUntilAirDate', () => {
   it('should return 0 for an episode airing today', () => {
@@ -203,5 +203,93 @@ describe('formatShortDate', () => {
     expect(formatShortDate(null)).toBe('');
     expect(formatShortDate('')).toBe('');
     expect(formatShortDate('2026-02-31')).toBe('');
+  });
+});
+
+describe('yearRange', () => {
+  it('spans the years a show ran', () => {
+    expect(yearRange('2005-03-24', '2013-05-16', 'Ended')).toBe('2005 – 2013');
+  });
+
+  it('leaves the end open while a show is running', () => {
+    expect(yearRange('2019-01-01', null, 'Running')).toBe('2019 – now');
+  });
+
+  it('shows one year for a show that started and ended in it', () => {
+    expect(yearRange('2020-02-01', '2020-11-01', 'Ended')).toBe('2020');
+  });
+
+  it('shows the start year when the end is unknown', () => {
+    expect(yearRange('2027-01-22', null, 'In Development')).toBe('2027');
+  });
+
+  it('is empty without a premiere date', () => {
+    expect(yearRange(null, null, 'In Development')).toBe('');
+  });
+});
+
+describe('parseHashtags', () => {
+  it('reads tags with or without #, split by spaces or commas', () => {
+    expect(parseHashtags('#scifi #rewatch')).toEqual(['scifi', 'rewatch']);
+    expect(parseHashtags('scifi, rewatch,comfy')).toEqual(['scifi', 'rewatch', 'comfy']);
+  });
+
+  it('drops characters a hashtag cannot hold', () => {
+    expect(parseHashtags('#sci-fi #best!show')).toEqual(['scifi', 'bestshow']);
+  });
+
+  it('keeps letters from any language and underscores', () => {
+    expect(parseHashtags('#télé #ドラマ #slow_burn')).toEqual(['télé', 'ドラマ', 'slow_burn']);
+  });
+
+  it('keeps the combining marks some scripts are written with', () => {
+    expect(parseHashtags('#हिन्दी')).toEqual(['हिन्दी']);
+    // an accent typed as its own character comes out as the one accented letter
+    expect(parseHashtags('#te\u0301le\u0301')).toEqual(['télé']);
+  });
+
+  it("doesn't start a hashtag with a mark", () => {
+    expect(parseHashtags('#\u0301abc')).toEqual(['abc']);
+  });
+
+  it('drops tags that are only numbers, and repeats in any case', () => {
+    expect(parseHashtags('#2024 #SciFi #scifi #s2')).toEqual(['SciFi', 's2']);
+  });
+
+  it('is empty for nothing', () => {
+    expect(parseHashtags('')).toEqual([]);
+    expect(parseHashtags(null)).toEqual([]);
+    expect(parseHashtags(' # , ')).toEqual([]);
+  });
+});
+
+describe('hasHashtag', () => {
+  it('matches a stored tag in any case', () => {
+    expect(hasHashtag('scifi Rewatch', 'rewatch')).toBe(true);
+    expect(hasHashtag('scifi rewatch', 'sci')).toBe(false);
+    expect(hasHashtag(null, 'scifi')).toBe(false);
+  });
+});
+
+describe('episodeHashtags', () => {
+  it('puts the show tags first and leaves out repeats', () => {
+    expect(episodeHashtags({ tags: 'scifi rewatch' }, { tags: 'Finale scifi' })).toEqual(['scifi', 'rewatch', 'Finale']);
+    expect(episodeHashtags({ tags: null }, { tags: null })).toEqual([]);
+  });
+});
+
+describe('suggestedHashtags', () => {
+  it("turns a show's genres into hashtags", () => {
+    expect(suggestedHashtags(['Drama', 'Science-Fiction', 'Thriller'], 'Scripted')).toEqual(['Drama', 'ScienceFiction', 'Thriller']);
+  });
+
+  it('adds the show type only when it says something', () => {
+    expect(suggestedHashtags(['Comedy'], 'Animation')).toEqual(['Comedy', 'Animation']);
+    expect(suggestedHashtags([], 'Reality')).toEqual(['Reality']);
+    expect(suggestedHashtags(['Comedy'], 'Game Show')).toEqual(['Comedy']);
+  });
+
+  it('is empty without genres', () => {
+    expect(suggestedHashtags(undefined, undefined)).toEqual([]);
   });
 });

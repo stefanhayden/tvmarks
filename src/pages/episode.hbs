@@ -16,6 +16,7 @@
             S{{episode.season}} {{#if episode.number}}| E{{episode.number}}{{/if}} - 
             <span style="color: rgba(0, 0, 0, 0.3)">{{episode.airdate}}</span>
           </div>
+          {{> hashtags stored=episode.show.tags also=episode.tags}}
         </div>
         <div style="display:flex; flex-direction: column;">
           <div style="display: flex; align-items: center; gap: 10px; justify-content: end;">
@@ -69,6 +70,10 @@
           action="/show/{{episode.show_id}}/episode/{{episode.id}}/update"
           onsubmit="this.querySelector('button').disabled = 'disabled'">
       <textarea name="note" placeholder="Add a note" style="width: 100%; height: 100px; margin-bottom: 10px; background: #fdf7fc">{{episode.note}}</textarea>
+      <div class="form-group">
+        <label for="episode_tags">Hashtags <small>(added to the show's: {{#if episode.show.tags}}{{hashtagText episode.show.tags}}{{else}}none yet{{/if}})</small></label>
+        <input id="episode_tags" name="tags" value="{{hashtagText episode.tags}}" placeholder="#finale" style="width: 100%; background: #fdf7fc" />
+      </div>
 
       <details class="form-group">
         <summary>

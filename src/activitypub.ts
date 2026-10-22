@@ -3,7 +3,65 @@ import crypto from 'crypto';
 import escapeHTML from 'escape-html';
 
 import { signedGetJSON, signedPostJSON } from './signature';
-import { actorInfo, actorMatchesUsername } from './util';
+import { actorInfo, actorMatchesUsername, episodeHashtags, parseHashtags, cleanHashtag } from './util';
+
+// "#TheOffice" from a show's TVMaze url, like https://www.tvmaze.com/shows/526/the-office. Unlike a hashtag typed in, a
+// show named only with numbers, like 24, keeps one
+export function showHashtag(showUrl: string): string | undefined {
+  const slug = String(showUrl || '').split('/').reverse()[0];
+  const tag = slug
+    .split('-')
+    .map((val) => val.charAt(0).toUpperCase() + val.slice(1))
+    .join('');
+  return cleanHashtag(tag) || undefined;
+}
+
+type PostedShow = { id: number | string; name: string; url: string; note?: string | null; tags?: string | null };
+type PostedEpisode = { id: number | string; season: number; number: number; note?: string | null; tags?: string | null };
+
+// the post for adding a show, also used to update it when the show's note or hashtags change
+export const showPostData = (show: PostedShow, domain: string) => ({
+  id: `show-${show.id}`,
+  path: `show/${show.id}`,
+  url: show.url,
+  description: show.note || '',
+  title: `Started following: <a href="https://${domain}/show/${show.id}" rel="nofollow noopener noreferrer">${escapeHTML(show.name)}</a>`,
+  tags: parseHashtags(show.tags),
+});
+
+// the post for watching an episode
+export const episodePostData = (show: PostedShow, episode: PostedEpisode, domain: string) => ({
+  id: `show-${show.id}-episode-${episode.id}`,
+  path: `show/${show.id}`,
+  url: show.url,
+  description: episode.note || '',
+  title: `<a href="https://${domain}/show/${show.id}" rel="nofollow noopener noreferrer">${escapeHTML(show.name)}</a>: Watched s${episode.season}e${
+    episode.number
+  }`,
+  tags: episodeHashtags(show, episode),
+});
+
+export const taggedUrl = (domain: string, tag: string) => `https://${domain}/tagged/${encodeURIComponent(tag)}`;
+
+// every post is tagged #tvmarks and with its show, plus the hashtags given to the show or episode. The given ones are
+// also written into the post so they show up in it, a post's tag list alone is easy to miss
+function hashtagsFor(domain: string, showUrl: string, showPath: string, tags: string[] = []) {
+  const automatic = [
+    { type: 'Hashtag', href: `https://${domain}/`, name: '#tvmarks' },
+    ...[showHashtag(showUrl)].filter(Boolean).map((tag) => ({ type: 'Hashtag', href: `https://${domain}/${showPath}`, name: `#${tag}` })),
+  ];
+  // a given hashtag that is also an automatic one links where the automatic one does, in the tag list and the post alike
+  const hrefOf = (tag: string) => automatic.find((auto) => auto.name.toLowerCase() === `#${tag.toLowerCase()}`)?.href;
+  const given = tags.filter((tag) => !hrefOf(tag));
+  return {
+    tag: [...automatic, ...given.map((tag) => ({ type: 'Hashtag', href: taggedUrl(domain, tag), name: `#${tag}` }))],
+    content: tags.length
+      ? `<p>${tags
+          .map((tag) => `<a href="${hrefOf(tag) || taggedUrl(domain, tag)}" class="mention hashtag" rel="tag">#<span>${escapeHTML(tag)}</span></a>`)
+          .join(' ')}</p>`
+      : '',
+  };
+}
 
 function getGuidFromPermalink(urlString) {
   return urlString.match(/(?:\/m\/)([a-zA-Z0-9+/]+)/)[1];
@@ -38,7 +96,8 @@ export function createNoteObject(data, account, domain) {
     description = description ? `<br/><br/>${description?.trim().replace('\n', '<br/>') || ''}` : '';
   }
 
-  const content = `<p><strong>${data.title}</strong>${description}</p>`;
+  const hashtags = hashtagsFor(domain, data.url, data.path, data.tags);
+  const content = `<p><strong>${data.title}</strong>${description}</p>${hashtags.content}`;
   const noteMessage = {
     '@context': [
       'https://www.w3.org/ns/activitystreams',
@@ -60,13 +119,7 @@ export function createNoteObject(data, account, domain) {
     },
     url: `https://${domain}/${data.path}`,
     to: [`https://${domain}/u/${account}/followers/`, 'https://www.w3.org/ns/activitystreams#Public'],
-    tag: [
-      {
-        type: 'Hashtag',
-        href: `https://${domain}/tagged/tvmarks`,
-        name: '#tvmarks',
-      },
-    ],
+    tag: hashtags.tag,
     // allow quoting per FEP-044f; Mastodon and other implementations will
     // respect this interaction policy when rendering the note.
     interactionPolicy: {
@@ -80,22 +133,6 @@ export function createNoteObject(data, account, domain) {
     // attached to the Activity (Create/Update) top-level object.
   };
 
-  try {
-    const showHashTag = data.url
-      .split('/')
-      .reverse()[0]
-      .split('-')
-      .map((val) => String(val).charAt(0).toUpperCase() + String(val).slice(1))
-      .join('');
-    noteMessage.tag.push({
-      type: 'Hashtag',
-      href: `https://${domain}/tagged/${showHashTag}`,
-      name: `#${showHashTag}`,
-    });
-  } catch (e) {
-    console.error('failed to turn tvshow in to hashtag', e);
-  }
-
   return noteMessage;
 }
 
@@ -108,7 +145,8 @@ export function createEpisodeNoteObject(episode, show, account, domain) {
   }
 
   const episodeTitle = `${escapeHTML(show.name)}: Watched s${episode.season}e${episode.number}`;
-  const content = `<p><strong>${episodeTitle}</strong>${description}</p>`;
+  const hashtags = hashtagsFor(domain, show.url, `show/${show.id}`, episodeHashtags(show, episode));
+  const content = `<p><strong>${episodeTitle}</strong>${description}</p>${hashtags.content}`;
 
   const noteMessage = {
     '@context': [
@@ -132,13 +170,7 @@ export function createEpisodeNoteObject(episode, show, account, domain) {
     inReplyTo: show.url,
     to: [`https://${domain}/u/${account}/followers/`, 'https://www.w3.org/ns/activitystreams#Public'],
     url: `https://${domain}/show/${show.id}/episode/${episode.id}`,
-    tag: [
-      {
-        type: 'Hashtag',
-        href: `https://${domain}/tagged/tvmarks`,
-        name: '#tvmarks',
-      },
-    ],
+    tag: hashtags.tag,
     // allow quoting per FEP-044f
     interactionPolicy: {
       canQuote: {
@@ -147,22 +179,6 @@ export function createEpisodeNoteObject(episode, show, account, domain) {
     },
     // see note above — do not include `quoteUrl` inside the Note object
   };
-
-  try {
-    const showHashTag = show.url
-      .split('/')
-      .reverse()[0]
-      .split('-')
-      .map((val) => String(val).charAt(0).toUpperCase() + String(val).slice(1))
-      .join('');
-    noteMessage.tag.push({
-      type: 'Hashtag',
-      href: `https://${domain}/tagged/${showHashTag}`,
-      name: `#${showHashTag}`,
-    });
-  } catch (e) {
-    console.error('failed to turn tvshow into hashtag', e);
-  }
 
   return noteMessage;
 }
@@ -201,12 +217,16 @@ function createMessage(noteObject, dataId, account, domain, db, quoteUrl = null)
 
 async function createUpdateMessage(data, account, domain, db, quoteUrl = null) {
   const guid = await db.getGuidForId(data.id);
+  // never posted, like something from before the site federated
+  if (!guid) return null;
 
   const note = {
     ...createNoteObject(data, account, domain),
     id: `https://${domain}/m/${guid}`,
     updated: new Date().toISOString(),
   };
+  // the stored note is what /m/<guid> serves, so it says what the update says
+  await db.insertMessage(guid, data.id, JSON.stringify(note));
 
   const updateMessage = {
     '@context': ['https://www.w3.org/ns/activitystreams', 'https://w3id.org/security/v1', 'https://joinmastodon.org/ns', { quoteUrl: 'as:quoteUrl' }],
@@ -355,6 +375,7 @@ export async function broadcastMessage(data, action, db, account, domain, quoteU
         console.log('unsupported action!');
         return;
     }
+    if (!message) return;
 
     console.log(`sending this message to all followers: ${JSON.stringify(message)}`);
     console.log('followers', allowedFollowers);

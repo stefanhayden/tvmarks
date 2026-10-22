@@ -1,11 +1,10 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
-import escapeHTML from 'escape-html';
 import { stringify as csvStringify } from 'csv-stringify/sync'; // https://github.com/adaltas/node-csv/issues/323
-import { domain, actorInfo, parseJSON, account, dataDir, countAiredEpisodes } from '../util';
+import { domain, actorInfo, parseJSON, account, dataDir, countAiredEpisodes, yearRange, parseHashtags, storedHashtags, suggestedHashtags, hashtagText } from '../util';
 import { isAuthenticated } from '../session-auth';
-import { lookupActorInfo, createFollowMessage, createUnfollowMessage, signAndSend, getInboxFromActorProfile, broadcastMessage } from '../activitypub';
+import { lookupActorInfo, createFollowMessage, createUnfollowMessage, signAndSend, getInboxFromActorProfile, broadcastMessage, showPostData } from '../activitypub';
 import { downloadImage, showImagesDir } from '../download-image';
 import * as apDb from '../activity-pub-db';
 import * as tvDb from '../tvshow-db';
@@ -353,6 +352,8 @@ router.get('/', isAuthenticated, async (req, res) => {
       // Wrap in 'show' property for template compatibility
       params.searchTv = tvMazeResults.map((result) => ({
         show: result,
+        years: yearRange(result.premiered, result.ended, result.status),
+        suggestedTags: hashtagText(suggestedHashtags(result.genres, result.type)),
         score: result.score,
         existsLocally: localShowIds.has(result.id),
       }));
@@ -720,9 +721,11 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
         console.log(`failed fetching image for new show ${show.id}`, err);
       }
     }
+    const tags = storedHashtags(parseHashtags(req.body.tags));
     await tvDb.createShow({
       id: show.id,
       note: req.body.description,
+      ...(tags && { tags }),
       tvrage_id: show.externals.tvrage,
       thetvdb_id: show.externals.thetvdb,
       imdb_id: show.externals.imdb,
@@ -763,17 +766,7 @@ router.post('/show/add/:showId', isAuthenticated, async (req, res) => {
 
     const addedShow = await tvDb.getShow(req.params.showId);
 
-    // addedShow
-    const data = {
-      id: `show-${addedShow.id}`,
-      path: `show/${addedShow.id}`,
-      url: addedShow.url,
-      description: req.body.description,
-      title: `Started following: <a href="https://${domain}/show/${addedShow.id}" rel="nofollow noopener noreferrer">${escapeHTML(
-        addedShow.name,
-      )}</a>`,
-    };
-    broadcastMessage(data, 'create', apDb, account, domain);
+    broadcastMessage(showPostData(addedShow, domain), 'create', apDb, account, domain);
 
     return res.redirect(301, `/show/${show.id}`);
   } catch (err) {

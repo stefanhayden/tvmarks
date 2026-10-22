@@ -87,6 +87,10 @@
       </legend>
       <form method="post" action="/show/{{show.id}}/update" onsubmit="this.querySelector('button').disabled = 'disabled'">
         <textarea name="note" placeholder="Add a note" style="width: 100%; height: 100px; margin-bottom: 10px; background: #fdf7fc">{{show.note}}</textarea>
+        <div class="form-group">
+          <label for="show_tags">Hashtags <small>(on this show's post, and on episode posts from here on: ones already sent keep the hashtags they had)</small></label>
+          <input id="show_tags" name="tags" value="{{hashtagText show.tags}}" placeholder="#scifi #rewatch" style="width: 100%; background: #fdf7fc" />
+        </div>
         <details class="form-group">
           <summary>
             <label for="bookmark_allowed">

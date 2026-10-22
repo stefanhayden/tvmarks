@@ -1,54 +1,56 @@
-<div class="bookmark search-result-card" style="display: flex; gap: 1.25rem; align-items: flex-start;">
-  {{#if tvshow.image.medium}}
-  <div style="flex-shrink: 0;">
-    <img src="{{{tvshow.image.medium}}}" style="width: 90px; height: auto; border-radius: 6px; display: block;" />
-  </div>
-  {{/if}}
-  <div style="flex: 1; min-width: 0;">
-    <div class="headline">
-      <a href="{{tvshow.url}}" title="view on tvmaze" target="_blank">
-        {{tvshow.name}}
-      </a>
-    </div>
-    <div class="subhead">
-      {{#if bookmark}}
-        <a href="/bookmark/{{bookmark.id}}" class="bookmark-date" title="{{bookmark.created_at}}">
-          {{bookmark.timestamp}}
-        </a>
+<article class="search-result">
+  <a
+    class="search-result__poster"
+    href="{{#if existsLocally}}/show/{{tvshow.id}}{{else}}{{tvshow.url}}{{/if}}"
+    {{^if existsLocally}}target="_blank" rel="noopener"{{/if}}
+    tabindex="-1"
+    aria-hidden="true"
+  >
+    {{#if tvshow.image.medium}}
+      <img src="{{tvshow.image.medium}}" alt="" />
+    {{else}}
+      <span class="search-result__no-poster">{{tvshow.name}}</span>
+    {{/if}}
+  </a>
+  <div class="search-result__body">
+    <h2 class="search-result__title">
+      {{#if existsLocally}}
+        <a href="/show/{{tvshow.id}}">{{tvshow.name}}</a>
+      {{else}}
+        <a href="{{tvshow.url}}" target="_blank" rel="noopener" title="View on TVMaze">{{tvshow.name}}</a>
+      {{/if}}
+    </h2>
+    <div class="show-meta search-result__meta">
+      {{#if tvshow.status}}
+        <span class="show-status" data-status="{{tvshow.status}}">{{tvshow.status}}</span>
+      {{/if}}
+      {{#if years}}
+        <span>{{years}}</span>
       {{/if}}
       {{#if tvshow.network.name}}
-        <span class="bookmark-domain">
-          {{tvshow.network.name}}
-          {{#if tvshow.network.country.code}}
-            ({{{tvshow.network.country.code}}})
-          {{/if}}
-        </span>
+        <span>{{tvshow.network.name}}{{#if tvshow.network.country.code}} ({{tvshow.network.country.code}}){{/if}}</span>
+      {{/if}}
+      {{#if existsLocally}}
+        <a href="{{tvshow.url}}" target="_blank" rel="noopener">TVMaze</a>
       {{/if}}
     </div>
-    <div class="description" style="font-size: 0.9rem; color: var(--color-dimmed); margin-top: 0.4rem; margin-bottom: 0.75rem;">
-      {{{tvshow.summary}}}
-    </div>
+    {{#if tvshow.summary}}
+      <div class="search-result__summary">{{{tvshow.summary}}}</div>
+    {{/if}}
     {{#if existsLocally}}
-      <a href="/show/{{{tvshow.id}}}" class="search-result-action search-result-action--exists">
-        View in library
+      <a href="/show/{{tvshow.id}}" class="search-result-action search-result-action--exists">
+        In your library
       </a>
     {{else}}
-      <form method="post" action="/admin/show/add/{{{tvshow.id}}}" style="margin-bottom: 0;" onsubmit="this.querySelector('button').disabled = true">
-        <textarea placeholder="I can't wait to watch!" name="description" style="height: 5rem; margin-bottom: 0.5rem; width: 100%;"></textarea>
-        <button>add show</button>
+      <form class="search-result__add" method="post" action="/admin/show/add/{{tvshow.id}}" onsubmit="this.querySelector('button').disabled = true">
+        {{! filled in from TVMaze's genres, out in the open so nothing is posted that you didn't see }}
+        <input class="search-result__tags" name="tags" value="{{suggestedTags}}" placeholder="#hashtags" aria-label="Hashtags for {{tvshow.name}}" />
+        <button class="search-result-action search-result-action--add">Add show</button>
+        <details class="search-result__note">
+          <summary>Add a note</summary>
+          <textarea name="description" placeholder="I can't wait to watch!" aria-label="Note for {{tvshow.name}}"></textarea>
+        </details>
       </form>
     {{/if}}
-    <div class="bottom">
-      {{^if permalink}}
-        {{#if bookmark.comment_count}}
-          <span>
-            <a href="/bookmark/{{bookmark.id}}">
-              {{bookmark.comment_count}}
-              {{pluralize bookmark.comment_count "comment" "comments"}}
-            </a>
-          </span>
-        {{/if}}
-      {{/if}}
-    </div>
   </div>
-</div>
+</article>

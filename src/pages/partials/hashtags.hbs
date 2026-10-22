@@ -1,0 +1,7 @@
+{{#with (hashtags stored also)}}
+  <div class="hashtags">
+    {{#each this}}
+      <a href="/tagged/{{this}}" class="hashtag">#{{this}}</a>
+    {{/each}}
+  </div>
+{{/with}}

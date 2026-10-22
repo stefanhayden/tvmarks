@@ -9,7 +9,7 @@ import fs from 'fs';
 import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import { stripHtml } from 'string-strip-html';
-import { timeSince, account, domain, dataDir, getEpisodeStatusUpdatedValues } from './util';
+import { timeSince, account, domain, dataDir, getEpisodeStatusUpdatedValues, hasHashtag, parseHashtags, storedHashtags, configuredTimezoneOffset } from './util';
 import { createStreamingServiceMatcher, defaultStreamingServices, StreamingService, StreamingServiceSource } from './streaming-services';
 
 export type Show = {
@@ -43,6 +43,7 @@ export type Show = {
   abandoned: number | boolean; // 1 |  0 -- this is how the DB does true / false
   streaming_service?: string | null; // slug from the streaming_services table
   streaming_service_source?: StreamingServiceSource | null; // null until a service is guessed or the viewer decides
+  tags?: string | null; // hashtags separated by spaces, without the #
   created_at: string;
   updated_at: string;
 };
@@ -62,6 +63,7 @@ type Episode = {
   image: string;
   summary: string;
   note: string;
+  tags?: string | null; // hashtags separated by spaces, without the #
   created_at: string;
   updated_at: string;
   watched_at: string | null;
@@ -80,8 +82,13 @@ type Comment = {
 
 const ACCOUNT_MENTION_REGEX = new RegExp(`^@${account}@${domain} `);
 
-const timezone_offset = process.env.TIMEZONE_OFFSET || '+0';
-const timezoneMod = `${timezone_offset} hour`;
+// a number of hours SQLite's date modifiers take, a TIMEZONE_OFFSET they don't understand (like "-05:00") would make
+// them NULL. Read the way localDateString reads it, so SQL and JS agree on what day it is
+const timezone_offset = configuredTimezoneOffset();
+const timezoneMod = `${timezone_offset >= 0 ? '+' : ''}${timezone_offset} hour`;
+
+// text for a LIKE pattern, its wildcards taken literally, used with ESCAPE '\\'
+const escapeLike = (text: string) => text.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 let db: Database<sqlite3.Database, sqlite3.Statement> | undefined;
 
@@ -193,6 +200,7 @@ export const init = async (dbFile = `${dataDir}/tvshows.db`) => {
               abandoned BOOLEAN DEFAULT FALSE,
               streaming_service TEXT DEFAULT NULL,
               streaming_service_source TEXT DEFAULT NULL, -- "manual", "network"
+              tags TEXT DEFAULT NULL, -- hashtags separated by spaces, without the #
               
               created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
               updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -216,6 +224,7 @@ export const init = async (dbFile = `${dataDir}/tvshows.db`) => {
               image TEXT,
               summary TEXT,
               note TEXT,
+              tags TEXT DEFAULT NULL, -- hashtags separated by spaces, without the #
               created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
               updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
               watched_at DATETIME DEFAULT NULL,
@@ -254,6 +263,16 @@ export const init = async (dbFile = `${dataDir}/tvshows.db`) => {
           await db.run('ALTER TABLE shows ADD COLUMN streaming_service_source TEXT DEFAULT NULL');
           await db.run(`UPDATE shows SET streaming_service_source = 'manual' WHERE streaming_service IS NOT NULL`);
           console.log('Column shows.streaming_service_source added');
+        }
+        // databases created before shows and episodes had hashtags
+        if (!columns.some((column) => column.name === 'tags')) {
+          await db.run('ALTER TABLE shows ADD COLUMN tags TEXT DEFAULT NULL');
+          console.log('Column shows.tags added');
+        }
+        const episodeColumns = await db.all<{ name: string }[]>('PRAGMA table_info(episodes)');
+        if (!episodeColumns.some((column) => column.name === 'tags')) {
+          await db.run('ALTER TABLE episodes ADD COLUMN tags TEXT DEFAULT NULL');
+          console.log('Column episodes.tags added');
         }
       }
 
@@ -465,6 +484,20 @@ export const getShowsAbandoned = async (limit = 24, offset = 0) => {
   return undefined;
 };
 
+// shows that may be the one a show hashtag like #TheOffice was made from, the end of its url without dashes:
+// .../shows/526/the-office. Whoever asks checks each against the hashtag
+export const getShowsWithUrlEnding = async (ending: string) => {
+  try {
+    return await db.all<Pick<Show, 'id' | 'url'>[]>(
+      `SELECT id, url FROM shows WHERE replace(url, '-', '') LIKE ? ESCAPE '\\'`,
+      `%/${escapeLike(ending)}`,
+    );
+  } catch (dbError) {
+    console.error('failed getShowsWithUrlEnding', dbError);
+  }
+  return undefined;
+};
+
 export const getTvshowsForCSVExport = async () => {
   // We use a try catch block in case of db errors
   try {
@@ -535,16 +568,21 @@ export const getRecentEpisodesByShowId = async (showId) => {
   return undefined;
 };
 
+// the page shows one card per show per air day, so it pages by those: limit and offset count show days, not episodes,
+// and a show's episodes on one day are never split across pages
 export const getUpcomingEpisodes = async (limit = 24, offset = 0, includeHidden = false) => {
   const showStarted = `EXISTS (SELECT 1 FROM episodes watched WHERE watched.show_id = shows.id AND watched.watched_status = 'WATCHED')`;
   try {
     const result = await db.all(
-      `SELECT
+      `WITH upcoming AS (
+      SELECT
         episodes.*,
         shows.name as show_name,
         shows.image as show_image,
         shows.abandoned as show_abandoned,
-        ${showStarted} as show_started
+        ${showStarted} as show_started,
+        -- the broadcaster's calendar date, the same one the show page lists, else the day in our timezone
+        COALESCE(NULLIF(episodes.airdate, ''), date(episodes.airstamp, '${timezoneMod}')) as airs_on
       FROM episodes
       INNER JOIN shows ON episodes.show_id = shows.id
       WHERE
@@ -557,8 +595,16 @@ export const getUpcomingEpisodes = async (limit = 24, offset = 0, includeHidden 
             : // a later season of a show you never started isn't coming up for you, a premiere still is
               `AND shows.abandoned IS NOT 1 AND (COALESCE(episodes.season, 1) <= 1 OR ${showStarted})`
         }
-      ORDER BY episodes.airstamp ASC
-      LIMIT ? OFFSET ?`,
+      ),
+      show_days AS (
+        SELECT show_id, airs_on, MIN(airstamp) as first_airstamp FROM upcoming
+        GROUP BY show_id, airs_on
+        ORDER BY first_airstamp, show_id
+        LIMIT ? OFFSET ?
+      )
+      SELECT upcoming.* FROM upcoming
+      INNER JOIN show_days ON show_days.show_id = upcoming.show_id AND show_days.airs_on = upcoming.airs_on
+      ORDER BY show_days.first_airstamp, show_days.show_id, upcoming.airstamp, upcoming.id`,
       limit,
       offset,
     );
@@ -885,13 +931,55 @@ export const updateEpisodeWatchStatus = async (id: number | string, status: 'WAT
   return undefined;
 };
 
-export const updateEpisodeNote = async (id: string, note: string) => {
-  try {
-    await db.run(`UPDATE episodes SET note = ? WHERE id = ?`, note, id);
+// SQL narrows it down to rows holding the text, then the whole hashtag is matched here. SQL's LIKE ignores case only for
+// ASCII, so a tag with other letters is matched here alone, like "Télé" against "télé"
+const taggedCondition = (column: string, tag: string) =>
+  /^[\x20-\x7e]*$/.test(tag) ? { sql: `AND ${column} LIKE ? ESCAPE '\\'`, params: [`%${escapeLike(tag)}%`] } : { sql: '', params: [] };
 
+export const getShowsTagged = async (tag: string) => {
+  try {
+    const narrowed = taggedCondition('tags', tag);
+    const shows = await db.all<Show[]>(
+      `SELECT * FROM shows WHERE tags IS NOT NULL ${narrowed.sql} ORDER BY name COLLATE NOCASE`,
+      ...narrowed.params,
+    );
+    return shows.filter((show) => hasHashtag(show.tags, tag));
+  } catch (dbError) {
+    console.error('failed getShowsTagged', dbError);
+  }
+  return undefined;
+};
+
+export const getEpisodesTagged = async (tag: string) => {
+  try {
+    const narrowed = taggedCondition('episodes.tags', tag);
+    const episodes = await db.all<(Episode & { show_name: string })[]>(
+      `SELECT episodes.*, shows.name as show_name FROM episodes
+        INNER JOIN shows ON episodes.show_id = shows.id
+        WHERE episodes.tags IS NOT NULL ${narrowed.sql}
+        ORDER BY shows.name COLLATE NOCASE, episodes.season, episodes.number`,
+      ...narrowed.params,
+    );
+    return episodes.filter((episode) => hasHashtag(episode.tags, tag));
+  } catch (dbError) {
+    console.error('failed getEpisodesTagged', dbError);
+  }
+  return undefined;
+};
+
+// the episode details you edit, only the ones given
+export const updateEpisodeDetails = async (id: number | string, details: Partial<Pick<Episode, 'note' | 'tags'>>) => {
+  const keys = Object.keys(details).filter((key) => key === 'note' || key === 'tags');
+  try {
+    if (keys.length) {
+      await db.run(`UPDATE episodes SET ${keys.map((key) => `${key} = $${key}`).join(', ')} WHERE id = $id`, {
+        $id: id,
+        ...Object.fromEntries(keys.map((key) => [`$${key}`, details[key]])),
+      });
+    }
     return await db.get<Episode>('SELECT * from episodes WHERE id = ?', id);
   } catch (dbError) {
-    console.error('failed updateEpisodeNote', dbError);
+    console.error('failed updateEpisodeDetails', dbError);
   }
   return undefined;
 };
@@ -906,35 +994,8 @@ export const createShow = async (body: Omit<Show, 'last_watched_episode_id' | 'c
         ${keys.join(',')}, created_at, updated_at
       ) 
       VALUES (${keys.map((v) => `$${v}`).join(',')}, DateTime('now'), DateTime('now'))`,
-      {
-        $id: body.id,
-        $note: body.note,
-        $tvrage_id: body.tvrage_id,
-        $thetvdb_id: body.thetvdb_id,
-        $imdb_id: body.imdb_id,
-        $url: body.url,
-        $summary: body.summary,
-        $name: body.name,
-        $type: body.type,
-        $language: body.language,
-        $status: body.status,
-        $runtime: body.runtime,
-        $averageRuntime: body.averageRuntime,
-        $premiered: body.premiered,
-        $ended: body.ended,
-        $officialSite: body.officialSite,
-        $network_name: body.network_name,
-        $network_country: body.network_country,
-        $network_country_code: body.network_country_code,
-        $network_country_timezone: body.network_country_timezone,
-        $image: body.image,
-        $episodes_count: body.episodes_count,
-        $aired_episodes_count: body.aired_episodes_count,
-        $watched_episodes_count: body.watched_episodes_count,
-        $last_watched_date: body.last_watched_date,
-        $next_episode_towatch_airdate: body.next_episode_towatch_airdate,
-        $abandoned: body.abandoned,
-      },
+      // bound from the same keys as the columns, a column without its value would be stored as NULL
+      Object.fromEntries(keys.map((key) => [`$${key}`, body[key]])),
     );
     if (body.network_name) await guessStreamingServices({ showId: result.lastID });
     return getShow(result.lastID);
@@ -975,29 +1036,26 @@ export const updateShow = async (id: string, body: Partial<Show>) => {
   return undefined;
 };
 
+// the counts are taken again as they're written, not the ones the shows were picked by. A show refresh can add episodes in
+// between, like the homepage's refresh running alongside its watch next pass, and those counts would be stale
 export const updateAllAiredCounts = async (updates: Pick<Show, 'id' | 'aired_episodes_count'>[]) => {
   if (updates.length === 0) return;
 
-  await db.run(`
+  await db.run(
+    `
       UPDATE  shows
-      SET     aired_episodes_count = CASE id ${updates.map((u) => `WHEN ${u.id} THEN '${u.aired_episodes_count}' \n`).join(' ')}
-        END
-      WHERE   id IN (${updates.map((u) => `'${u.id}'`).join(', ')})
-    `);
-};
-
-export const updateShowNote = async (id: string, body: Pick<Show, 'note'>) => {
-  try {
-    await db.run(`UPDATE shows SET note=$note WHERE id = $id`, {
-      $id: id,
-      $note: body.note,
-    });
-
-    return await db.get('SELECT * from shows WHERE id = ?', id);
-  } catch (dbError) {
-    console.error('failed updateShowNote', dbError);
-  }
-  return undefined;
+      SET     aired_episodes_count = (
+        SELECT count(*) FROM episodes
+        WHERE episodes.show_id = shows.id
+          AND episodes.number IS NOT NULL
+          AND episodes.airstamp IS NOT NULL
+          AND episodes.airstamp != ''
+          AND DateTime(episodes.airstamp) <= DateTime('now')
+      )
+      WHERE   id IN (${updates.map(() => '?').join(', ')})
+    `,
+    ...updates.map((u) => u.id),
+  );
 };
 
 export const updateShowImage = async (id: string, body: Pick<Show, 'image'>) => {
@@ -1032,23 +1090,8 @@ export const createEpisode = async (body: Omit<Episode, 'note' | 'created_at' | 
         ${keys.join(',')}, created_at, updated_at
       ) 
       VALUES (${keys.map((v) => `$${v}`).join(',')}, DateTime('now'), DateTime('now'))`,
-      {
-        $id: body.id,
-        $show_id: body.show_id,
-        $url: body.url,
-        $name: body.name,
-        $season: body.season,
-        $number: body.number,
-        $type: body.type,
-        $airdate: body.airdate,
-        $airtime: body.airtime,
-        $airstamp: body.airstamp,
-        $runtime: body.runtime,
-        $image: body.image,
-        $summary: body.summary,
-        $watched_status: body.watched_status,
-        $watched_at: body.watched_at,
-      },
+      // bound from the same keys as the columns, a column without its value would be stored as NULL
+      Object.fromEntries(keys.map((key) => [`$${key}`, body[key]])),
     );
 
     return result.lastID;
@@ -1166,6 +1209,9 @@ const retireStaleEpisodes = async (stale: Episode[]) => {
       if (ep.note && ep.note !== replacement.note) {
         const note = replacement.note ? `${replacement.note}\n\n${ep.note}` : ep.note;
         await db.run('UPDATE episodes SET note = ? WHERE id = ?', note, replacement.id);
+      }
+      if (ep.tags) {
+        await db.run('UPDATE episodes SET tags = ? WHERE id = ?', storedHashtags(parseHashtags(`${replacement.tags || ''} ${ep.tags}`)), replacement.id);
       }
     }
     await db.run('DELETE from episodes WHERE id = ?', ep.id);
