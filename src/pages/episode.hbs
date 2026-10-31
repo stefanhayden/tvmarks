@@ -54,6 +54,11 @@
     </div>
   </form>
 
+  {{#if episode.summary}}
+    <div class="description" style="margin-bottom: 20px;">
+      {{{episode.summary}}}
+    </div>
+  {{/if}}
 
   {{#unless @root.loggedIn}}
     <div style="margin-bottom: 20px;">
